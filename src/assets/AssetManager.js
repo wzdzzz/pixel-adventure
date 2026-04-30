@@ -1,5 +1,121 @@
 import Phaser from 'phaser';
 
+// Character animation config — maps character type to frames and animations
+export const CHARACTERS = {
+  hero: {
+    prefix: 'hero',
+    frames: [0, 1, 2, 5, 6, 7, 13, 15, 16, 29, 30, 31, 32, 35, 37, 39],
+    display: { w: 36, h: 52 },
+    anims: {
+      idle: { frames: [0, 1, 2, 13], rate: 4, repeat: -1 },
+      walk: { frames: [5, 6, 7], rate: 8, repeat: -1 },
+      walk_up: { frames: [29, 30, 31, 32], rate: 8, repeat: -1 },
+      attack: { frames: [15, 35], rate: 10, repeat: 0 },
+      hurt: { frames: [16], rate: 1, repeat: 0 },
+      die: { frames: [37, 39], rate: 3, repeat: 0 }
+    }
+  },
+  slime: {
+    prefix: 'slime',
+    frames: [0, 1, 2, 3, 4],
+    display: { w: 40, h: 34 },
+    anims: {
+      idle: { frames: [0, 1, 2], rate: 4, repeat: -1 },
+      walk: { frames: [0, 1, 2, 3], rate: 6, repeat: -1 },
+      hurt: { frames: [4], rate: 1, repeat: 0 },
+      die: { frames: [4, 3], rate: 3, repeat: 0 }
+    }
+  },
+  skeleton: {
+    prefix: 'skeleton',
+    frames: [0, 1, 2, 3, 4, 5],
+    display: { w: 42, h: 48 },
+    anims: {
+      idle: { frames: [0, 2], rate: 3, repeat: -1 },
+      walk: { frames: [3, 4, 5], rate: 6, repeat: -1 },
+      attack: { frames: [4, 5], rate: 8, repeat: 0 },
+      hurt: { frames: [1], rate: 1, repeat: 0 },
+      die: { frames: [1, 0], rate: 3, repeat: 0 }
+    }
+  },
+  goblin: {
+    prefix: 'goblin',
+    frames: [0, 2, 3, 4, 5],
+    display: { w: 46, h: 44 },
+    anims: {
+      idle: { frames: [2, 3], rate: 3, repeat: -1 },
+      walk: { frames: [2, 3, 4], rate: 6, repeat: -1 },
+      attack: { frames: [4, 5], rate: 8, repeat: 0 },
+      hurt: { frames: [5], rate: 1, repeat: 0 },
+      die: { frames: [5, 0], rate: 3, repeat: 0 }
+    }
+  },
+  spider: {
+    prefix: 'spider',
+    frames: [0, 1, 4, 5],
+    display: { w: 44, h: 36 },
+    anims: {
+      idle: { frames: [0, 1], rate: 3, repeat: -1 },
+      walk: { frames: [0, 1, 4, 5], rate: 6, repeat: -1 },
+      hurt: { frames: [4], rate: 1, repeat: 0 },
+      die: { frames: [5, 4], rate: 3, repeat: 0 }
+    }
+  },
+  bat: {
+    prefix: 'bat',
+    frames: [0, 3, 4],
+    display: { w: 44, h: 34 },
+    anims: {
+      idle: { frames: [0, 3], rate: 5, repeat: -1 },
+      walk: { frames: [0, 3, 4], rate: 8, repeat: -1 },
+      hurt: { frames: [4], rate: 1, repeat: 0 },
+      die: { frames: [4, 3], rate: 3, repeat: 0 }
+    }
+  },
+  orc_warrior: {
+    prefix: 'orc_warrior',
+    frames: [0, 1, 2, 3, 4],
+    display: { w: 50, h: 52 },
+    anims: {
+      idle: { frames: [0, 1], rate: 3, repeat: -1 },
+      walk: { frames: [2, 3, 4], rate: 6, repeat: -1 },
+      attack: { frames: [3, 4], rate: 8, repeat: 0 },
+      hurt: { frames: [1], rate: 1, repeat: 0 }
+    }
+  },
+  fire_mage: {
+    prefix: 'fire_mage',
+    frames: [0, 1, 2, 3, 5],
+    display: { w: 48, h: 50 },
+    anims: {
+      idle: { frames: [0, 3], rate: 3, repeat: -1 },
+      walk: { frames: [1, 2, 5], rate: 6, repeat: -1 },
+      attack: { frames: [3, 5], rate: 8, repeat: 0 }
+    }
+  },
+  giant_skeleton: {
+    prefix: 'giant_skeleton',
+    frames: [0, 1, 2, 3, 5],
+    display: { w: 56, h: 70 },
+    anims: {
+      idle: { frames: [0, 1], rate: 2, repeat: -1 },
+      walk: { frames: [0, 1, 2], rate: 4, repeat: -1 },
+      attack: { frames: [2, 3], rate: 6, repeat: 0 },
+      hurt: { frames: [5], rate: 1, repeat: 0 }
+    }
+  },
+  skeleton_king: {
+    prefix: 'skeleton_king_boss',
+    frames: [0, 1, 2, 3],
+    display: { w: 64, h: 74 },
+    anims: {
+      idle: { frames: [0, 1], rate: 2, repeat: -1 },
+      walk: { frames: [0, 1, 2, 3], rate: 4, repeat: -1 },
+      attack: { frames: [2, 3], rate: 6, repeat: 0 }
+    }
+  }
+};
+
 export const TEXTURES = {
   PLAYER: 'player',
   ENEMY: 'enemy',

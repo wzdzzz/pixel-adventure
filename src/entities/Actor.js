@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
 import { Stats } from '../systems/Stats.js';
+import { CHARACTERS } from '../assets/AssetManager.js';
 
 /**
  * Actor 基类 — Player 和 Enemy 共享的逻辑
  * 提供: Stats属性、HP/MP管理、受伤/击退、I-Frames、死亡
  */
 export class Actor {
-  constructor(scene, x, y, textureKey, statsConfig = {}) {
+  constructor(scene, x, y, textureKey, statsConfig = {}, characterType = null) {
     this.scene = scene;
+    this.characterType = characterType;
 
     // 属性系统
     this.stats = new Stats(statsConfig);
@@ -30,10 +32,39 @@ export class Actor {
     // 创建精灵 — 碰撞体改为脚部小圆
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 0.5);
-    this.sprite.body.setCircle(8, (this.sprite.width / 2) - 8, this.sprite.height - 18);
+
+    // Apply character display size if available
+    const charConfig = characterType ? CHARACTERS[characterType] : null;
+    if (charConfig) {
+      this.sprite.setDisplaySize(charConfig.display.w, charConfig.display.h);
+    }
+
+    // Set collision body to cover most of displayed sprite
+    const dw = this.sprite.displayWidth;
+    const dh = this.sprite.displayHeight;
+    const bodyW = dw * 0.85;
+    const bodyH = dh * 0.55;
+    // Convert display-space body dimensions to unscaled texture coords
+    const scaleX = this.sprite.scaleX || 1;
+    const scaleY = this.sprite.scaleY || 1;
+    const rawBodyW = bodyW / scaleX;
+    const rawBodyH = bodyH / scaleY;
+    const offsetX = (this.sprite.width - rawBodyW) / 2;
+    const offsetY = this.sprite.height - rawBodyH;
+    this.sprite.body.setSize(rawBodyW, rawBodyH, false);
+    this.sprite.body.setOffset(offsetX, offsetY);
     this.sprite.setCollideWorldBounds(true);
 
     this.direction = { x: 1, y: 0 };
+  }
+
+  /** Play a character animation by name (idle, walk, attack, hurt, die) */
+  playAnim(name, ignoreIfPlaying = true) {
+    if (!this.characterType) return;
+    const key = `${this.characterType}_${name}`;
+    if (this.sprite.anims && this.scene.anims.exists(key)) {
+      this.sprite.play(key, ignoreIfPlaying);
+    }
   }
 
   /** 刷新属性缓存并同步 maxHp/maxMp */

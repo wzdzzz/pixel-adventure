@@ -81,7 +81,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   createControlsHint() {
-    this.add.text(400, 585, 'WASD:移动 | 鼠标左键:攻击 | E:交互', {
+    this.add.text(400, 585, 'WASD:移动 | 左键:攻击 | E:交互', {
       fontSize: '12px',
       fill: '#888888',
       fontFamily: 'Courier New'

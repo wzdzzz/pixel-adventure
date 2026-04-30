@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TEXTURES } from '../assets/AssetManager.js';
+import { TEXTURES, CHARACTERS } from '../assets/AssetManager.js';
 import { Actor } from './Actor.js';
 
 export const EnemyState = {
@@ -31,16 +31,29 @@ export class Enemy extends Actor {
       agi: Math.ceil(mergedConfig.speed / 10)
     };
 
-    super(scene, x, y, TEXTURES.ENEMY, statsConfig);
+    // Determine character type and texture from config
+    const characterType = mergedConfig.id || null;
+    const charConfig = characterType ? CHARACTERS[characterType] : null;
+    const textureKey = charConfig
+      ? `${charConfig.prefix}_${String(charConfig.frames[0]).padStart(2, '0')}`
+      : TEXTURES.ENEMY;
+
+    super(scene, x, y, textureKey, statsConfig, characterType);
 
     // Enemy-specific config (detection range, patrol range, raw damage, etc.)
     this.config = mergedConfig;
 
+    // Random slime color variant
+    if (characterType === 'slime') {
+      const slimeColors = [0x88ff88, 0x8888ff, 0xff8888];
+      this.sprite.setTint(slimeColors[Math.floor(Math.random() * 3)]);
+    }
+
     // Bounce — added after super(), body is already set up by Actor
     this.sprite.setBounce(0.1);
 
-    // Enemy i-frames are shorter than player
-    this.iFramesDuration = 300;
+    // Enemy i-frames match stagger duration
+    this.iFramesDuration = 600;
 
     // Back-reference so collision callbacks can find this Enemy instance
     this.sprite.enemyInstance = this;
@@ -75,6 +88,7 @@ export class Enemy extends Actor {
 
   startPatrol() {
     this.setState(EnemyState.PATROL);
+    this.playAnim('walk');
     this.moveToPoint(this.currentPatrolTarget);
   }
 
@@ -159,6 +173,7 @@ export class Enemy extends Actor {
     );
     if (distToTarget < 5) {
       this.sprite.setVelocity(0, 0);
+      this.playAnim('idle');
     }
   }
 
@@ -181,6 +196,7 @@ export class Enemy extends Actor {
     this.scene.physics.moveTo(this.sprite, player.x, player.y, chaseSpeed);
     this.direction = player.x < this.sprite.x ? -1 : 1;
     this.sprite.setFlipX(this.direction < 0);
+    this.playAnim('walk');
   }
 
   // ── Attack AI ──────────────────────────────────────────────────
@@ -190,6 +206,7 @@ export class Enemy extends Actor {
     this.direction = player.x < this.sprite.x ? -1 : 1;
     this.sprite.setFlipX(this.direction < 0);
     this.sprite.setTint(0xff8800);
+    this.playAnim('attack');
 
     if (this.stateTimer >= 300) {
       this.sprite.clearTint();
@@ -208,26 +225,26 @@ export class Enemy extends Actor {
   // ── Damage ─────────────────────────────────────────────────────
 
   takeDamage(damage, attackerX, attackerY) {
-    // Use Actor's i-frames to prevent damage stacking, not state check
     if (this.isInvulnerable || this.state === EnemyState.DEAD) return;
 
-    // Enter HURT state and stop movement
+    // Enter HURT stagger — stop movement and attacking
     this.setState(EnemyState.HURT);
     this.sprite.setVelocity(0, 0);
+    this.playAnim('hurt', false);
 
-    // Delegate actual damage, knockback, i-frames & flash to Actor
+    // Reset attack cooldown so enemy can't attack right after stagger
+    this.attackCooldown = 800;
+
+    // Delegate damage, knockback, i-frames & flash to Actor
     super.takeDamage(damage, attackerX, attackerY);
 
-    // Enemy-specific screen effects
-    this.scene.events.emit('hitStop', 50);
-    this.scene.events.emit('screenShake', 3, 80);
+    this.scene.events.emit('screenShake', 2, 60);
 
-    // After the flash completes (~400ms), resume or let Actor's die() handle death
-    this.scene.time.delayedCall(400, () => {
-      if (this.hp > 0) {
+    // Stagger duration: 600ms before enemy can act again
+    this.scene.time.delayedCall(600, () => {
+      if (this.hp > 0 && this.state === EnemyState.HURT) {
         this.setState(EnemyState.CHASE);
       }
-      // If hp <= 0 Actor already scheduled die() via its own delayedCall
     });
   }
 
@@ -236,6 +253,7 @@ export class Enemy extends Actor {
   die() {
     this.setState(EnemyState.DEAD);
     this.sprite.body.enable = false;
+    this.playAnim('die', false);
 
     this.scene.tweens.add({
       targets: this.sprite,

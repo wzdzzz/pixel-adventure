@@ -230,7 +230,17 @@ export const levelData = [
     name: '第一关 - 迷雾森林',
     generateMap: generateLevel1Map,
     playerStart: { x: 150, y: 150 },
-    enemies: { type: 'slime', count: 8 },
+    enemies: [
+      { type: 'slime', count: 2 },
+      { type: 'goblin', count: 2 },
+      { type: 'spider', count: 2 },
+      { type: 'bat', count: 2 },
+      { type: 'skeleton', count: 2 },
+      { type: 'orc_warrior', count: 1 },
+      { type: 'fire_mage', count: 1 },
+      { type: 'giant_skeleton', count: 1 },
+      { type: 'skeleton_king', count: 1 }
+    ],
     items: { coins: 12, keys: 2, potions: 4, hasArtifact: false },
     npcs: [
       {
@@ -263,7 +273,12 @@ export const levelData = [
     name: '第二关 - 古老废墟',
     generateMap: generateLevel2Map,
     playerStart: { x: 800, y: 1100 },
-    enemies: { type: 'slime', count: 12 },
+    enemies: [
+      { type: 'skeleton', count: 4 },
+      { type: 'bat', count: 3 },
+      { type: 'orc_warrior', count: 2 },
+      { type: 'slime', count: 3 }
+    ],
     items: { coins: 15, keys: 2, potions: 6, hasArtifact: true },
     npcs: [
       {

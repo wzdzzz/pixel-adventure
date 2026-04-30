@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { AssetManager, TEXTURES } from '../assets/AssetManager.js';
+import { AssetManager, TEXTURES, CHARACTERS } from '../assets/AssetManager.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -27,6 +27,15 @@ export class BootScene extends Phaser.Scene {
     };
     for (const [key, path] of Object.entries(sprites)) {
       this.load.image(key, path);
+    }
+
+    // Load character animation frames
+    for (const [name, config] of Object.entries(CHARACTERS)) {
+      const folder = name; // directory name matches character key
+      for (const i of config.frames) {
+        const frameKey = `${config.prefix}_${String(i).padStart(2, '0')}`;
+        this.load.image(frameKey, `sprites/characters/${folder}/${frameKey}.png`);
+      }
     }
   }
 
@@ -58,6 +67,22 @@ export class BootScene extends Phaser.Scene {
     });
 
     AssetManager.generateAllTextures(this);
+
+    // Create character animations from loaded frames
+    for (const [name, config] of Object.entries(CHARACTERS)) {
+      for (const [animName, animConfig] of Object.entries(config.anims)) {
+        const key = `${name}_${animName}`;
+        if (this.anims.exists(key)) continue;
+        this.anims.create({
+          key,
+          frames: animConfig.frames.map(i => ({
+            key: `${config.prefix}_${String(i).padStart(2, '0')}`
+          })),
+          frameRate: animConfig.rate,
+          repeat: animConfig.repeat
+        });
+      }
+    }
 
     this.registry.set('gameState', {
       hp: 100,

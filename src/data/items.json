@@ -84,16 +84,82 @@
       "detectionRange": 180,
       "stats": { "con": 5, "str": 7, "int": 2, "agi": 1 }
     },
-    "golem": {
-      "id": "golem",
-      "name": "石头人",
+    "goblin": {
+      "id": "goblin",
+      "name": "哥布林",
       "texture": "enemy",
-      "hp": 80,
-      "damage": 20,
-      "speed": 40,
+      "hp": 35,
+      "damage": 12,
+      "speed": 70,
+      "patrolRange": 100,
+      "detectionRange": 160,
+      "stats": { "con": 3, "str": 6, "int": 1, "agi": 3 }
+    },
+    "spider": {
+      "id": "spider",
+      "name": "蜘蛛",
+      "texture": "enemy",
+      "hp": 25,
+      "damage": 8,
+      "speed": 80,
+      "patrolRange": 140,
+      "detectionRange": 170,
+      "stats": { "con": 2, "str": 4, "int": 1, "agi": 4 }
+    },
+    "bat": {
+      "id": "bat",
+      "name": "蝙蝠",
+      "texture": "enemy",
+      "hp": 20,
+      "damage": 6,
+      "speed": 90,
+      "patrolRange": 160,
+      "detectionRange": 200,
+      "stats": { "con": 2, "str": 3, "int": 1, "agi": 5 }
+    },
+    "orc_warrior": {
+      "id": "orc_warrior",
+      "name": "兽人战士",
+      "texture": "enemy",
+      "hp": 70,
+      "damage": 18,
+      "speed": 45,
       "patrolRange": 80,
-      "detectionRange": 120,
-      "stats": { "con": 8, "str": 10, "int": 1, "agi": 0 }
+      "detectionRange": 160,
+      "stats": { "con": 7, "str": 9, "int": 1, "agi": 1 }
+    },
+    "fire_mage": {
+      "id": "fire_mage",
+      "name": "火焰法师",
+      "texture": "enemy",
+      "hp": 45,
+      "damage": 16,
+      "speed": 45,
+      "patrolRange": 100,
+      "detectionRange": 200,
+      "stats": { "con": 4, "str": 3, "int": 8, "agi": 2 }
+    },
+    "giant_skeleton": {
+      "id": "giant_skeleton",
+      "name": "巨型骷髅",
+      "texture": "enemy",
+      "hp": 100,
+      "damage": 22,
+      "speed": 35,
+      "patrolRange": 80,
+      "detectionRange": 180,
+      "stats": { "con": 10, "str": 11, "int": 2, "agi": 1 }
+    },
+    "skeleton_king": {
+      "id": "skeleton_king",
+      "name": "骷髅王",
+      "texture": "enemy",
+      "hp": 150,
+      "damage": 25,
+      "speed": 30,
+      "patrolRange": 60,
+      "detectionRange": 220,
+      "stats": { "con": 15, "str": 13, "int": 5, "agi": 1 }
     }
   },
   "npcs": {

@@ -82,7 +82,6 @@ export class MainGameScene extends Phaser.Scene {
     // Emit level change to UI
     this.events.emit('levelChanged', level.name, levelIndex);
 
-    this.addBreathingAnimations();
   }
 
   cleanupLevel() {
@@ -105,11 +104,14 @@ export class MainGameScene extends Phaser.Scene {
     if (this.portalLabel) { this.portalLabel.destroy(); this.portalLabel = null; }
     if (this.portalGlow) { this.portalGlow.destroy(); this.portalGlow = null; }
 
-    // Destroy map groups
-    if (this.walls) { this.walls.clear(true, true); }
-    if (this.obstacles) { this.obstacles.clear(true, true); }
-    if (this.decorations) { this.decorations.clear(true, true); }
-    if (this.groundTiles) { this.groundTiles.clear(true, true); }
+    // Destroy map groups safely — Phaser may have already destroyed internals on scene restart
+    const safelyClearGroup = (group) => {
+      try { if (group && group.children) group.clear(true, true); } catch (_) {}
+    };
+    safelyClearGroup(this.walls);    this.walls = null;
+    safelyClearGroup(this.obstacles); this.obstacles = null;
+    safelyClearGroup(this.decorations); this.decorations = null;
+    safelyClearGroup(this.groundTiles); this.groundTiles = null;
 
     if (this.endZone) { this.endZone.destroy(); this.endZone = null; }
     if (this.warFog) { this.warFog.destroy(); this.warFog = null; }
@@ -370,10 +372,15 @@ export class MainGameScene extends Phaser.Scene {
 
   createEnemies(level) {
     const empty = this.getEmptyTiles();
-    const count = level.enemies.count;
-    const positions = this.pickRandomPositions(empty, count);
-    positions.forEach(pos => {
-      this.enemies.push(new Enemy(this, pos.x, pos.y, itemData.enemies[level.enemies.type]));
+    // Support both array and legacy single-object format
+    const groups = Array.isArray(level.enemies) ? level.enemies : [level.enemies];
+    groups.forEach(group => {
+      const config = itemData.enemies[group.type];
+      if (!config) return;
+      const positions = this.pickRandomPositions(empty, group.count);
+      positions.forEach(pos => {
+        this.enemies.push(new Enemy(this, pos.x, pos.y, config));
+      });
     });
   }
 
@@ -513,14 +520,32 @@ export class MainGameScene extends Phaser.Scene {
     this.enemies.forEach(enemy => {
       this.physics.add.collider(enemy.sprite, this.walls);
       this.physics.add.collider(enemy.sprite, this.obstacles);
+      // Enemies also blocked by decorations (trees, water, fences, etc.)
+      this.decorations.getChildren().forEach(d => {
+        if (d.body) this.physics.add.collider(enemy.sprite, d);
+      });
+      // Enemies blocked by breakables
+      this.breakables.forEach(b => {
+        this.physics.add.collider(enemy.sprite, b);
+      });
     });
+
+    // Enemy-enemy collision — prevent stacking
+    for (let i = 0; i < this.enemies.length; i++) {
+      for (let j = i + 1; j < this.enemies.length; j++) {
+        this.physics.add.collider(this.enemies[i].sprite, this.enemies[j].sprite);
+      }
+    }
 
     this.items.forEach(item => {
       this.physics.add.overlap(this.player.sprite, item.sprite, () => this.handleItemPickup(item), null, this);
     });
 
+    // Player can't be pushed by enemies
+    this.player.sprite.body.pushable = false;
+
     this.enemies.forEach(enemy => {
-      this.physics.add.overlap(this.player.sprite, enemy.sprite, () => this.handleEnemyContact(enemy), null, this);
+      this.physics.add.collider(this.player.sprite, enemy.sprite, () => this.handleEnemyContact(enemy), null, this);
       this.physics.add.overlap(this.player.attackHitbox, enemy.sprite, () => this.handleAttackHit(enemy), null, this);
     });
 
@@ -775,57 +800,6 @@ export class MainGameScene extends Phaser.Scene {
     });
   }
 
-  // --- Breathing Animations ---
-
-  addBreathingAnimations() {
-    // Player breathing
-    if (this.player?.sprite) {
-      this.tweens.add({
-        targets: this.player.sprite,
-        scaleX: 1.03, scaleY: 0.97,
-        duration: 1500, yoyo: true, repeat: -1,
-        ease: 'Sine.easeInOut', delay: Math.random() * 500
-      });
-    }
-
-    // Enemies breathing
-    this.enemies.forEach(e => {
-      this.tweens.add({
-        targets: e.sprite,
-        scaleX: 1.03, scaleY: 0.97,
-        duration: 1200 + Math.random() * 600, yoyo: true, repeat: -1,
-        ease: 'Sine.easeInOut', delay: Math.random() * 1000
-      });
-    });
-
-    // NPCs breathing
-    this.npcs.forEach(n => {
-      const sprite = n.sprite || n;
-      if (sprite && sprite.setScale) {
-        this.tweens.add({
-          targets: sprite,
-          scaleX: 1.02, scaleY: 0.98,
-          duration: 1800 + Math.random() * 400, yoyo: true, repeat: -1,
-          ease: 'Sine.easeInOut', delay: Math.random() * 800
-        });
-      }
-    });
-
-    // Trees and flowers breathing
-    this.decorations.getChildren().forEach(d => {
-      if (d.texture && (d.texture.key === TEXTURES.TREE ||
-          d.texture.key === TEXTURES.TREE_PINE ||
-          d.texture.key === TEXTURES.FLOWER)) {
-        this.tweens.add({
-          targets: d,
-          scaleX: 1.02, scaleY: 0.98,
-          duration: 2000 + Math.random() * 1000, yoyo: true, repeat: -1,
-          ease: 'Sine.easeInOut', delay: Math.random() * 2000
-        });
-      }
-    });
-  }
-
   // --- Standard Handlers ---
 
   startHitStop(duration) {
@@ -868,8 +842,11 @@ export class MainGameScene extends Phaser.Scene {
   handleAttackHit(enemy) {
     if (!this.player.attackHitbox.body.enable) return;
     if (this.player.attackHitRegistered) return;
+    if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
     enemy.takeDamage(this.player.getAttack(), this.player.sprite.x, this.player.sprite.y);
     this.player.onAttackHit();
+    // Disable hitbox immediately after hit to prevent same-frame duplicates
+    this.player.attackHitbox.body.enable = false;
   }
 
   handleBreakableHit(b) {
@@ -1011,8 +988,6 @@ export class MainGameScene extends Phaser.Scene {
     // Y-depth sorting for dynamic entities
     if (this.player?.sprite) {
       this.player.sprite.setDepth(this.player.sprite.y);
-      this.player.swordSprite.setDepth(this.player.sprite.y + 1);
-      this.player.slashSprite.setDepth(this.player.sprite.y + 1);
     }
 
     if (this.player && this.player.sprite) {
