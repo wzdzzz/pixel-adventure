@@ -1,0 +1,88 @@
+{
+  "items": {
+    "coin": {
+      "id": "coin",
+      "name": "金币",
+      "type": "currency",
+      "texture": "coin",
+      "value": 10,
+      "description": "闪闪发光的金币",
+      "effect": {
+        "type": "score",
+        "amount": 10
+      }
+    },
+    "key": {
+      "id": "key",
+      "name": "钥匙",
+      "type": "key",
+      "texture": "key",
+      "value": 1,
+      "description": "可以打开特定的门",
+      "effect": {
+        "type": "key",
+        "amount": 1
+      }
+    },
+    "artifact": {
+      "id": "artifact",
+      "name": "远古神器",
+      "type": "quest",
+      "texture": "artifact",
+      "value": 100,
+      "description": "传说中的神器，获得即可胜利",
+      "effect": {
+        "type": "artifact",
+        "amount": 1
+      }
+    },
+    "potion": {
+      "id": "potion",
+      "name": "回复药水",
+      "type": "consumable",
+      "texture": "potion",
+      "value": 25,
+      "description": "恢复25点生命值",
+      "effect": {
+        "type": "heal",
+        "amount": 25
+      }
+    },
+    "heart": {
+      "id": "heart",
+      "name": "生命之心",
+      "type": "consumable",
+      "texture": "heart",
+      "value": 50,
+      "description": "恢复50点生命值",
+      "effect": {
+        "type": "heal",
+        "amount": 50
+      }
+    }
+  },
+  "enemies": {
+    "slime": {
+      "id": "slime",
+      "name": "史莱姆",
+      "texture": "enemy",
+      "hp": 30,
+      "damage": 10,
+      "speed": 60,
+      "patrolRange": 120,
+      "detectionRange": 150
+    }
+  },
+  "npcs": {
+    "elder": {
+      "id": "elder",
+      "name": "村长",
+      "texture": "npc",
+      "dialogues": [
+        "欢迎来到这个危险的地方，冒险者！",
+        "小心那些红色的怪物，它们会攻击你。",
+        "收集钥匙可以打开宝箱，找到神器就能离开这里！"
+      ]
+    }
+  }
+}

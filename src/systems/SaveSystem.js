@@ -1,0 +1,133 @@
+/**
+ * 存档/读档系统
+ *
+ * 使用 localStorage 保存和加载游戏状态
+ * 包括玩家位置、已拾取的道具、HP等
+ */
+export class SaveSystem {
+  static SAVE_KEY = 'pixel_adventure_save';
+
+  /**
+   * 保存游戏状态
+   * @param {Phaser.Scene} scene - 场景实例
+   */
+  static save(scene) {
+    try {
+      const gameState = scene.registry.get('gameState');
+      const playerPosition = scene.player ? scene.player.getPosition() : null;
+
+      const saveData = {
+        timestamp: Date.now(),
+        version: '1.0.0',
+        player: {
+          position: playerPosition,
+          hp: scene.player ? scene.player.hp : 100,
+          maxHp: scene.player ? scene.player.maxHp : 100
+        },
+        gameState: {
+          score: gameState.score,
+          keysCollected: gameState.keysCollected,
+          hasArtifact: gameState.hasArtifact,
+          collectedItems: gameState.collectedItems || []
+        },
+        inventory: scene.inventory ? scene.inventory.exportData() : []
+      };
+
+      localStorage.setItem(SaveSystem.SAVE_KEY, JSON.stringify(saveData));
+      console.log('[SaveSystem] 游戏已保存');
+      return true;
+    } catch (error) {
+      console.error('[SaveSystem] 保存失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 加载游戏状态
+   * @param {Phaser.Scene} scene - 场景实例
+   * @returns {boolean} 是否成功加载
+   */
+  static load(scene) {
+    try {
+      const saveString = localStorage.getItem(SaveSystem.SAVE_KEY);
+      if (!saveString) {
+        console.log('[SaveSystem] 没有找到存档');
+        return false;
+      }
+
+      const saveData = JSON.parse(saveString);
+
+      // 验证存档版本
+      if (!saveData.version) {
+        console.log('[SaveSystem] 存档格式无效');
+        return false;
+      }
+
+      // 恢复游戏状态
+      scene.registry.set('gameState', {
+        ...scene.registry.get('gameState'),
+        score: saveData.gameState.score,
+        keysCollected: saveData.gameState.keysCollected,
+        hasArtifact: saveData.gameState.hasArtifact,
+        collectedItems: saveData.gameState.collectedItems || []
+      });
+
+      // 恢复背包
+      if (scene.inventory && saveData.inventory) {
+        scene.inventory.importData(saveData.inventory);
+      }
+
+      // 恢复玩家位置（在 MainGameScene 中处理）
+      scene.registry.set('savedPlayerData', saveData.player);
+
+      console.log('[SaveSystem] 存档已加载');
+      return true;
+    } catch (error) {
+      console.error('[SaveSystem] 加载失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 检查是否有存档
+   * @returns {boolean}
+   */
+  static hasSave() {
+    return localStorage.getItem(SaveSystem.SAVE_KEY) !== null;
+  }
+
+  /**
+   * 删除存档
+   * @returns {boolean}
+   */
+  static deleteSave() {
+    try {
+      localStorage.removeItem(SaveSystem.SAVE_KEY);
+      console.log('[SaveSystem] 存档已删除');
+      return true;
+    } catch (error) {
+      console.error('[SaveSystem] 删除存档失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 获取存档信息
+   * @returns {object|null}
+   */
+  static getSaveInfo() {
+    try {
+      const saveString = localStorage.getItem(SaveSystem.SAVE_KEY);
+      if (!saveString) return null;
+
+      const saveData = JSON.parse(saveString);
+      return {
+        timestamp: new Date(saveData.timestamp).toLocaleString(),
+        score: saveData.gameState.score,
+        hasArtifact: saveData.gameState.hasArtifact
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+}
