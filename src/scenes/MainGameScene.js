@@ -362,9 +362,10 @@ export class MainGameScene extends Phaser.Scene {
     const startY = savedData?.position?.y || level.playerStart.y;
     this.player = new Player(this, startX, startY);
     if (savedData?.hp) {
-      this.player.hp = savedData.hp;
-      this.player.maxHp = savedData.maxHp || 100;
+      this.player.hp = Math.min(savedData.hp, this.player.maxHp);
     }
+    // Emit initial HP/MP so UI shows correct values
+    this.player.onHpChanged();
   }
 
   createEnemies(level) {
@@ -861,13 +862,13 @@ export class MainGameScene extends Phaser.Scene {
   handleEnemyContact(enemy) {
     if (this.player.isInvulnerable || this.player.state === PlayerState.DEAD) return;
     if (enemy.state === EnemyState.DEAD) return;
-    this.player.takeDamage(enemy.config.damage, enemy.sprite.x, enemy.sprite.y);
+    this.player.takeDamage(enemy.getAttack(), enemy.sprite.x, enemy.sprite.y);
   }
 
   handleAttackHit(enemy) {
     if (!this.player.attackHitbox.body.enable) return;
     if (this.player.attackHitRegistered) return;
-    enemy.takeDamage(20, this.player.sprite.x, this.player.sprite.y);
+    enemy.takeDamage(this.player.getAttack(), this.player.sprite.x, this.player.sprite.y);
     this.player.onAttackHit();
   }
 

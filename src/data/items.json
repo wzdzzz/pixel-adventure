@@ -70,7 +70,30 @@
       "damage": 10,
       "speed": 60,
       "patrolRange": 120,
-      "detectionRange": 150
+      "detectionRange": 150,
+      "stats": { "con": 3, "str": 5, "int": 1, "agi": 1 }
+    },
+    "skeleton": {
+      "id": "skeleton",
+      "name": "骷髅兵",
+      "texture": "enemy",
+      "hp": 50,
+      "damage": 14,
+      "speed": 50,
+      "patrolRange": 100,
+      "detectionRange": 180,
+      "stats": { "con": 5, "str": 7, "int": 2, "agi": 1 }
+    },
+    "golem": {
+      "id": "golem",
+      "name": "石头人",
+      "texture": "enemy",
+      "hp": 80,
+      "damage": 20,
+      "speed": 40,
+      "patrolRange": 80,
+      "detectionRange": 120,
+      "stats": { "con": 8, "str": 10, "int": 1, "agi": 0 }
     }
   },
   "npcs": {

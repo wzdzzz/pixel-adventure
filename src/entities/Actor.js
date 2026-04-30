@@ -1,0 +1,178 @@
+import Phaser from 'phaser';
+import { Stats } from '../systems/Stats.js';
+
+/**
+ * Actor 基类 — Player 和 Enemy 共享的逻辑
+ * 提供: Stats属性、HP/MP管理、受伤/击退、I-Frames、死亡
+ */
+export class Actor {
+  constructor(scene, x, y, textureKey, statsConfig = {}) {
+    this.scene = scene;
+
+    // 属性系统
+    this.stats = new Stats(statsConfig);
+    const derived = this.stats.getDerived();
+
+    // 生命/魔法
+    this.hp = derived.maxHp;
+    this.maxHp = derived.maxHp;
+    this.mp = derived.maxMp;
+    this.maxMp = derived.maxMp;
+
+    // I-Frames (无敌帧)
+    this.isInvulnerable = false;
+    this.iFramesDuration = 200; // ms, 约12帧@60fps
+    this.iFramesTimer = 0;
+
+    // HP回复计时器
+    this.regenTimer = 0;
+
+    // 创建精灵 — 碰撞体改为脚部小圆
+    this.sprite = scene.physics.add.sprite(x, y, textureKey);
+    this.sprite.setOrigin(0.5, 0.5);
+    this.sprite.body.setCircle(8, (this.sprite.width / 2) - 8, this.sprite.height - 18);
+    this.sprite.setCollideWorldBounds(true);
+
+    this.direction = { x: 1, y: 0 };
+  }
+
+  /** 刷新属性缓存并同步 maxHp/maxMp */
+  refreshStats() {
+    const derived = this.stats.getDerived();
+    this.maxHp = derived.maxHp;
+    this.maxMp = derived.maxMp;
+    // 不超过上限
+    if (this.hp > this.maxHp) this.hp = this.maxHp;
+    if (this.mp > this.maxMp) this.mp = this.maxMp;
+  }
+
+  /** 获取攻击力 */
+  getAttack() {
+    return this.stats.getDerived().attack;
+  }
+
+  /** 获取移动速度 */
+  getMoveSpeed() {
+    return this.stats.getDerived().moveSpeed;
+  }
+
+  /** 受伤 (通用) */
+  takeDamage(damage, attackerX, attackerY) {
+    if (this.isInvulnerable || this.hp <= 0) return;
+
+    // 防御减伤
+    const defense = this.stats.getDerived().defense;
+    const finalDamage = Math.max(1, damage - defense);
+
+    this.hp = Math.max(0, this.hp - finalDamage);
+
+    // 开启 I-Frames
+    this.isInvulnerable = true;
+    this.iFramesTimer = this.iFramesDuration;
+
+    // 击退
+    this.applyKnockback(attackerX, attackerY);
+
+    // 受伤闪烁
+    this.flashDamage();
+
+    // 通知 HP 变更
+    this.onHpChanged();
+
+    if (this.hp <= 0) {
+      // 延迟到闪烁结束再死亡
+      this.scene.time.delayedCall(300, () => this.die());
+    }
+  }
+
+  /** 击退 */
+  applyKnockback(attackerX, attackerY, force = 200) {
+    if (attackerX == null && attackerY == null) return;
+    const angle = Phaser.Math.Angle.Between(
+      attackerX, attackerY,
+      this.sprite.x, this.sprite.y
+    );
+    // 韧性减少击退
+    const tenacity = this.stats.getDerived().tenacity;
+    const finalForce = force * (1 - tenacity);
+    this.sprite.setVelocity(
+      Math.cos(angle) * finalForce,
+      Math.sin(angle) * finalForce
+    );
+  }
+
+  /** 受伤闪烁特效 */
+  flashDamage() {
+    this.sprite.setTint(0xff0000);
+    let flashCount = 0;
+    this.scene.time.addEvent({
+      delay: 70,
+      callback: () => {
+        flashCount++;
+        if (flashCount % 2 === 0) this.sprite.setTint(0xff0000);
+        else this.sprite.clearTint();
+      },
+      repeat: 5
+    });
+    this.scene.time.delayedCall(420, () => this.sprite.clearTint());
+  }
+
+  /** 治疗 */
+  heal(amount) {
+    if (this.hp <= 0) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.onHpChanged();
+  }
+
+  /** MP 消耗 */
+  useMp(amount) {
+    if (this.mp < amount) return false;
+    this.mp -= amount;
+    this.onHpChanged(); // Also notifies MP change to UI
+    return true;
+  }
+
+  /** HP/MP 回复 (每帧调用) */
+  updateRegen(delta) {
+    if (this.hp <= 0) return;
+    const hpRegen = this.stats.getDerived().hpRegen;
+    if (hpRegen <= 0) return;
+
+    this.regenTimer += delta;
+    if (this.regenTimer >= 1000) {
+      this.regenTimer -= 1000;
+      if (this.hp < this.maxHp) {
+        this.hp = Math.min(this.maxHp, this.hp + hpRegen);
+        this.onHpChanged();
+      }
+    }
+  }
+
+  /** I-Frames 计时 (每帧调用) */
+  updateIFrames(delta) {
+    if (!this.isInvulnerable) return;
+    this.iFramesTimer -= delta;
+    if (this.iFramesTimer <= 0) {
+      this.isInvulnerable = false;
+      this.iFramesTimer = 0;
+      this.sprite.setAlpha(1);
+    }
+  }
+
+  /** 基础 update — 子类应 super.update(delta) */
+  updateActor(delta) {
+    this.updateIFrames(delta);
+    this.updateRegen(delta);
+  }
+
+  /** 子类覆写 — HP变更时的回调 */
+  onHpChanged() {}
+
+  /** 子类覆写 — 死亡逻辑 */
+  die() {}
+
+  /** 销毁 */
+  destroyActor() {
+    if (this.sprite) this.sprite.destroy();
+  }
+}

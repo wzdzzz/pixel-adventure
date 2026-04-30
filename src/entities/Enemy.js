@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/AssetManager.js';
+import { Actor } from './Actor.js';
 
 export const EnemyState = {
   PATROL: 'PATROL',
@@ -10,10 +11,10 @@ export const EnemyState = {
   DEAD: 'DEAD'
 };
 
-export class Enemy {
+export class Enemy extends Actor {
   constructor(scene, x, y, config = {}) {
-    this.scene = scene;
-    this.config = {
+    // Merge defaults into config
+    const mergedConfig = {
       hp: config.hp || 30,
       damage: config.damage || 10,
       speed: config.speed || 60,
@@ -22,19 +23,33 @@ export class Enemy {
       ...config
     };
 
-    this.sprite = scene.physics.add.sprite(x, y, TEXTURES.ENEMY);
-    this.sprite.setOrigin(0.5, 0.5);
-    this.sprite.setCollideWorldBounds(true);
+    // Use explicit stats from config, or derive from legacy hp/damage/speed values
+    const statsConfig = mergedConfig.stats || {
+      con: Math.ceil(mergedConfig.hp / 10),
+      str: Math.ceil(mergedConfig.damage / 2),
+      int: 1,
+      agi: Math.ceil(mergedConfig.speed / 10)
+    };
+
+    super(scene, x, y, TEXTURES.ENEMY, statsConfig);
+
+    // Enemy-specific config (detection range, patrol range, raw damage, etc.)
+    this.config = mergedConfig;
+
+    // Bounce — added after super(), body is already set up by Actor
     this.sprite.setBounce(0.1);
-    this.sprite.body.setSize(20, 24);
-    this.sprite.body.setOffset(4, 4);
+
+    // Enemy i-frames are shorter than player
+    this.iFramesDuration = 300;
+
+    // Back-reference so collision callbacks can find this Enemy instance
     this.sprite.enemyInstance = this;
 
-    this.hp = this.config.hp;
-    this.maxHp = this.config.hp;
+    // State machine
     this.state = EnemyState.PATROL;
     this.stateTimer = 0;
 
+    // Patrol data
     this.spawnX = x;
     this.spawnY = y;
     this.patrolPointA = { x: x - this.config.patrolRange / 2, y: y };
@@ -42,6 +57,7 @@ export class Enemy {
     this.currentPatrolTarget = this.patrolPointB;
     this.patrolWaitTimer = 0;
 
+    // Combat
     this.attackCooldown = 0;
     this.target = null;
     this.direction = 1;
@@ -49,6 +65,8 @@ export class Enemy {
 
     this.startPatrol();
   }
+
+  // ── State helpers ──────────────────────────────────────────────
 
   setState(newState) {
     this.state = newState;
@@ -64,7 +82,8 @@ export class Enemy {
     const distance = Phaser.Math.Distance.Between(
       this.sprite.x, this.sprite.y, point.x, point.y
     );
-    const duration = (distance / this.config.speed) * 1000;
+    const speed = this.getMoveSpeed();
+    const duration = (distance / speed) * 1000;
 
     if (this.moveTween) {
       this.moveTween.remove();
@@ -74,7 +93,7 @@ export class Enemy {
     this.direction = point.x < this.sprite.x ? -1 : 1;
     this.sprite.setFlipX(this.direction < 0);
 
-    this.scene.physics.moveTo(this.sprite, point.x, point.y, this.config.speed);
+    this.scene.physics.moveTo(this.sprite, point.x, point.y, speed);
 
     this.moveTween = this.scene.time.delayedCall(duration, () => {
       this.moveTween = null;
@@ -86,8 +105,13 @@ export class Enemy {
     });
   }
 
+  // ── Main update ────────────────────────────────────────────────
+
   update(player, delta) {
     if (!player || this.state === EnemyState.DEAD) return;
+
+    // Actor base tick (i-frames, regen, etc.)
+    this.updateActor(delta);
 
     this.stateTimer += delta;
     if (this.attackCooldown > 0) this.attackCooldown -= delta;
@@ -114,6 +138,8 @@ export class Enemy {
     }
   }
 
+  // ── Patrol AI ──────────────────────────────────────────────────
+
   updatePatrol(player, distance) {
     if (this.patrolWaitTimer > 0) {
       this.patrolWaitTimer -= this.scene.game.loop.delta;
@@ -136,6 +162,8 @@ export class Enemy {
     }
   }
 
+  // ── Chase AI ───────────────────────────────────────────────────
+
   updateChase(player, distance) {
     if (distance > this.config.detectionRange * 2) {
       this.target = null;
@@ -149,10 +177,13 @@ export class Enemy {
       return;
     }
 
-    this.scene.physics.moveTo(this.sprite, player.x, player.y, this.config.speed * 1.2);
+    const chaseSpeed = this.getMoveSpeed() * 1.2;
+    this.scene.physics.moveTo(this.sprite, player.x, player.y, chaseSpeed);
     this.direction = player.x < this.sprite.x ? -1 : 1;
     this.sprite.setFlipX(this.direction < 0);
   }
+
+  // ── Attack AI ──────────────────────────────────────────────────
 
   updateAttackStartup(player) {
     this.sprite.setVelocity(0, 0);
@@ -168,52 +199,39 @@ export class Enemy {
 
   updateAttackActive(player, distance) {
     if (this.stateTimer >= 100) {
-      this.scene.events.emit('enemyAttack', this, this.config.damage);
+      this.scene.events.emit('enemyAttack', this, this.getAttack());
       this.attackCooldown = 1500;
       this.setState(EnemyState.CHASE);
     }
   }
 
-  takeDamage(damage, attackerX, attackerY) {
-    if (this.state === EnemyState.HURT || this.state === EnemyState.DEAD) return;
+  // ── Damage ─────────────────────────────────────────────────────
 
-    this.hp -= damage;
+  takeDamage(damage, attackerX, attackerY) {
+    // Use Actor's i-frames to prevent damage stacking, not state check
+    if (this.isInvulnerable || this.state === EnemyState.DEAD) return;
+
+    // Enter HURT state and stop movement
     this.setState(EnemyState.HURT);
     this.sprite.setVelocity(0, 0);
-    this.sprite.setTint(0xff0000);
 
+    // Delegate actual damage, knockback, i-frames & flash to Actor
+    super.takeDamage(damage, attackerX, attackerY);
+
+    // Enemy-specific screen effects
     this.scene.events.emit('hitStop', 50);
     this.scene.events.emit('screenShake', 3, 80);
 
-    const knockbackAngle = Phaser.Math.Angle.Between(
-      attackerX || this.scene.player.sprite.x,
-      attackerY || this.scene.player.sprite.y,
-      this.sprite.x,
-      this.sprite.y
-    );
-    const knockbackForce = 200;
-    this.sprite.setVelocity(
-      Math.cos(knockbackAngle) * knockbackForce,
-      Math.sin(knockbackAngle) * knockbackForce
-    );
-
-    this.scene.tweens.add({
-      targets: this.sprite,
-      alpha: 0.5,
-      duration: 80,
-      yoyo: true,
-      repeat: 2,
-      onComplete: () => {
-        this.sprite.setAlpha(1);
-        this.sprite.clearTint();
-        if (this.hp <= 0) {
-          this.die();
-        } else {
-          this.setState(EnemyState.CHASE);
-        }
+    // After the flash completes (~400ms), resume or let Actor's die() handle death
+    this.scene.time.delayedCall(400, () => {
+      if (this.hp > 0) {
+        this.setState(EnemyState.CHASE);
       }
+      // If hp <= 0 Actor already scheduled die() via its own delayedCall
     });
   }
+
+  // ── Death ──────────────────────────────────────────────────────
 
   die() {
     this.setState(EnemyState.DEAD);
@@ -228,10 +246,12 @@ export class Enemy {
       onComplete: () => {
         this.dropLoot();
         this.scene.events.emit('enemyDeath', this);
-        this.destroy();
+        this.destroyActor();
       }
     });
   }
+
+  // ── Loot ───────────────────────────────────────────────────────
 
   dropLoot() {
     const dropChance = Math.random();
@@ -242,11 +262,13 @@ export class Enemy {
     }
   }
 
+  // ── Cleanup ────────────────────────────────────────────────────
+
   destroy() {
     if (this.moveTween) {
       this.moveTween.remove();
       this.moveTween = null;
     }
-    if (this.sprite) this.sprite.destroy();
+    this.destroyActor();
   }
 }

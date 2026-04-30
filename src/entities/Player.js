@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { TEXTURES } from '../assets/AssetManager.js';
+import { Actor } from './Actor.js';
 
 export const PlayerState = {
   IDLE: 'IDLE',
@@ -12,28 +13,27 @@ export const PlayerState = {
   DEAD: 'DEAD'
 };
 
-export class Player {
+export class Player extends Actor {
   constructor(scene, x, y) {
-    this.scene = scene;
+    // Player default stats: con 10, str 8, int 5, agi 8
+    const statsConfig = { con: 10, str: 8, int: 5, agi: 8 };
+    super(scene, x, y, TEXTURES.PLAYER, statsConfig);
 
-    this.sprite = scene.physics.add.sprite(x, y, TEXTURES.PLAYER);
-    this.sprite.setOrigin(0.5, 0.5);
-    this.sprite.setCollideWorldBounds(true);
+    // Player-specific physics — Actor already created the sprite with circle body
     this.sprite.setBounce(0.1);
     this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
     this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_SPEED, GAME_CONFIG.PHYSICS.PLAYER_SPEED);
-    this.sprite.body.setSize(20, 24);
-    this.sprite.body.setOffset(4, 4);
     this.sprite.playerInstance = this;
 
-    this.hp = 100;
-    this.maxHp = 100;
-    this.direction = { x: 1, y: 0 };
+    // Player uses longer I-Frames (800ms vs Actor default 200ms)
+    this.iFramesDuration = 800;
+
+    // Player state machine
     this.state = PlayerState.IDLE;
     this.stateTimer = 0;
-    this.isInvulnerable = false;
     this.attackHitRegistered = false;
 
+    // Attack hitbox
     this.attackHitbox = scene.add.rectangle(0, 0, 40, 20, 0xffff00, 0);
     scene.physics.add.existing(this.attackHitbox, false);
     this.attackHitbox.body.enable = false;
@@ -50,9 +50,11 @@ export class Player {
     this.slashSprite.setVisible(false);
     this.slashSprite.setAlpha(0);
 
+    // Interact system
     this.interactTarget = null;
     this.canInteract = false;
 
+    // Input
     this.cursors = scene.input.keyboard.createCursorKeys();
     this.wasd = {
       up: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -84,6 +86,9 @@ export class Player {
   }
 
   update(delta) {
+    // Actor base update: I-Frames countdown, HP regen
+    this.updateActor(delta);
+
     this.stateTimer += delta;
     this.updateDirectionToMouse();
 
@@ -148,7 +153,7 @@ export class Player {
       this.sprite.setVelocity(0, 0);
       return;
     }
-    const speed = GAME_CONFIG.PHYSICS.PLAYER_SPEED;
+    const speed = this.getMoveSpeed();
     const len = Math.sqrt(input.x * input.x + input.y * input.y) || 1;
     this.sprite.setVelocity((input.x / len) * speed, (input.y / len) * speed);
   }
@@ -277,50 +282,54 @@ export class Player {
     this.attackHitRegistered = true;
   }
 
+  /**
+   * Override Actor.applyKnockback — Player uses stronger force (600)
+   * and fallback attacker position based on facing direction.
+   */
+  applyKnockback(attackerX, attackerY, _force = 600) {
+    const angle = Phaser.Math.Angle.Between(
+      attackerX ?? (this.sprite.x - this.direction.x * 30),
+      attackerY ?? (this.sprite.y - this.direction.y * 30),
+      this.sprite.x,
+      this.sprite.y
+    );
+    // Apply tenacity reduction
+    const tenacity = this.stats.getDerived().tenacity;
+    const knockbackForce = 600 * (1 - tenacity);
+    this.sprite.setVelocity(
+      Math.cos(angle) * knockbackForce,
+      Math.sin(angle) * knockbackForce
+    );
+  }
+
+  /**
+   * Override Actor.takeDamage — add Player-specific behavior:
+   *  - emit hitStop and screenShake events
+   *  - HURT state transition and drag reset
+   *  - Actor handles: defense calc, HP reduction, I-Frames, knockback, flash, onHpChanged, delayed death
+   */
   takeDamage(damage, attackerX, attackerY) {
     if (this.isInvulnerable || this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
 
-    this.hp = Math.max(0, this.hp - damage);
-    this.isInvulnerable = true;
+    // Cancel any active attack visuals
     this.attackHitbox.body.enable = false;
     this.swordSprite.setVisible(false);
     this.slashSprite.setVisible(false);
 
-    this.setState(PlayerState.HURT);
-
+    // Player-specific screen effects
     this.scene.events.emit('hitStop', 40);
     this.scene.events.emit('screenShake', 5, 100);
 
-    const knockbackAngle = Phaser.Math.Angle.Between(
-      attackerX || this.sprite.x - this.direction.x * 30,
-      attackerY || this.sprite.y - this.direction.y * 30,
-      this.sprite.x,
-      this.sprite.y
-    );
-    const knockbackForce = 600;
-    this.sprite.setVelocity(
-      Math.cos(knockbackAngle) * knockbackForce,
-      Math.sin(knockbackAngle) * knockbackForce
-    );
+    // Transition to HURT state
+    this.setState(PlayerState.HURT);
 
+    // Reduce drag during knockback
     this.sprite.setDrag(1200);
 
-    this.scene.events.emit('playerHpChanged', this.hp, this.maxHp);
+    // Delegate to Actor for defense calc, HP reduction, I-Frames, knockback, flash, onHpChanged
+    super.takeDamage(damage, attackerX, attackerY);
 
-    let flashCount = 0;
-    const flashTimer = this.scene.time.addEvent({
-      delay: 70,
-      callback: () => {
-        flashCount++;
-        if (flashCount % 2 === 0) {
-          this.sprite.setTint(0xff0000);
-        } else {
-          this.sprite.clearTint();
-        }
-      },
-      repeat: 7
-    });
-
+    // 250ms HURT -> IDLE recovery (if still alive)
     this.scene.time.delayedCall(250, () => {
       if (this.state === PlayerState.HURT && this.hp > 0) {
         this.setState(PlayerState.IDLE);
@@ -328,23 +337,24 @@ export class Player {
       }
     });
 
+    // 1000ms delayed drag reset — uses Actor's I-Frames instead of manual isInvulnerable timer
     this.scene.time.delayedCall(1000, () => {
-      this.sprite.clearTint();
-      this.sprite.setAlpha(1);
       this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
-      this.isInvulnerable = false;
-      if (this.hp <= 0) {
-        this.die();
-      }
     });
   }
 
+  /** Override Actor.heal — guard against DEAD state using PlayerState */
   heal(amount) {
     if (this.state === PlayerState.DEAD) return;
-    this.hp = Math.min(this.maxHp, this.hp + amount);
-    this.scene.events.emit('playerHpChanged', this.hp, this.maxHp);
+    super.heal(amount);
   }
 
+  /** Override Actor.onHpChanged — emit player-specific HP/MP event for UI */
+  onHpChanged() {
+    this.scene.events.emit('playerHpChanged', this.hp, this.maxHp, this.mp, this.maxMp);
+  }
+
+  /** Override Actor.die — player death animation and event */
   die() {
     this.setState(PlayerState.DEAD);
     this.sprite.body.enable = false;
@@ -398,12 +408,6 @@ export class Player {
     this.scene.events.emit('playerInteract', this.interactTarget);
   }
 
-  isAttacking() {
-    return this.state === PlayerState.ATTACK_STARTUP ||
-           this.state === PlayerState.ATTACK_ACTIVE ||
-           this.state === PlayerState.ATTACK_RECOVERY;
-  }
-
   getPosition() {
     return { x: this.sprite.x, y: this.sprite.y };
   }
@@ -412,10 +416,11 @@ export class Player {
     // Remove input listeners to prevent ghost handlers after level transition
     if (this._onPointerDown) this.scene.input.off('pointerdown', this._onPointerDown);
     if (this._onEKeyDown && this.eKey) this.eKey.off('down', this._onEKeyDown);
-    if (this.sprite) this.sprite.destroy();
     if (this.attackHitbox) this.attackHitbox.destroy();
     if (this.interactText) this.interactText.destroy();
     if (this.swordSprite) this.swordSprite.destroy();
     if (this.slashSprite) this.slashSprite.destroy();
+    // Actor base cleanup (destroys this.sprite)
+    this.destroyActor();
   }
 }

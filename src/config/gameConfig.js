@@ -18,7 +18,7 @@ export const GAME_CONFIG = {
   },
 
   DEFAULT_STATE: {
-    hp: 100,
+    hp: 100,  // con=10 → maxHp=100
     maxHp: 100,
     score: 0,
     inventory: [],

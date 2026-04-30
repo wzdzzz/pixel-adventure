@@ -27,13 +27,24 @@ export class UIScene extends Phaser.Scene {
   }
 
   createHealthBar() {
-    this.heartIcon = this.add.image(20, 25, TEXTURES.HEART).setScale(0.8).setDepth(2);
-    this.hpBarBg = this.add.rectangle(50, 25, 150, 16, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    // HP
+    this.heartIcon = this.add.image(20, 18, TEXTURES.HEART).setScale(0.8).setDepth(2);
+    this.hpBarBg = this.add.rectangle(50, 18, 150, 12, 0x333333).setOrigin(0, 0.5).setDepth(2);
     this.hpBarBg.setStrokeStyle(1, 0x666666);
-    this.hpBar = this.add.rectangle(51, 25, 148, 14, 0x00ff00).setOrigin(0, 0.5).setDepth(3);
-    this.hpText = this.add.text(210, 25, '100/100', {
-      fontSize: '14px',
+    this.hpBar = this.add.rectangle(51, 18, 148, 10, 0x00ff00).setOrigin(0, 0.5).setDepth(3);
+    this.hpText = this.add.text(210, 18, '100/100', {
+      fontSize: '12px',
       fill: '#ffffff',
+      fontFamily: 'Courier New'
+    }).setOrigin(0, 0.5).setDepth(3);
+
+    // MP
+    this.mpBarBg = this.add.rectangle(50, 35, 150, 10, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    this.mpBarBg.setStrokeStyle(1, 0x444466);
+    this.mpBar = this.add.rectangle(51, 35, 148, 8, 0x4488ff).setOrigin(0, 0.5).setDepth(3);
+    this.mpText = this.add.text(210, 35, '50/50', {
+      fontSize: '11px',
+      fill: '#aaccff',
       fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
   }
@@ -79,8 +90,9 @@ export class UIScene extends Phaser.Scene {
 
   setupEvents() {
     if (this.gameScene) {
-      this.gameScene.events.on('playerHpChanged', (hp, maxHp) => {
+      this.gameScene.events.on('playerHpChanged', (hp, maxHp, mp, maxMp) => {
         this.updateHealthBar(hp, maxHp);
+        if (mp !== undefined) this.updateMpBar(mp, maxMp);
       });
 
       this.gameScene.events.on('scoreChanged', (score) => {
@@ -122,6 +134,13 @@ export class UIScene extends Phaser.Scene {
         yoyo: true
       });
     }
+  }
+
+  updateMpBar(mp, maxMp) {
+    if (!maxMp || maxMp <= 0) return;
+    const percentage = mp / maxMp;
+    this.mpBar.width = Math.max(0, 148 * percentage);
+    this.mpText.setText(`${Math.floor(mp)}/${maxMp}`);
   }
 
   updateScore(score) {
