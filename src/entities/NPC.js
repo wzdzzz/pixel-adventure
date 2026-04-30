@@ -20,6 +20,7 @@ export class NPC {
 
     this.sprite = scene.physics.add.sprite(x, y, TEXTURES.NPC);
     this.sprite.setOrigin(0.5, 0.5);
+    this.sprite.setDisplaySize(28, 32);
     this.sprite.body.setAllowGravity(false);
     this.sprite.body.setImmovable(true);
     this.sprite.npcInstance = this;

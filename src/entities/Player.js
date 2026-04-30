@@ -38,6 +38,7 @@ export class Player {
     scene.physics.add.existing(this.attackHitbox, false);
     this.attackHitbox.body.enable = false;
 
+    // Sword pivots from handle (origin at bottom-center)
     this.swordSprite = scene.add.image(0, 0, TEXTURES.SWORD);
     this.swordSprite.setOrigin(0.5, 1);
     this.swordSprite.setDepth(15);
@@ -68,10 +69,13 @@ export class Player {
       padding: { x: 4, y: 2 }
     }).setOrigin(0.5).setVisible(false).setDepth(10);
 
-    scene.input.on('pointerdown', (pointer) => {
+    // Store handler references for cleanup
+    this._onPointerDown = (pointer) => {
       if (pointer.leftButtonDown()) this.tryAttack();
-    });
-    this.eKey.on('down', () => this.tryInteract());
+    };
+    this._onEKeyDown = () => this.tryInteract();
+    scene.input.on('pointerdown', this._onPointerDown);
+    this.eKey.on('down', this._onEKeyDown);
   }
 
   setState(newState) {
@@ -166,13 +170,14 @@ export class Player {
     this.swordSprite.setAlpha(1);
 
     const angle = this.getAttackAngle();
-    this.swordSprite.setRotation(angle - Math.PI * 0.8);
-    this.swordSprite.setPosition(this.sprite.x + this.direction.x * 16, this.sprite.y + this.direction.y * 16);
+    // Sword starts from body edge, swings an arc in front
+    this.swordSprite.setRotation(angle - Math.PI * 0.6);
+    this.updateSwordPosition();
 
     this.scene.tweens.add({
       targets: this.swordSprite,
-      rotation: angle + Math.PI * 0.4,
-      duration: 200,
+      rotation: angle + Math.PI * 0.3,
+      duration: 180,
       ease: 'Quad.easeOut'
     });
   }
@@ -183,9 +188,10 @@ export class Player {
 
   updateSwordPosition() {
     if (!this.swordSprite.visible) return;
+    // Sword held at body edge (6px from center)
     this.swordSprite.setPosition(
-      this.sprite.x + this.direction.x * 16,
-      this.sprite.y + this.direction.y * 16
+      this.sprite.x + this.direction.x * 6,
+      this.sprite.y + this.direction.y * 6
     );
   }
 
@@ -198,34 +204,35 @@ export class Player {
   }
 
   activateHitbox() {
-    const offset = 30;
+    // Hitbox just in front of the body (18px from center)
+    const offset = 18;
     let hx = this.sprite.x, hy = this.sprite.y;
-    if (this.direction.x > 0.3) { hx += offset; this.attackHitbox.setSize(40, 24); }
-    else if (this.direction.x < -0.3) { hx -= offset; this.attackHitbox.setSize(40, 24); }
-    else if (this.direction.y < -0.3) { hy -= offset; this.attackHitbox.setSize(24, 40); }
-    else if (this.direction.y > 0.3) { hy += offset; this.attackHitbox.setSize(24, 40); }
-    else { hx += offset; this.attackHitbox.setSize(40, 24); }
+    if (this.direction.x > 0.3) { hx += offset; this.attackHitbox.setSize(28, 24); }
+    else if (this.direction.x < -0.3) { hx -= offset; this.attackHitbox.setSize(28, 24); }
+    else if (this.direction.y < -0.3) { hy -= offset; this.attackHitbox.setSize(24, 28); }
+    else if (this.direction.y > 0.3) { hy += offset; this.attackHitbox.setSize(24, 28); }
+    else { hx += offset; this.attackHitbox.setSize(28, 24); }
     this.attackHitbox.setPosition(hx, hy);
     this.attackHitbox.body.enable = true;
 
     this.slashSprite.setPosition(hx, hy);
     this.slashSprite.setVisible(true);
     this.slashSprite.setAlpha(0.9);
-    this.slashSprite.setScale(0.5);
+    this.slashSprite.setScale(0.4);
     this.slashSprite.setRotation(this.getAttackAngle());
 
     this.scene.tweens.add({
       targets: this.slashSprite,
-      scaleX: 1.2,
-      scaleY: 1.2,
+      scaleX: 1.0,
+      scaleY: 1.0,
       alpha: 0,
-      duration: 200,
+      duration: 180,
       ease: 'Quad.easeOut'
     });
   }
 
   handleAttackActive() {
-    const offset = 30;
+    const offset = 18;
     let hx = this.sprite.x, hy = this.sprite.y;
     if (this.direction.x > 0.3) hx += offset;
     else if (this.direction.x < -0.3) hx -= offset;
@@ -241,7 +248,7 @@ export class Player {
       this.scene.tweens.add({
         targets: this.swordSprite,
         alpha: 0,
-        duration: 150,
+        duration: 120,
         onComplete: () => {
           this.swordSprite.setVisible(false);
           this.slashSprite.setVisible(false);
@@ -382,6 +389,11 @@ export class Player {
 
   tryInteract() {
     if (this.state === PlayerState.DEAD) return;
+    // When dialogue is open, always emit so pagination can advance
+    if (this.scene.dialoguing) {
+      this.scene.events.emit('playerInteract', this.interactTarget);
+      return;
+    }
     if (!this.canInteract || !this.interactTarget) return;
     this.scene.events.emit('playerInteract', this.interactTarget);
   }
@@ -397,6 +409,9 @@ export class Player {
   }
 
   destroy() {
+    // Remove input listeners to prevent ghost handlers after level transition
+    if (this._onPointerDown) this.scene.input.off('pointerdown', this._onPointerDown);
+    if (this._onEKeyDown && this.eKey) this.eKey.off('down', this._onEKeyDown);
     if (this.sprite) this.sprite.destroy();
     if (this.attackHitbox) this.attackHitbox.destroy();
     if (this.interactText) this.interactText.destroy();

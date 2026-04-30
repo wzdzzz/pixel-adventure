@@ -35,7 +35,7 @@ export class UIManager {
       wordWrap: { width: width - 40 }
     });
 
-    const closeHint = this.scene.add.text(width / 2 - 20, height / 2 - 15, '[E]', {
+    const closeHint = this.scene.add.text(width / 2 - 20, height / 2 - 15, '[E] 下一页', {
       fontSize: '11px',
       fill: '#888888',
       fontFamily: 'Courier New'
@@ -54,13 +54,30 @@ export class UIManager {
       dialogueText,
       closeHint,
       isOpen: false,
-      typewriterTimer: null
+      typewriterTimer: null,
+      // Pagination state
+      pages: [],
+      currentPage: 0,
+      typewriterDone: false
     };
   }
 
-  openWindow(windowObj, name, text, onComplete) {
+  /**
+   * Open a paginated dialogue window.
+   * @param {object} windowObj
+   * @param {string} name - speaker name
+   * @param {string|string[]} pages - single text or array of pages
+   * @param {Function} onAllComplete - called when ALL pages are read and closed
+   */
+  openWindow(windowObj, name, pages, onAllComplete) {
     if (windowObj.isOpen) return;
     windowObj.isOpen = true;
+    windowObj.typewriterDone = false;
+
+    // Normalize to array
+    windowObj.pages = Array.isArray(pages) ? pages : [pages];
+    windowObj.currentPage = 0;
+    windowObj.onAllComplete = onAllComplete || null;
 
     windowObj.nameText.setText(name);
     windowObj.dialogueText.setText('');
@@ -76,9 +93,57 @@ export class UIManager {
       duration: 200,
       ease: 'Back.easeOut',
       onComplete: () => {
-        this.typewriterEffect(windowObj, text, onComplete);
+        this.showPage(windowObj);
       }
     });
+  }
+
+  showPage(windowObj) {
+    const text = windowObj.pages[windowObj.currentPage];
+    const isLastPage = windowObj.currentPage >= windowObj.pages.length - 1;
+
+    windowObj.typewriterDone = false;
+    windowObj.dialogueText.setText('');
+    windowObj.closeHint.setText('...');
+
+    this.typewriterEffect(windowObj, text, () => {
+      windowObj.typewriterDone = true;
+      windowObj.closeHint.setText(isLastPage ? '[E] 关闭' : '[E] 下一页');
+    });
+  }
+
+  /**
+   * Advance to next page or close if on last page.
+   * Returns true if window was closed.
+   */
+  advancePage(windowObj) {
+    if (!windowObj.isOpen) return true;
+
+    // If typewriter still running, skip to full text
+    if (!windowObj.typewriterDone) {
+      if (windowObj.typewriterTimer) {
+        windowObj.typewriterTimer.remove();
+        windowObj.typewriterTimer = null;
+      }
+      const text = windowObj.pages[windowObj.currentPage];
+      windowObj.dialogueText.setText(text);
+      windowObj.typewriterDone = true;
+      const isLastPage = windowObj.currentPage >= windowObj.pages.length - 1;
+      windowObj.closeHint.setText(isLastPage ? '[E] 关闭' : '[E] 下一页');
+      return false;
+    }
+
+    // Advance to next page
+    windowObj.currentPage++;
+    if (windowObj.currentPage < windowObj.pages.length) {
+      this.showPage(windowObj);
+      return false;
+    }
+
+    // All pages read - close
+    this.closeWindow(windowObj);
+    if (windowObj.onAllComplete) windowObj.onAllComplete();
+    return true;
   }
 
   typewriterEffect(windowObj, text, onComplete) {

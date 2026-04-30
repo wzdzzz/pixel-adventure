@@ -1,9 +1,33 @@
 import Phaser from 'phaser';
-import { AssetManager } from '../assets/AssetManager.js';
+import { AssetManager, TEXTURES } from '../assets/AssetManager.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BootScene' });
+  }
+
+  preload() {
+    // Load real sprite images — these override generated textures
+    const sprites = {
+      [TEXTURES.CHEST_CLOSED]: 'sprites/chest_closed.png',
+      [TEXTURES.CHEST_OPEN]: 'sprites/chest_open.png',
+      [TEXTURES.CHEST_LOCKED]: 'sprites/chest_locked.png',
+      [TEXTURES.COIN]: 'sprites/coin.png',
+      [TEXTURES.POTION]: 'sprites/potion.png',
+      [TEXTURES.CAMPFIRE]: 'sprites/campfire.png',
+      [TEXTURES.SIGN]: 'sprites/sign.png',
+      [TEXTURES.STONE]: 'sprites/stone.png',
+      [TEXTURES.ARTIFACT]: 'sprites/artifact.png',
+      [TEXTURES.NPC]: 'sprites/npc.png',
+      [TEXTURES.BARREL]: 'sprites/barrel.png',
+      [TEXTURES.GEM]: 'sprites/gem.png',
+      [TEXTURES.LANTERN]: 'sprites/lantern.png',
+      [TEXTURES.ROCK_CANDLE]: 'sprites/rock_candle.png',
+      [TEXTURES.HEAL_ICON]: 'sprites/heal_icon.png',
+    };
+    for (const [key, path] of Object.entries(sprites)) {
+      this.load.image(key, path);
+    }
   }
 
   create() {
@@ -42,7 +66,8 @@ export class BootScene extends Phaser.Scene {
       inventory: [],
       keysCollected: 0,
       hasArtifact: false,
-      playerPosition: { x: 100, y: 100 },
+      currentLevel: 0,
+      playerPosition: { x: 150, y: 150 },
       collectedItems: []
     });
 

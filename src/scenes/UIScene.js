@@ -13,6 +13,7 @@ export class UIScene extends Phaser.Scene {
     this.createHealthBar();
     this.createScoreDisplay();
     this.createKeyDisplay();
+    this.createLevelDisplay();
     this.createControlsHint();
     this.setupEvents();
   }
@@ -60,8 +61,16 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setDepth(2);
   }
 
+  createLevelDisplay() {
+    this.levelText = this.add.text(720, 25, '第一关', {
+      fontSize: '12px',
+      fill: '#7c4dff',
+      fontFamily: 'Courier New'
+    }).setOrigin(0.5, 0.5).setDepth(2);
+  }
+
   createControlsHint() {
-    this.add.text(400, 585, 'WASD:移动 | 空格:攻击 | E:交互', {
+    this.add.text(400, 585, 'WASD:移动 | 鼠标左键:攻击 | E:交互', {
       fontSize: '12px',
       fill: '#888888',
       fontFamily: 'Courier New'
@@ -80,6 +89,10 @@ export class UIScene extends Phaser.Scene {
 
       this.gameScene.events.on('keysChanged', (count) => {
         this.updateKeyCount(count);
+      });
+
+      this.gameScene.events.on('levelChanged', (name, index) => {
+        this.updateLevelDisplay(name, index);
       });
     }
   }
@@ -130,6 +143,15 @@ export class UIScene extends Phaser.Scene {
       scaleY: 1.3,
       duration: 100,
       yoyo: true
+    });
+  }
+
+  updateLevelDisplay(name, index) {
+    this.levelText.setText(name);
+    this.tweens.add({
+      targets: this.levelText,
+      scaleX: 1.3, scaleY: 1.3,
+      duration: 200, yoyo: true
     });
   }
 
