@@ -112,6 +112,7 @@ export class VictoryScene extends Phaser.Scene {
         inventory: [],
         keysCollected: 0,
         hasArtifact: false,
+        currentLevel: 0,
         playerPosition: { x: 150, y: 150 },
         collectedItems: []
       });
@@ -129,6 +130,7 @@ export class VictoryScene extends Phaser.Scene {
         inventory: [],
         keysCollected: 0,
         hasArtifact: false,
+        currentLevel: 0,
         playerPosition: { x: 150, y: 150 },
         collectedItems: []
       });

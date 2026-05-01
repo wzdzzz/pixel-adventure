@@ -18,20 +18,25 @@ export class SaveSystem {
 
       const saveData = {
         timestamp: Date.now(),
-        version: '1.0.0',
+        version: '2.0.0',
         player: {
           position: playerPosition,
           hp: scene.player ? scene.player.hp : 100,
-          maxHp: scene.player ? scene.player.maxHp : 100
+          maxHp: scene.player ? scene.player.maxHp : 100,
+          stats: scene.player ? scene.player.stats.toJSON() : null
         },
         gameState: {
           score: gameState.score,
           keysCollected: gameState.keysCollected,
           hasArtifact: gameState.hasArtifact,
-          collectedItems: gameState.collectedItems || []
+          collectedItems: gameState.collectedItems || [],
+          currentLevel: gameState.currentLevel || 0
         },
         inventory: scene.inventory ? scene.inventory.exportData() : [],
-        levelSystem: scene.levelSystem ? scene.levelSystem.toJSON() : null
+        levelSystem: scene.levelSystem ? scene.levelSystem.toJSON() : null,
+        equipment: scene.equipmentSystem ? scene.equipmentSystem.toJSON() : null,
+        skillTree: scene.skillTreeSystem ? scene.skillTreeSystem.toJSON() : null,
+        quests: scene.questSystem ? scene.questSystem.toJSON() : null
       };
 
       localStorage.setItem(SaveSystem.SAVE_KEY, JSON.stringify(saveData));
@@ -70,7 +75,8 @@ export class SaveSystem {
         score: saveData.gameState.score,
         keysCollected: saveData.gameState.keysCollected,
         hasArtifact: saveData.gameState.hasArtifact,
-        collectedItems: saveData.gameState.collectedItems || []
+        collectedItems: saveData.gameState.collectedItems || [],
+        currentLevel: saveData.gameState.currentLevel || 0
       });
 
       // 恢复背包
@@ -87,6 +93,29 @@ export class SaveSystem {
           scene.player.stats.invalidate();
           scene.player.refreshStats();
         }
+      }
+
+      // Restore equipment system
+      if (scene.equipmentSystem && saveData.equipment) {
+        scene.equipmentSystem.fromJSON(saveData.equipment);
+      }
+
+      // Restore skill tree
+      if (scene.skillTreeSystem && saveData.skillTree) {
+        scene.skillTreeSystem.fromJSON(saveData.skillTree);
+      }
+
+      // Restore quest progress
+      if (scene.questSystem && saveData.quests) {
+        scene.questSystem.fromJSON(saveData.quests);
+      }
+
+      // Restore player stats if saved
+      if (scene.player && saveData.player?.stats?.base) {
+        Object.keys(saveData.player.stats.base).forEach(key => {
+          scene.player.stats.setBase(key, saveData.player.stats.base[key]);
+        });
+        scene.player.refreshStats();
       }
 
       // 恢复玩家位置（在 MainGameScene 中处理）
