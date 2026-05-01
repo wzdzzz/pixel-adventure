@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/AssetManager.js';
-import { WARRIOR_SKILLS, SKILL_SLOTS, getSkillAtLevel } from '../data/warriorSkills.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -24,9 +23,23 @@ export class UIScene extends Phaser.Scene {
     // Listen for resize events to reposition all HUD elements
     this.scale.on('resize', this.onResize, this);
 
-    // Cleanup resize listener when the scene shuts down
+    // Cleanup all external listeners when the scene shuts down
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
+      // 移除挂在 MainGameScene 事件上的监听，防止场景重启时引用已销毁的 UI 对象
+      if (this.gameScene) {
+        this.gameScene.events.off('playerHpChanged');
+        this.gameScene.events.off('playerResourceChanged');
+        this.gameScene.events.off('scoreChanged');
+        this.gameScene.events.off('keysChanged');
+        this.gameScene.events.off('levelChanged');
+        this.gameScene.events.off('xpChanged');
+        this.gameScene.events.off('levelUp');
+        this.gameScene.events.off('goldChanged');
+        this.gameScene.events.off('questActivated');
+        this.gameScene.events.off('questProgressUpdated');
+        this.gameScene.events.off('questCompleted');
+      }
     });
   }
 
@@ -154,10 +167,15 @@ export class UIScene extends Phaser.Scene {
 
     this.skillSlots = [];
 
+    // Read skill slots and defs from the player dynamically
+    const player = this.gameScene?.player;
+    const playerSlots = player?.skillSlots || [null, null, null, null];
+    const skillDefs = player?.skillEngine?.getSkillDefs() || {};
+
     for (let i = 0; i < 4; i++) {
       const x = startX + i * (slotSize + gap) + slotSize / 2;
-      const skillId = SKILL_SLOTS[i];
-      const base = skillId ? WARRIOR_SKILLS[skillId] : null;
+      const skillId = playerSlots[i];
+      const base = skillId ? skillDefs[skillId] : null;
 
       // Slot background
       const bg = this.add.rectangle(x, slotY, slotSize, slotSize, 0x1a1a2e, 0.85)
