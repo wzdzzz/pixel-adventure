@@ -53,6 +53,24 @@ export class MainGameScene extends Phaser.Scene {
     this.loadLevel(this.currentLevel);
     this.setupEvents();
 
+    // Panel toggle keys
+    this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+    this.iKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
+    this.gamePaused = false;
+
+    const openPanel = () => {
+      if (this.scene.isActive('PanelScene') || this.gamePaused) return;
+      this.pauseGame();
+      this.scene.launch('PanelScene');
+      this.scene.bringToTop('PanelScene');
+    };
+
+    this.tabKey.on('down', (event) => {
+      if (event.originalEvent) event.originalEvent.preventDefault();
+      openPanel();
+    });
+    this.iKey.on('down', () => openPanel());
+
     this.time.addEvent({
       delay: 30000,
       callback: () => SaveSystem.save(this),
@@ -1018,6 +1036,16 @@ export class MainGameScene extends Phaser.Scene {
     this.time.delayedCall(1000, () => this.scene.start('GameOverScene'));
   }
 
+  pauseGame() {
+    this.physics.pause();
+    this.gamePaused = true;
+  }
+
+  resumeGame() {
+    this.physics.resume();
+    this.gamePaused = false;
+  }
+
   update(time, delta) {
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= delta;
@@ -1027,6 +1055,8 @@ export class MainGameScene extends Phaser.Scene {
       }
       return;
     }
+
+    if (this.gamePaused) return;
 
     if (this.screenShakeTimer > 0) {
       this.screenShakeTimer -= delta;

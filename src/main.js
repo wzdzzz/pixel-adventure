@@ -5,6 +5,7 @@ import { MainGameScene } from './scenes/MainGameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { VictoryScene } from './scenes/VictoryScene.js';
+import { PanelScene } from './scenes/PanelScene.js';
 
 /**
  * 游戏入口文件
@@ -24,6 +25,7 @@ const scenes = [
   BootScene,
   MainGameScene,
   UIScene,
+  PanelScene,
   GameOverScene,
   VictoryScene
 ];
