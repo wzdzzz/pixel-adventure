@@ -6,8 +6,8 @@ export const GAME_CONFIG = {
 
   MAP: {
     TILE_SIZE: 32,
-    WIDTH: 50,
-    HEIGHT: 40
+    WIDTH: 80,
+    HEIGHT: 60
   },
 
   PHYSICS: {
@@ -52,7 +52,7 @@ export function createPhaserConfig(scenes) {
     },
     scene: scenes,
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH
     }
   };

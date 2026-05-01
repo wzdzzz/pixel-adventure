@@ -16,11 +16,17 @@ export class UIScene extends Phaser.Scene {
     this.createLevelDisplay();
     this.createControlsHint();
     this.setupEvents();
+
+    // Listen for resize events to reposition all HUD elements
+    this.scale.on('resize', this.onResize, this);
   }
 
   createHUD() {
-    this.hudBg = this.add.rectangle(0, 0, 800, 50, 0x000000, 0.7).setOrigin(0, 0);
-    this.bottomBar = this.add.rectangle(0, 570, 800, 30, 0x000000, 0.5).setOrigin(0, 0);
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    this.hudBg = this.add.rectangle(0, 0, width, 50, 0x000000, 0.7).setOrigin(0, 0);
+    this.bottomBar = this.add.rectangle(0, height - 30, width, 30, 0x000000, 0.5).setOrigin(0, 0);
 
     this.hudBg.setDepth(1);
     this.bottomBar.setDepth(1);
@@ -50,13 +56,15 @@ export class UIScene extends Phaser.Scene {
   }
 
   createScoreDisplay() {
-    this.add.text(400, 15, '分数', {
+    const width = this.cameras.main.width;
+
+    this.scoreLabelText = this.add.text(width / 2, 15, '分数', {
       fontSize: '12px',
       fill: '#aaaaaa',
       fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(2);
 
-    this.scoreText = this.add.text(400, 32, '0', {
+    this.scoreText = this.add.text(width / 2, 32, '0', {
       fontSize: '18px',
       fill: '#ffff00',
       fontFamily: 'Courier New'
@@ -64,8 +72,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   createKeyDisplay() {
-    this.keyIcon = this.add.image(600, 25, TEXTURES.KEY).setScale(0.8).setDepth(2);
-    this.keyText = this.add.text(620, 25, 'x0', {
+    const width = this.cameras.main.width;
+
+    this.keyIcon = this.add.image(width - 200, 25, TEXTURES.KEY).setScale(0.8).setDepth(2);
+    this.keyText = this.add.text(width - 180, 25, 'x0', {
       fontSize: '14px',
       fill: '#ff69b4',
       fontFamily: 'Courier New'
@@ -73,7 +83,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   createLevelDisplay() {
-    this.levelText = this.add.text(720, 25, '第一关', {
+    const width = this.cameras.main.width;
+
+    this.levelText = this.add.text(width - 80, 25, '第一关', {
       fontSize: '12px',
       fill: '#7c4dff',
       fontFamily: 'Courier New'
@@ -81,11 +93,47 @@ export class UIScene extends Phaser.Scene {
   }
 
   createControlsHint() {
-    this.add.text(400, 585, 'WASD:移动 | 左键:攻击 | E:交互', {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    this.controlsText = this.add.text(width / 2, height - 15, 'WASD:移动 | 左键:攻击 | E:交互', {
       fontSize: '12px',
       fill: '#888888',
       fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(2);
+  }
+
+  onResize(gameSize) {
+    const width = gameSize.width;
+    const height = gameSize.height;
+
+    // Update camera size
+    this.cameras.main.setSize(width, height);
+
+    // Top bar: full width
+    this.hudBg.setPosition(0, 0);
+    this.hudBg.width = width;
+
+    // Bottom bar: full width, anchored to bottom
+    this.bottomBar.setPosition(0, height - 30);
+    this.bottomBar.width = width;
+
+    // HP/MP bars: top-left, fixed offset (20, 18) — no change needed for these
+    // (heartIcon, hpBarBg, hpBar, hpText, mpBarBg, mpBar, mpText stay at fixed left positions)
+
+    // Score: top-center
+    this.scoreLabelText.setPosition(width / 2, 15);
+    this.scoreText.setPosition(width / 2, 32);
+
+    // Keys: top-right
+    this.keyIcon.setPosition(width - 200, 25);
+    this.keyText.setPosition(width - 180, 25);
+
+    // Level name: top-right
+    this.levelText.setPosition(width - 80, 25);
+
+    // Controls hint: bottom-center
+    this.controlsText.setPosition(width / 2, height - 15);
   }
 
   setupEvents() {
