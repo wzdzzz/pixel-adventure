@@ -672,7 +672,7 @@ export class PanelScene extends Phaser.Scene {
         // Determine which slot to compare against
         let compareSlot = item.slot;
         if (compareSlot === 'ring1' || compareSlot === 'ring2') {
-          compareSlot = equip?.getSlot('ring1') ? 'ring1' : 'ring2';
+          compareSlot = equip?.getSlot('ring1') === null ? 'ring1' : 'ring2';
         }
         const currentEquip = equip ? equip.getSlot(compareSlot) : null;
 

@@ -111,22 +111,18 @@ export class SaveSystem {
         scene.questSystem.fromJSON(saveData.quests);
       }
 
-      // Restore player stats if saved
-      if (scene.player && saveData.player?.stats) {
-        const saved = saveData.player.stats;
-        if (saved.base) {
-          Object.keys(saved.base).forEach(key => {
-            scene.player.stats.setBase(key, saved.base[key]);
-          });
-        }
-        if (saved.bonuses) {
-          Object.assign(scene.player.stats.bonuses, saved.bonuses);
-        }
-        if (saved.flatBonuses) {
-          Object.assign(scene.player.stats.flatBonuses, saved.flatBonuses);
-        }
+      // Restore player base stats (bonuses/flatBonuses are reconstructed by equipment + level systems)
+      if (scene.player && saveData.player?.stats?.base) {
+        Object.keys(saveData.player.stats.base).forEach(key => {
+          scene.player.stats.setBase(key, saveData.player.stats.base[key]);
+        });
         scene.player.stats.invalidate();
         scene.player.refreshStats();
+      }
+
+      // Re-apply equipment bonuses after base stats are restored
+      if (scene.equipmentSystem) {
+        scene.equipmentSystem._applyBonuses();
       }
 
       // 恢复玩家位置（在 MainGameScene 中处理）
