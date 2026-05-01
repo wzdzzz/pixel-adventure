@@ -3,7 +3,10 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { TEXTURES } from '../assets/AssetManager.js';
 import { Actor } from './Actor.js';
 import { SkillEngine } from '../systems/SkillEngine.js';
-import { SKILL_SLOTS } from '../data/warriorSkills.js';
+import { getClassConfig } from '../data/classConfig.js';
+import * as WarriorModule from '../data/warriorSkills.js';
+import * as ArcherModule from '../data/archerSkills.js';
+import * as MageModule from '../data/mageSkills.js';
 
 export const PlayerState = {
   IDLE: 'IDLE',
@@ -17,15 +20,25 @@ export const PlayerState = {
   DEAD: 'DEAD'
 };
 
+const SKILL_MODULES = {
+  warrior: WarriorModule,
+  archer: ArcherModule,
+  mage: MageModule
+};
+
 export class Player extends Actor {
-  constructor(scene, x, y) {
-    const statsConfig = { con: 10, str: 8, int: 5, agi: 8, per: 5, lck: 3 };
-    super(scene, x, y, 'hero_00', statsConfig, 'hero');
+  constructor(scene, x, y, classType = 'warrior', gender = 'male') {
+    const classConfig = getClassConfig(classType);
+    super(scene, x, y, 'hero_00', classConfig.baseStats, classConfig.texturePrefix);
+
+    this.classType = classType;
+    this.gender = gender;
+    this.classConfig = classConfig;
 
     this.sprite.setBounce(0);
     this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
     this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_SPEED, GAME_CONFIG.PHYSICS.PLAYER_SPEED);
-    this.sprite.body.pushable = false;  // Player cannot be pushed by enemies
+    this.sprite.body.pushable = false;
     this.sprite.playerInstance = this;
 
     this.iFramesDuration = 800;
@@ -38,7 +51,7 @@ export class Player extends Actor {
     // Facing direction: 1 = right, -1 = left
     this.facing = 1;
 
-    // Attack hitbox (invisible rectangle)
+    // Attack hitbox
     this.attackHitbox = scene.add.rectangle(0, 0, 40, 36, 0xffff00, 0);
     scene.physics.add.existing(this.attackHitbox, false);
     this.attackHitbox.body.enable = false;
@@ -64,7 +77,6 @@ export class Player extends Actor {
       padding: { x: 4, y: 2 }
     }).setOrigin(0.5).setVisible(false).setDepth(10);
 
-    // Store handler references for cleanup
     this._onPointerDown = (pointer) => {
       if (pointer.leftButtonDown() && !scene.gamePaused) this.tryAttack();
     };
@@ -72,16 +84,21 @@ export class Player extends Actor {
     scene.input.on('pointerdown', this._onPointerDown);
     this.eKey.on('down', this._onEKeyDown);
 
-    // Skill system
-    this.skillEngine = new SkillEngine(scene, this);
+    // ─── Skill System (class-aware) ───
+    const skillModule = SKILL_MODULES[classType] || SKILL_MODULES.warrior;
+    this._skillModule = skillModule; // exposed for UI panels
+    this.skillSlots = [...skillModule.SKILL_SLOTS];
+    const SKILL_DEFS_KEY = { warrior: 'WARRIOR_SKILLS', archer: 'ARCHER_SKILLS', mage: 'MAGE_SKILLS' };
+    const skillDefs = skillModule[SKILL_DEFS_KEY[classType]] || {};
+    this.skillEngine = new SkillEngine(scene, this, skillDefs, skillModule.getSkillAtLevel);
 
-    // Skill hitbox (reusable, separate from attackHitbox)
+    // Skill hitbox (reusable)
     this.skillHitbox = scene.add.rectangle(0, 0, 10, 10, 0xff0000, 0);
     scene.physics.add.existing(this.skillHitbox, false);
     this.skillHitbox.body.setAllowGravity(false);
     this.skillHitbox.body.enable = false;
 
-    // Bind number keys 1-4 to skill slots
+    // Bind number keys 1-4
     this.skillKeys = [
       scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
@@ -96,11 +113,10 @@ export class Player extends Actor {
       key.on('down', handler);
     });
 
-    // Charge skill dash state
+    // Skill state
     this._chargeDashVelocity = null;
+    this._chargeDashDir = null;
     this._chargeHitRegistered = false;
-
-    // Whirlwind skill state
     this._whirlwindSuperArmor = false;
     this._whirlwindMoveSpeedMod = 0;
     this._whirlwindTween = null;
@@ -184,7 +200,6 @@ export class Player extends Actor {
     const speed = this.getMoveSpeed();
     const len = Math.sqrt(input.x * input.x + input.y * input.y) || 1;
     this.sprite.setVelocity((input.x / len) * speed, (input.y / len) * speed);
-    // Use walk_up animation when moving upward without horizontal input
     if (input.y < 0 && input.x === 0) {
       this.playAnim('walk_up');
     } else {
@@ -199,7 +214,16 @@ export class Player extends Actor {
     this.sprite.setVelocity(0, 0);
     this.attackHitRegistered = false;
     this.setState(PlayerState.ATTACK_STARTUP);
-    this.playAnim('attack', false);
+
+    if (this.isRangedClass()) {
+      this.playAnim('idle');
+      // Brief "charge" tint for ranged classes
+      const tint = this.classType === 'archer' ? 0xccffcc : 0xccccff;
+      this.sprite.setTint(tint);
+      this.scene.time.delayedCall(120, () => { if (this.sprite) this.sprite.clearTint(); });
+    } else {
+      this.playAnim('attack', false);
+    }
   }
 
   handleAttackStartup() {
@@ -207,26 +231,32 @@ export class Player extends Actor {
     if (this.stateTimer >= 100) {
       this.setState(PlayerState.ATTACK_ACTIVE);
       this.activateHitbox();
+
+      // Ranged classes: spawn basic-attack projectile
+      if (this.isRangedClass()) {
+        const color = this.classType === 'archer' ? 0xccff44 : 0x88aaff;
+        this.spawnProjectile(this.facing * 60, 0, color, 4, 2);
+      }
     }
   }
 
   activateHitbox() {
-    const offset = 22;
+    const offset = this.isRangedClass() ? 50 : 22;
     const hx = this.sprite.x + this.facing * offset;
     const hy = this.sprite.y;
-    this.attackHitbox.setSize(40, 36);
+    const hw = this.isRangedClass() ? 20 : 40;
+    const hh = this.isRangedClass() ? 16 : 36;
+    this.attackHitbox.setSize(hw, hh);
     this.attackHitbox.setPosition(hx, hy);
     this.attackHitbox.body.enable = true;
   }
 
   handleAttackActive() {
-    // Keep hitbox following player
-    const offset = 22;
+    const offset = this.isRangedClass() ? 50 : 22;
     this.attackHitbox.setPosition(
       this.sprite.x + this.facing * offset,
       this.sprite.y
     );
-
     if (this.stateTimer >= 100) {
       this.attackHitbox.body.enable = false;
       this.setState(PlayerState.ATTACK_RECOVERY);
@@ -240,6 +270,11 @@ export class Player extends Actor {
     }
   }
 
+  /** Returns true for archer/mage */
+  isRangedClass() {
+    return this.classConfig?.attackType === 'ranged' || this.classConfig?.attackType === 'magic';
+  }
+
   isAttacking() {
     return this.state === PlayerState.ATTACK_STARTUP ||
            this.state === PlayerState.ATTACK_ACTIVE ||
@@ -250,38 +285,34 @@ export class Player extends Actor {
   onAttackHit() {
     if (this.attackHitRegistered) return;
     this.attackHitRegistered = true;
-
-    // Rage gain on dealing damage
     this.addRage(8);
   }
 
-  // Player has no knockback — override to do nothing
   applyKnockback() {}
 
   takeDamage(damage, attackerX, attackerY) {
-    // Whirlwind: fully invulnerable (isInvulnerable is already true)
     if (this.isInvulnerable || this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
 
-    // Cancel any active skill on hit (e.g. charge gets interrupted)
+    // Apply damage reduction from status effects
+    const mods = this.statusEffects.getModifiers();
+    if (mods.damageReduction) {
+      damage = Math.floor(damage * (1 - mods.damageReduction));
+    }
+
     if (this.state === PlayerState.SKILL_CASTING) {
       this.skillEngine.cancelActiveSkill();
       this.skillHitbox.body.enable = false;
       this._chargeDashVelocity = null;
       this._chargeDashDir = null;
-      if (this._whirlwindTween) { this._whirlwindTween.stop(); this._whirlwindTween = null; }
-      this.sprite.setAngle(0);
+      this._cleanupSkillVisuals();
     }
 
     this.attackHitbox.body.enable = false;
-
     this.scene.events.emit('screenShake', 3, 80);
-
     this.setState(PlayerState.HURT);
     this.playAnim('hurt', false);
 
     super.takeDamage(damage, attackerX, attackerY);
-
-    // Rage gain on taking damage
     this.addRage(12);
 
     this.scene.time.delayedCall(200, () => {
@@ -307,48 +338,52 @@ export class Player extends Actor {
 
   die() {
     this.setState(PlayerState.DEAD);
+    this.statusEffects.clearAll();
     this.sprite.body.enable = false;
     this.sprite.setTint(0xff0000);
     this.playAnim('die', false);
 
     this.scene.tweens.add({
       targets: this.sprite,
-      alpha: 0,
-      scaleX: 2,
-      scaleY: 2,
+      alpha: 0, scaleX: 2, scaleY: 2,
       duration: 1000,
       onComplete: () => this.scene.events.emit('playerDeath')
     });
   }
 
-  // ─── Skill System ───
+  // ═══════════════════════════════════════════════
+  // Skill System
+  // ═══════════════════════════════════════════════
 
-  /** Try to activate a skill by slot index (0-3). */
   trySkill(slotIndex) {
     if (this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
     if (this.state === PlayerState.SKILL_CASTING) return;
     if (this.scene.gamePaused) return;
 
-    const skillId = SKILL_SLOTS[slotIndex];
+    const skillId = this.skillSlots[slotIndex];
     if (!skillId) return;
 
     const skill = this.skillEngine.execute(skillId);
     if (!skill) return;
 
-    // Stop movement, enter casting state
     this.sprite.setVelocity(0, 0);
     this.attackHitbox.body.enable = false;
     this.setState(PlayerState.SKILL_CASTING);
-    this.playAnim('attack', false); // reuse attack anim for now
 
-    // Whirlwind: invulnerable from startup (not just active phase)
+    // Ranged classes: don't play melee attack anim for non-dash skills
+    if (this.isRangedClass() && skill.effect.type !== 'dash') {
+      this.playAnim('idle');
+    } else {
+      this.playAnim('attack', false);
+    }
+
+    // Spin: invulnerable from startup
     if (skill.effect.type === 'spin') {
       this._whirlwindSuperArmor = true;
       this.isInvulnerable = true;
     }
   }
 
-  /** Handle SKILL_CASTING state each frame. */
   handleSkillCasting(delta) {
     const activeSkill = this.skillEngine.getActiveSkill();
 
@@ -360,73 +395,79 @@ export class Player extends Actor {
         const baseSpeed = this.getMoveSpeed();
         const modifiedSpeed = baseSpeed * (1 + this._whirlwindMoveSpeedMod);
         const len = Math.sqrt(input.x * input.x + input.y * input.y) || 1;
-        this.sprite.setVelocity(
-          (input.x / len) * modifiedSpeed,
-          (input.y / len) * modifiedSpeed
-        );
+        this.sprite.setVelocity((input.x / len) * modifiedSpeed, (input.y / len) * modifiedSpeed);
       } else {
         this.sprite.setVelocity(0, 0);
       }
     }
 
-    // Update active skill hitbox position
+    // Update hitbox position during active phase
     if (activeSkill && this.skillEngine.activePhase === 'active') {
       if (activeSkill.effect.type === 'dash') {
-        // Keep charge hitbox in front of player along dash direction
         const dir = this._chargeDashDir || { x: this.facing, y: 0 };
         this.skillHitbox.setPosition(
           this.sprite.x + dir.x * 22,
           this.sprite.y + dir.y * 22
         );
-        // Maintain dash velocity
         if (this._chargeDashVelocity) {
           this.sprite.setVelocity(this._chargeDashVelocity.vx, this._chargeDashVelocity.vy);
         }
       } else if (activeSkill.effect.type === 'spin') {
-        // Keep spin hitbox centered on player
         this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+      } else if (activeSkill.effect.type === 'melee') {
+        this.skillHitbox.setPosition(
+          this.sprite.x + this.facing * 22,
+          this.sprite.y
+        );
       }
+      // buff/taunt: no hitbox positioning
     }
 
-    // Tick the skill engine
     const result = this.skillEngine.update(delta);
     if (!result) return;
 
-    const skill = result.skill;
-
     switch (result.event) {
       case 'phase_active':
-        this.onSkillActive(skill);
+        this.onSkillActive(result.skill);
         break;
       case 'skill_tick':
-        this.onSkillTick(skill);
+        this.onSkillTick(result.skill);
         break;
       case 'phase_recovery':
-        this.onSkillRecovery(skill);
+        this.onSkillRecovery(result.skill);
         break;
       case 'skill_complete':
-        this.onSkillComplete(skill);
+        this.onSkillComplete(result.skill);
         break;
     }
   }
 
-  /** Called when skill enters active phase. */
   onSkillActive(skill) {
-    if (skill.effect.type === 'dash') {
-      this.startChargeDash(skill);
-    } else if (skill.effect.type === 'spin') {
-      this.startWhirlwind(skill);
+    switch (skill.effect.type) {
+      case 'dash':
+        this.startChargeDash(skill);
+        break;
+      case 'spin':
+        this.startWhirlwind(skill);
+        break;
+      case 'melee':
+        this.startMeleeSkill(skill);
+        break;
+      case 'buff':
+        this.startBuffSkill(skill);
+        break;
+      case 'taunt':
+        this.startTauntSkill(skill);
+        break;
     }
   }
 
-  /** Called on each tick of a multi-hit skill. */
   onSkillTick(skill) {
     if (skill.effect.type === 'spin') {
       this.whirlwindTick(skill);
     }
   }
 
-  /** Called when skill enters recovery phase. */
   onSkillRecovery(skill) {
     this.skillHitbox.body.enable = false;
     if (this._whirlwindSuperArmor) {
@@ -436,14 +477,9 @@ export class Player extends Actor {
     this._chargeDashVelocity = null;
     this._chargeDashDir = null;
     this.sprite.setVelocity(0, 0);
-    if (this._whirlwindTween) {
-      this._whirlwindTween.stop();
-      this._whirlwindTween = null;
-    }
-    this.sprite.setAngle(0);
+    this._cleanupSkillVisuals();
   }
 
-  /** Called when skill fully completes. */
   onSkillComplete(skill) {
     this.skillHitbox.body.enable = false;
     if (this._whirlwindSuperArmor) {
@@ -452,21 +488,26 @@ export class Player extends Actor {
     }
     this._chargeDashVelocity = null;
     this._chargeDashDir = null;
+    this._cleanupSkillVisuals();
+    this.setState(PlayerState.IDLE);
+  }
+
+  _cleanupSkillVisuals() {
     if (this._whirlwindTween) {
       this._whirlwindTween.stop();
       this._whirlwindTween = null;
     }
+    if (this._auraRing) {
+      this._auraRing.destroy();
+      this._auraRing = null;
+    }
     this.sprite.setAngle(0);
-    this.setState(PlayerState.IDLE);
   }
 
-  // ─── Charge Skill ───
+  // ─── Dash (Charge, Leap Strike) ───
 
-  /** Begin the Charge dash: dash in current movement direction (or facing). */
   startChargeDash(skill) {
     const effect = skill.effect;
-
-    // Read keyboard input directly (velocity is already zeroed by trySkill)
     const input = this.getInputDirection();
     let dirX, dirY;
     if (input.x !== 0 || input.y !== 0) {
@@ -478,16 +519,12 @@ export class Player extends Actor {
       dirY = 0;
     }
 
-    // Update facing based on dash direction
     if (dirX !== 0) {
       this.facing = dirX > 0 ? 1 : -1;
       this.sprite.setFlipX(this.facing < 0);
     }
 
-    // Store dash direction for hitbox tracking
     this._chargeDashDir = { x: dirX, y: dirY };
-
-    // Activate skill hitbox in front of player along dash direction
     const hx = this.sprite.x + dirX * 22;
     const hy = this.sprite.y + dirY * 22;
     this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
@@ -495,55 +532,240 @@ export class Player extends Actor {
     this.skillHitbox.setPosition(hx, hy);
     this.skillHitbox.body.enable = true;
 
-    // Set dash velocity along movement direction
     this._chargeDashVelocity = {
       vx: dirX * effect.speed,
       vy: dirY * effect.speed
     };
     this._chargeHitRegistered = false;
 
+    // Mage blink: leave ghost afterimage then teleport at high speed
+    if (this.classType === 'mage') {
+      this.spawnGhostAfterimage();
+      this.sprite.setAlpha(0.4);
+      this.scene.time.delayedCall(skill.phases.active, () => {
+        if (this.sprite) this.sprite.setAlpha(1);
+      });
+    }
+    // Archer roll: briefly lower alpha
+    if (this.classType === 'archer') {
+      this.sprite.setAlpha(0.5);
+      this.scene.time.delayedCall(skill.phases.active, () => {
+        if (this.sprite) this.sprite.setAlpha(1);
+      });
+    }
+
     this.sprite.setVelocity(this._chargeDashVelocity.vx, this._chargeDashVelocity.vy);
   }
 
-  // ─── Whirlwind Skill ───
+  // ─── Spin (Whirlwind) ───
 
-  /** Begin Whirlwind: create circular hitbox, enable invincibility. */
   startWhirlwind(skill) {
     const effect = skill.effect;
-
-    // Circular hitbox centered on player (using a square approximation)
     const size = effect.radius * 2;
     this.skillHitbox.setSize(size, size);
     this.skillHitbox.body.setSize(size, size);
     this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
     this.skillHitbox.body.enable = true;
 
-    // Full invincibility during spin
-    this._whirlwindSuperArmor = true;
-    this.isInvulnerable = true;
-
-    // Store the move speed modifier
+    if (effect.superArmor) {
+      this._whirlwindSuperArmor = true;
+      this.isInvulnerable = true;
+    }
     this._whirlwindMoveSpeedMod = effect.moveSpeedMod;
 
-    // Visual spin effect -- rotate sprite
     const spinDuration = skill.phases.active;
-    const rotations = 4;
-    this._whirlwindTween = this.scene.tweens.add({
-      targets: this.sprite,
-      angle: 360 * rotations,
-      duration: spinDuration,
-      ease: 'Linear',
+
+    if (this.isRangedClass()) {
+      // Ranged: show aura ring instead of rotating sprite
+      const color = this.classType === 'archer' ? 0x88cc44 : 0x6688ff;
+      this._auraRing = this.scene.add.circle(
+        this.sprite.x, this.sprite.y, effect.radius, color, 0.15
+      ).setStrokeStyle(2, color, 0.6).setDepth(this.sprite.depth - 1);
+
+      // Pulse the aura
+      this._whirlwindTween = this.scene.tweens.add({
+        targets: this._auraRing,
+        scaleX: 1.15, scaleY: 1.15, alpha: 0.08,
+        duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      });
+    } else {
+      // Warrior: physical spin
+      this._whirlwindTween = this.scene.tweens.add({
+        targets: this.sprite,
+        angle: 360 * 4,
+        duration: spinDuration,
+        ease: 'Linear',
+        onComplete: () => { this.sprite.setAngle(0); }
+      });
+    }
+  }
+
+  whirlwindTick(skill) {
+    this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+    // Keep aura ring following player
+    if (this._auraRing) {
+      this._auraRing.setPosition(this.sprite.x, this.sprite.y);
+    }
+  }
+
+  // ─── Melee (Heavy Strike, Execute, Ground Splitter, Armor Break) ───
+
+  startMeleeSkill(skill) {
+    const effect = skill.effect;
+    const offset = this.isRangedClass() ? 40 : 22;
+    const hx = this.sprite.x + this.facing * offset;
+    const hy = this.sprite.y;
+    this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
+    this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
+    this.skillHitbox.setPosition(hx, hy);
+    this.skillHitbox.body.enable = true;
+
+    // Ranged classes: spawn a visible projectile flying to hitbox
+    if (this.isRangedClass()) {
+      const color = this.getSkillProjectileColor(skill);
+      const size = Math.max(4, Math.min(effect.hitbox.w, effect.hitbox.h) / 6);
+      this.spawnProjectile(this.facing * (offset + effect.hitbox.w / 2), 0, color, size, size * 0.5, skill);
+    }
+  }
+
+  // ─── Buff (War Cry, Blood Rage, Defensive Stance, Berserker Rage) ───
+
+  startBuffSkill(skill) {
+    const effect = skill.effect;
+    if (effect.target === 'self') {
+      this.statusEffects.apply(effect.buffId, {
+        id: effect.buffId,
+        type: 'buff',
+        duration: effect.duration,
+        modifiers: effect.modifiers,
+        source: this
+      });
+    }
+    // Class-colored visual feedback
+    const buffColors = { warrior: 0xffdd44, archer: 0x66ff88, mage: 0x88bbff };
+    const tint = buffColors[this.classType] || 0xffdd44;
+    this.sprite.setTint(tint);
+    this.scene.time.delayedCall(300, () => {
+      if (this.sprite) this.sprite.clearTint();
+    });
+
+    // Mage: extra sparkle ring on shield-type buffs
+    if (this.classType === 'mage' && effect.modifiers?.damageReduction) {
+      const ring = this.scene.add.circle(this.sprite.x, this.sprite.y, 24, 0x6688ff, 0.2)
+        .setStrokeStyle(2, 0x88bbff, 0.7).setDepth(this.sprite.depth + 1);
+      this.scene.tweens.add({
+        targets: ring, scaleX: 2, scaleY: 2, alpha: 0,
+        duration: 400, onComplete: () => ring.destroy()
+      });
+    }
+  }
+
+  // ─── Taunt ───
+
+  startTauntSkill(skill) {
+    const effect = skill.effect;
+    // Force nearby enemies to target player
+    this.scene.events.emit('playerTaunt', this, effect.radius, effect.duration);
+    // Visual: red pulse
+    this.sprite.setTint(0xff4444);
+    this.scene.time.delayedCall(300, () => {
+      if (this.sprite) this.sprite.clearTint();
+    });
+  }
+
+  // ═══════════════════════════════════════════════
+  // Projectile & Visual Effects (code-generated)
+  // ═══════════════════════════════════════════════
+
+  /**
+   * Spawn a simple projectile visual (no physics — hitbox handles damage)
+   * @param {number} dx - relative X offset to travel
+   * @param {number} dy - relative Y offset to travel
+   * @param {number} color - tint color
+   * @param {number} w - width
+   * @param {number} h - height
+   * @param {object} [skill] - optional skill for extra effects
+   */
+  spawnProjectile(dx, dy, color, w = 6, h = 3, skill = null) {
+    const sx = this.sprite.x;
+    const sy = this.sprite.y;
+    const tx = sx + dx;
+    const ty = sy + dy;
+
+    // Main projectile body
+    const proj = this.scene.add.rectangle(sx, sy, w, h, color)
+      .setDepth(this.sprite.depth + 1);
+
+    // Rotate to face travel direction
+    const angle = Math.atan2(dy, dx);
+    proj.setRotation(angle);
+
+    // Trail particles
+    const trailColor = Phaser.Display.Color.IntegerToColor(color).brighten(30).color;
+
+    this.scene.tweens.add({
+      targets: proj,
+      x: tx, y: ty,
+      duration: 120,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        // Spawn trail particle
+        const t = this.scene.add.circle(proj.x, proj.y, w * 0.4, trailColor, 0.5)
+          .setDepth(proj.depth - 1);
+        this.scene.tweens.add({
+          targets: t, alpha: 0, scaleX: 0.2, scaleY: 0.2,
+          duration: 150, onComplete: () => t.destroy()
+        });
+      },
       onComplete: () => {
-        this.sprite.setAngle(0);
+        // Impact flash
+        const flash = this.scene.add.circle(tx, ty, w * 1.5, color, 0.6)
+          .setDepth(proj.depth);
+        this.scene.tweens.add({
+          targets: flash, scaleX: 2.5, scaleY: 2.5, alpha: 0,
+          duration: 150, onComplete: () => flash.destroy()
+        });
+        proj.destroy();
       }
     });
   }
 
-  /** Process a whirlwind damage tick. */
-  whirlwindTick(skill) {
-    // Re-center hitbox on player
-    this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+  /** Ghost afterimage for mage blink */
+  spawnGhostAfterimage() {
+    // Create a tinted copy at current position
+    const ghost = this.scene.add.image(this.sprite.x, this.sprite.y, this.sprite.texture.key)
+      .setFlipX(this.sprite.flipX)
+      .setDisplaySize(this.sprite.displayWidth, this.sprite.displayHeight)
+      .setOrigin(0.5, 0.5)
+      .setTint(0x6688ff)
+      .setAlpha(0.6)
+      .setDepth(this.sprite.depth - 1);
+    this.scene.tweens.add({
+      targets: ghost, alpha: 0, scaleX: 1.5, scaleY: 1.5,
+      duration: 400, onComplete: () => ghost.destroy()
+    });
   }
+
+  /** Get projectile color based on skill type */
+  getSkillProjectileColor(skill) {
+    if (!skill) return 0xffffff;
+    const id = skill.id || '';
+    // Archer colors
+    if (id.includes('poison') || id === 'poisonArrow') return 0x66ff44;
+    if (id.includes('hunter') || id === 'huntersMark') return 0xff8844;
+    if (this.classType === 'archer') return 0xccff44;
+    // Mage colors
+    if (id.includes('fire') || id === 'fireball' || id === 'meteor') return 0xff6633;
+    if (id.includes('ice') || id.includes('frost') || id === 'freeze' || id === 'blizzard') return 0x44ccff;
+    if (id.includes('arcane') || id === 'arcaneMissile') return 0xbb66ff;
+    if (this.classType === 'mage') return 0x88aaff;
+    // Warrior fallback
+    return 0xffffff;
+  }
+
+  // ═══════════════════════════════════════════════
+  // Interaction
+  // ═══════════════════════════════════════════════
 
   updateInteractHint() {
     if (this.canInteract && this.interactTarget) {
@@ -590,14 +812,15 @@ export class Player extends Actor {
     if (this.attackHitbox) this.attackHitbox.destroy();
     if (this.skillHitbox) this.skillHitbox.destroy();
     if (this.interactText) this.interactText.destroy();
+    if (this._auraRing) { this._auraRing.destroy(); this._auraRing = null; }
 
-    // Clean up skill key listeners
     if (this.skillKeys && this._onSkillKeyDown) {
       this.skillKeys.forEach((key, i) => {
         if (this._onSkillKeyDown[i]) key.off('down', this._onSkillKeyDown[i]);
       });
     }
 
+    this.statusEffects.clearAll();
     this.destroyActor();
   }
 }

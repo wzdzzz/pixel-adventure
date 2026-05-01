@@ -6,23 +6,23 @@ import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { VictoryScene } from './scenes/VictoryScene.js';
 import { PanelScene } from './scenes/PanelScene.js';
+import { MainMenuScene } from './scenes/MainMenuScene.js';
 
 /**
  * 游戏入口文件
  *
- * 创建 Phaser 游戏实例，配置所有场景
- *
  * 场景顺序：
  * 1. BootScene - 启动场景，加载资源
- * 2. MainGameScene - 主游戏逻辑
- * 3. UIScene - HUD 界面层
- * 4. GameOverScene - 游戏失败画面
- * 5. VictoryScene - 胜利画面
+ * 2. MainMenuScene - 主菜单 + 角色选择
+ * 3. MainGameScene - 主游戏逻辑
+ * 4. UIScene - HUD 界面层
+ * 5. GameOverScene - 游戏失败画面
+ * 6. VictoryScene - 胜利画面
  */
 
-// 注册所有场景
 const scenes = [
   BootScene,
+  MainMenuScene,
   MainGameScene,
   UIScene,
   PanelScene,

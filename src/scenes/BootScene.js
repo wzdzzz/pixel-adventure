@@ -97,9 +97,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     this.time.delayedCall(600, () => {
-      this.scene.start('MainGameScene');
-      this.scene.start('UIScene');
-      this.scene.bringToTop('UIScene');
+      this.scene.start('MainMenuScene');
     });
   }
 }

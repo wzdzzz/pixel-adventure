@@ -1,20 +1,27 @@
-import { WARRIOR_SKILLS, SKILL_SLOTS, getSkillAtLevel } from '../data/warriorSkills.js';
-
 /**
- * SkillEngine — manages skill cooldowns, resource checks, levels, and phase execution.
+ * SkillEngine — 管理技能冷却、资源检查、等级和阶段执行。
  *
- * Lifecycle of a skill:
- *   1. canUse(skillId) → checks cooldown, resource, player state
- *   2. execute(skillId) → deducts resource, starts cooldown, returns phase config
- *   3. update(delta) → ticks cooldowns
+ * 与职业无关：技能数据和缩放函数由构造函数注入。
  *
- * The Player is responsible for the actual phase transitions and hitbox management.
- * SkillEngine only manages the bookkeeping.
+ * 技能生命周期:
+ *   1. canUse(skillId) → 检查冷却/资源/状态
+ *   2. execute(skillId) → 扣除资源、启动冷却、返回阶段配置
+ *   3. update(delta) → tick 冷却和阶段
+ *
+ * Player 负责实际的阶段转换和 hitbox 管理。
  */
 export class SkillEngine {
-  constructor(scene, actor) {
+  /**
+   * @param {Phaser.Scene} scene
+   * @param {Actor} actor
+   * @param {Object} skillDefs - WARRIOR_SKILLS / ARCHER_SKILLS / MAGE_SKILLS
+   * @param {Function} getAtLevel - getSkillAtLevel(skillId, level) 缩放函数
+   */
+  constructor(scene, actor, skillDefs, getAtLevel) {
     this.scene = scene;
     this.actor = actor;
+    this.skillDefs = skillDefs;
+    this.getAtLevel = getAtLevel;
 
     /** Map<skillId, remainingCooldownMs> */
     this.cooldowns = {};
@@ -25,26 +32,31 @@ export class SkillEngine {
     /** Currently active skill ID, or null */
     this.activeSkillId = null;
 
-    /** Current phase of active skill: 'startup' | 'active' | 'recovery' | null */
+    /** Current phase: 'startup' | 'active' | 'recovery' | null */
     this.activePhase = null;
 
     /** Timer for current phase in ms */
     this.phaseTimer = 0;
 
-    /** Tick timer for multi-hit skills (whirlwind) */
+    /** Tick timer for multi-hit skills */
     this.tickTimer = 0;
 
-    /** Track enemies hit per skill activation (for single-hit skills like charge) */
+    /** Track enemies hit per skill activation */
     this.hitTargets = new Set();
 
     /** Cached scaled skill data for active skill */
     this._activeSkillData = null;
 
-    // Initialize cooldowns and levels
-    Object.keys(WARRIOR_SKILLS).forEach(id => {
+    // Initialize cooldowns and levels for all skills
+    Object.keys(this.skillDefs).forEach(id => {
       this.cooldowns[id] = 0;
       this.skillLevels[id] = 1;
     });
+  }
+
+  /** Get skill definitions (for UI enumeration) */
+  getSkillDefs() {
+    return this.skillDefs;
   }
 
   /** Get skill level */
@@ -55,15 +67,15 @@ export class SkillEngine {
   /** Get scaled skill data for current level */
   getScaledSkill(skillId) {
     const level = this.skillLevels[skillId] || 1;
-    return getSkillAtLevel(skillId, level);
+    return this.getAtLevel(skillId, level);
   }
 
   /**
-   * Upgrade a skill by 1 level. Costs skill points from LevelSystem.
-   * @returns {boolean} whether upgrade succeeded
+   * Upgrade a skill by 1 level.
+   * @returns {boolean}
    */
   upgradeSkill(skillId) {
-    const base = WARRIOR_SKILLS[skillId];
+    const base = this.skillDefs[skillId];
     if (!base) return false;
 
     const currentLevel = this.skillLevels[skillId] || 1;
@@ -80,18 +92,16 @@ export class SkillEngine {
 
   /**
    * Check if a skill can be used right now.
-   * @param {string} skillId
    * @returns {{ canUse: boolean, reason: string }}
    */
   canUse(skillId) {
-    const skill = WARRIOR_SKILLS[skillId];
+    const skill = this.skillDefs[skillId];
     if (!skill) return { canUse: false, reason: 'unknown_skill' };
 
     if (this.activeSkillId !== null) return { canUse: false, reason: 'already_casting' };
 
     if (this.cooldowns[skillId] > 0) return { canUse: false, reason: 'on_cooldown' };
 
-    // Use scaled cost
     const scaled = this.getScaledSkill(skillId);
     if (skill.resource === 'stamina' && this.actor.stamina < scaled.cost) {
       return { canUse: false, reason: 'no_stamina' };
@@ -99,14 +109,16 @@ export class SkillEngine {
     if (skill.resource === 'rage' && this.actor.rage < scaled.cost) {
       return { canUse: false, reason: 'no_rage' };
     }
+    if (skill.resource === 'mana' && this.actor.mana < scaled.cost) {
+      return { canUse: false, reason: 'no_mana' };
+    }
 
     return { canUse: true, reason: 'ok' };
   }
 
   /**
    * Execute a skill: deduct resource, start cooldown, begin startup phase.
-   * @param {string} skillId
-   * @returns {object|null} The scaled skill data object, or null if cannot use
+   * @returns {object|null} Scaled skill data, or null if cannot use
    */
   execute(skillId) {
     const check = this.canUse(skillId);
@@ -119,13 +131,14 @@ export class SkillEngine {
       this.actor.useStamina(scaled.cost);
     } else if (scaled.resource === 'rage') {
       this.actor.useRage(scaled.cost);
+    } else if (scaled.resource === 'mana') {
+      this.actor.useMana(scaled.cost);
     }
 
-    // Apply CDR (cooldown reduction) from stats
+    // Apply CDR
     const cdr = this.actor.stats.getDerived().cdr || 0;
     const effectiveCooldown = scaled.cooldown * (1 - cdr / 100);
 
-    // Start cooldown
     this.cooldowns[skillId] = effectiveCooldown;
 
     // Enter startup phase
@@ -141,8 +154,7 @@ export class SkillEngine {
 
   /**
    * Tick cooldowns and active skill phases.
-   * @param {number} delta - ms since last frame
-   * @returns {{ event: string, skill: object }|null} Phase transition event or null
+   * @returns {{ event: string, skill: object }|null}
    */
   update(delta) {
     // Tick all cooldowns
@@ -152,14 +164,12 @@ export class SkillEngine {
       }
     }
 
-    // Tick active skill phase
     if (this.activeSkillId === null) return null;
 
     const skill = this._activeSkillData;
     if (!skill) return null;
 
     this.phaseTimer += delta;
-
     const phaseDuration = skill.phases[this.activePhase];
 
     if (this.phaseTimer >= phaseDuration) {
@@ -183,7 +193,7 @@ export class SkillEngine {
       }
     }
 
-    // For multi-hit skills, tick the hit timer during active phase
+    // Multi-hit tick during active phase
     if (this.activePhase === 'active' && skill.effect.tickInterval) {
       this.tickTimer += delta;
       if (this.tickTimer >= skill.effect.tickInterval) {
@@ -195,17 +205,9 @@ export class SkillEngine {
     return null;
   }
 
-  /** Check if an enemy has already been hit by the current skill activation. */
-  hasHitTarget(enemy) {
-    return this.hitTargets.has(enemy);
-  }
+  hasHitTarget(enemy) { return this.hitTargets.has(enemy); }
+  markTargetHit(enemy) { this.hitTargets.add(enemy); }
 
-  /** Mark an enemy as hit by current skill activation. */
-  markTargetHit(enemy) {
-    this.hitTargets.add(enemy);
-  }
-
-  /** Force-cancel the active skill (e.g., on death or stun). */
   cancelActiveSkill() {
     this.activeSkillId = null;
     this.activePhase = null;
@@ -215,12 +217,8 @@ export class SkillEngine {
     this._activeSkillData = null;
   }
 
-  /**
-   * Get cooldown remaining for a skill (for UI).
-   * @returns {{ remaining: number, total: number, fraction: number }}
-   */
   getCooldownInfo(skillId) {
-    const base = WARRIOR_SKILLS[skillId];
+    const base = this.skillDefs[skillId];
     if (!base) return { remaining: 0, total: 0, fraction: 0 };
     const remaining = this.cooldowns[skillId] || 0;
     const scaled = this.getScaledSkill(skillId);
@@ -229,13 +227,11 @@ export class SkillEngine {
     return { remaining, total, fraction: total > 0 ? remaining / total : 0 };
   }
 
-  /** Get the currently active skill data (scaled), or null */
   getActiveSkill() {
     if (!this.activeSkillId) return null;
     return this._activeSkillData;
   }
 
-  /** Serialization */
   toJSON() {
     return {
       cooldowns: { ...this.cooldowns },
@@ -245,11 +241,7 @@ export class SkillEngine {
 
   fromJSON(data) {
     if (!data) return;
-    if (data.cooldowns) {
-      Object.assign(this.cooldowns, data.cooldowns);
-    }
-    if (data.skillLevels) {
-      Object.assign(this.skillLevels, data.skillLevels);
-    }
+    if (data.cooldowns) Object.assign(this.cooldowns, data.cooldowns);
+    if (data.skillLevels) Object.assign(this.skillLevels, data.skillLevels);
   }
 }

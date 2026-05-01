@@ -18,13 +18,18 @@ export class SaveSystem {
 
       const saveData = {
         timestamp: Date.now(),
-        version: '2.0.0',
+        version: '2.1.0',
         player: {
           position: playerPosition,
           hp: scene.player ? scene.player.hp : 100,
           maxHp: scene.player ? scene.player.maxHp : 100,
           stamina: scene.player ? scene.player.stamina : 140,
-          stats: scene.player ? scene.player.stats.toJSON() : null
+          mana: scene.player ? scene.player.mana : 0,
+          rage: scene.player ? scene.player.rage : 0,
+          classType: scene.player ? scene.player.classType : 'warrior',
+          gender: scene.player ? scene.player.gender : 'male',
+          stats: scene.player ? scene.player.stats.toJSON() : null,
+          statusEffects: scene.player?.statusEffects ? scene.player.statusEffects.toJSON() : []
         },
         gameState: {
           score: gameState.score,
@@ -130,6 +135,21 @@ export class SaveSystem {
       // Re-apply equipment bonuses after base stats are restored
       if (scene.equipmentSystem) {
         scene.equipmentSystem._applyBonuses();
+      }
+
+      // Restore status effects
+      if (scene.player?.statusEffects && saveData.player?.statusEffects) {
+        scene.player.statusEffects.fromJSON(saveData.player.statusEffects);
+      }
+
+      // Restore mana/rage
+      if (scene.player && saveData.player) {
+        if (saveData.player.mana !== undefined) {
+          scene.player.mana = Math.min(saveData.player.mana, scene.player.maxMana);
+        }
+        if (saveData.player.rage !== undefined) {
+          scene.player.rage = Math.min(saveData.player.rage, scene.player.maxRage);
+        }
       }
 
       // 恢复玩家位置（在 MainGameScene 中处理）

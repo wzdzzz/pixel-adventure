@@ -102,41 +102,14 @@ export class VictoryScene extends Phaser.Scene {
       repeat: -1
     });
 
-    // 点击屏幕重新开始
-    this.input.on('pointerdown', () => {
-      // 重置游戏状态
-      this.registry.set('gameState', {
-        hp: 100,
-        maxHp: 100,
-        score: 0,
-        inventory: [],
-        keysCollected: 0,
-        hasArtifact: false,
-        currentLevel: 0,
-        playerPosition: { x: 150, y: 150 },
-        collectedItems: []
-      });
+    const goToMenu = () => {
+      this.scene.stop('UIScene');
+      this.scene.stop('PanelScene');
+      this.scene.start('MainMenuScene');
+    };
 
-      // 重启游戏
-      this.scene.start('BootScene');
-    });
-
-    // 按 R 键重启
-    this.input.keyboard.on('keydown-R', () => {
-      this.registry.set('gameState', {
-        hp: 100,
-        maxHp: 100,
-        score: 0,
-        inventory: [],
-        keysCollected: 0,
-        hasArtifact: false,
-        currentLevel: 0,
-        playerPosition: { x: 150, y: 150 },
-        collectedItems: []
-      });
-
-      this.scene.start('BootScene');
-    });
+    this.input.on('pointerdown', goToMenu);
+    this.input.keyboard.on('keydown-R', goToMenu);
 
     // 底部提示
     this.add.text(width / 2, height - 40, '感谢游玩！按 R 键重新开始', {

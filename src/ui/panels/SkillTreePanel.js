@@ -1,5 +1,3 @@
-import { WARRIOR_SKILLS, SKILL_SLOTS, getSkillAtLevel, getSkillDescription } from '../../data/warriorSkills.js';
-
 export const SkillTreePanel = {
   createSkillTreeTab() {
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
@@ -22,7 +20,7 @@ export const SkillTreePanel = {
     });
     container.add(this.skillPointsText);
 
-    // --- Skill Cards ---
+    // --- Skill Cards (read from player dynamically) ---
     const cardStartY = contentTop + 40;
     const cardW = contentW - 40;
     const cardH = 90;
@@ -31,9 +29,13 @@ export const SkillTreePanel = {
 
     this.skillCards = {};
 
-    const allSkillIds = Object.keys(WARRIOR_SKILLS);
+    const player = this.gameScene?.player;
+    const skillDefs = player?.skillEngine?.getSkillDefs() || {};
+    const playerSlots = player?.skillSlots || [];
+
+    const allSkillIds = Object.keys(skillDefs);
     allSkillIds.forEach((skillId, idx) => {
-      const base = WARRIOR_SKILLS[skillId];
+      const base = skillDefs[skillId];
       const cy = cardStartY + idx * (cardH + cardGap) + cardH / 2;
 
       // Card background
@@ -73,7 +75,7 @@ export const SkillTreePanel = {
       container.add(statsText);
 
       // Slot key hint
-      const slotIdx = SKILL_SLOTS.indexOf(skillId);
+      const slotIdx = playerSlots.indexOf(skillId);
       if (slotIdx >= 0) {
         const keyHint = this.add.text(cardX - cardW / 2 + 12, cy - 30, `[${slotIdx + 1}]`, {
           fontSize: '9px', fill: '#666688', fontFamily: 'Courier New'
@@ -134,14 +136,17 @@ export const SkillTreePanel = {
     }
 
     const skillPoints = levelSystem ? levelSystem.skillPoints : 0;
+    const skillDefs = engine.getSkillDefs();
+    // Get the skill module's description/scaling functions from player
+    const skillModule = player._skillModule;
 
-    Object.keys(WARRIOR_SKILLS).forEach(skillId => {
+    Object.keys(skillDefs).forEach(skillId => {
       const card = this.skillCards[skillId];
       if (!card) return;
 
-      const base = WARRIOR_SKILLS[skillId];
+      const base = skillDefs[skillId];
       const level = engine.getSkillLevel(skillId);
-      const scaled = getSkillAtLevel(skillId, level);
+      const scaled = engine.getScaledSkill(skillId);
       const isMaxed = level >= base.maxLevel;
 
       // Update level
@@ -149,11 +154,15 @@ export const SkillTreePanel = {
       card.lvText.setColor(isMaxed ? '#ffd700' : '#aaccff');
 
       // Update description
-      card.descText.setText(getSkillDescription(skillId, level));
+      if (skillModule?.getSkillDescription) {
+        card.descText.setText(skillModule.getSkillDescription(skillId, level));
+      }
 
       // Update stats line
-      const resourceName = base.resource === 'stamina' ? '体力' : base.resource === 'rage' ? '怒气' : '';
-      card.statsText.setText(`${resourceName}: ${scaled.cost} | 冷却: ${(scaled.cooldown / 1000).toFixed(1)}s | 伤害: ${Math.round(scaled.effect.damageMultiplier * 100)}%`);
+      const resourceNames = { stamina: '体力', rage: '怒气', mana: '魔力' };
+      const resourceName = resourceNames[base.resource] || '';
+      const dmgText = scaled.effect?.damageMultiplier ? ` | 伤害: ${Math.round(scaled.effect.damageMultiplier * 100)}%` : '';
+      card.statsText.setText(`${resourceName}: ${scaled.cost} | 冷却: ${(scaled.cooldown / 1000).toFixed(1)}s${dmgText}`);
 
       // Update card border
       card.cardBg.setStrokeStyle(1, isMaxed ? 0xffd700 : 0x4a4a6a);
@@ -173,9 +182,9 @@ export const SkillTreePanel = {
         card.btnBg.setFillStyle(0x2a3a2a);
         card.btnBg.setInteractive({ useHandCursor: true });
         // Next level preview
-        const nextScaled = getSkillAtLevel(skillId, level + 1);
-        const nextDmg = Math.round(nextScaled.effect.damageMultiplier * 100);
-        card.nextLvText.setText(`下级: ${nextDmg}%伤害`);
+        const nextScaled = engine.getScaledSkill(skillId);
+        const nextDmg = nextScaled.effect?.damageMultiplier ? Math.round(nextScaled.effect.damageMultiplier * 100) : 0;
+        card.nextLvText.setText(nextDmg ? `下级: ${nextDmg}%伤害` : '');
         card.nextLvText.setColor('#558855');
       } else {
         card.btnText.setText(`升级 (${base.upgradeCost}点)`);

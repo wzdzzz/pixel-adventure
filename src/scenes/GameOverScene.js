@@ -58,23 +58,13 @@ export class GameOverScene extends Phaser.Scene {
       fontFamily: 'Courier New'
     }).setOrigin(0.5);
 
-    const resetGame = () => {
-      this.registry.set('gameState', {
-        hp: 100,
-        maxHp: 100,
-        score: 0,
-        inventory: [],
-        keysCollected: 0,
-        hasArtifact: false,
-        currentLevel: 0,
-        playerPosition: { x: 150, y: 150 },
-        collectedItems: []
-      });
-      SaveSystem.deleteSave();
-      this.scene.start('BootScene');
+    const goToMenu = () => {
+      this.scene.stop('UIScene');
+      this.scene.stop('PanelScene');
+      this.scene.start('MainMenuScene');
     };
 
-    this.input.on('pointerdown', resetGame);
-    this.input.keyboard.on('keydown-R', resetGame);
+    this.input.on('pointerdown', goToMenu);
+    this.input.keyboard.on('keydown-R', goToMenu);
   }
 }

@@ -248,12 +248,20 @@ export const LevelBuilder = {
     const savedData = this.registry.get('savedPlayerData');
     const startX = savedData?.position?.x || level.playerStart.x;
     const startY = savedData?.position?.y || level.playerStart.y;
-    this.player = new Player(this, startX, startY);
+    const classType = savedData?.classType || this.registry.get('classType') || 'warrior';
+    const gender = savedData?.gender || this.registry.get('gender') || 'male';
+    this.player = new Player(this, startX, startY, classType, gender);
     if (savedData?.hp) {
       this.player.hp = Math.min(savedData.hp, this.player.maxHp);
     }
     if (savedData?.stamina !== undefined) {
       this.player.stamina = Math.min(savedData.stamina, this.player.maxStamina);
+    }
+    if (savedData?.mana !== undefined) {
+      this.player.mana = Math.min(savedData.mana, this.player.maxMana);
+    }
+    if (savedData?.rage !== undefined) {
+      this.player.rage = Math.min(savedData.rage, this.player.maxRage);
     }
     // Emit initial HP/resource so UI shows correct values
     this.player.onHpChanged();

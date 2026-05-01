@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Stats } from '../systems/Stats.js';
 import { CHARACTERS } from '../assets/AssetManager.js';
+import { StatusEffectSystem } from '../systems/StatusEffectSystem.js';
 
 /**
  * Actor 基类 — Player 和 Enemy 共享的逻辑
@@ -28,6 +29,10 @@ export class Actor {
     this.maxRage = 100;
     this.rageCombatTimer = 0;   // time since last combat action (for decay)
     this.staminaIdleTimer = 0;  // time since last stamina use (for regen delay)
+
+    // Mana — caster resource
+    this.mana = this.getMaxMana();
+    this.maxMana = this.getMaxMana();
 
     // I-Frames (无敌帧)
     this.isInvulnerable = false;
@@ -64,6 +69,9 @@ export class Actor {
     this.sprite.setCollideWorldBounds(true);
 
     this.direction = { x: 1, y: 0 };
+
+    // Status effects (Buff/Debuff)
+    this.statusEffects = new StatusEffectSystem(scene, this);
   }
 
   /** Play a character animation by name (idle, walk, attack, hurt, die) */
@@ -75,13 +83,15 @@ export class Actor {
     }
   }
 
-  /** 刷新属性缓存并同步 maxHp/maxStamina */
+  /** 刷新属性缓存并同步 maxHp/maxStamina/maxMana */
   refreshStats() {
     const derived = this.stats.getDerived();
     this.maxHp = derived.maxHp;
     this.maxStamina = this.getMaxStamina();
+    this.maxMana = this.getMaxMana();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
+    if (this.mana > this.maxMana) this.mana = this.maxMana;
   }
 
   /** 获取攻击力 */
@@ -98,6 +108,26 @@ export class Actor {
   getMaxStamina() {
     const con = this.stats.getEffective('con');
     return con * 8 + 60;
+  }
+
+  /** Max mana based on INT */
+  getMaxMana() {
+    const int = this.stats.getEffective('int');
+    return int * 10 + 50;
+  }
+
+  /** Mana regen rate per second based on INT */
+  getManaRegenRate() {
+    const int = this.stats.getEffective('int');
+    return int * 0.5;
+  }
+
+  /** Use mana. Returns true if enough, false otherwise. */
+  useMana(amount) {
+    if (this.mana < amount) return false;
+    this.mana -= amount;
+    this.onResourceChanged();
+    return true;
   }
 
   /** Stamina regen rate per second based on CON */
@@ -235,6 +265,13 @@ export class Actor {
       this.rage = Math.max(0, this.rage - decayPerFrame);
       this.onResourceChanged();
     }
+
+    // Mana regen (continuous)
+    if (this.mana < this.maxMana) {
+      const manaPerFrame = this.getManaRegenRate() * (delta / 1000);
+      this.mana = Math.min(this.maxMana, this.mana + manaPerFrame);
+      this.onResourceChanged();
+    }
   }
 
   /** I-Frames 计时 (每帧调用) */
@@ -255,6 +292,7 @@ export class Actor {
   updateActor(delta) {
     this.updateIFrames(delta);
     this.updateRegen(delta);
+    this.statusEffects.update(delta);
   }
 
   /** 子类覆写 — HP变更时的回调 */

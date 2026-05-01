@@ -201,13 +201,47 @@ export const InteractionHandler = {
     const skill = skillEngine.getActiveSkill();
     if (!skill) return;
 
-    if (skill.effect.type === 'dash') {
-      // Charge: single-hit per enemy
+    const effectType = skill.effect.type;
+
+    // ─── Single-hit types: dash, melee, leap ───
+    if (effectType === 'dash' || effectType === 'melee') {
       if (skillEngine.hasHitTarget(enemy)) return;
       skillEngine.markTargetHit(enemy);
 
-      const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
+      let damageMultiplier = skill.effect.damageMultiplier;
+
+      // Execute: bonus damage when target HP low
+      if (skill.effect.executeThreshold && enemy.hp / enemy.maxHp < skill.effect.executeThreshold) {
+        damageMultiplier *= skill.effect.executeMultiplier;
+      }
+
+      const damage = Math.floor(this.player.getAttack() * damageMultiplier);
+
+      // Apply lifesteal from status effects
+      const mods = this.player.statusEffects.getModifiers();
+      if (mods.lifesteal) {
+        this.player.heal(Math.floor(damage * mods.lifesteal));
+      }
+
       enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
+
+      // Apply status effects from skill (bleed, armorBreak, slow, etc.)
+      if (skill.effect.applyEffects) {
+        for (const effectDef of skill.effect.applyEffects) {
+          if (Math.random() < effectDef.chance) {
+            const config = {
+              id: effectDef.effectId,
+              type: 'debuff',
+              duration: effectDef.duration,
+              maxStacks: effectDef.maxStacks || 1,
+              refreshable: true,
+              source: this.player
+            };
+            if (effectDef.modifiers) config.modifiers = effectDef.modifiers;
+            enemy.statusEffects.apply(effectDef.effectId, config);
+          }
+        }
+      }
 
       // Stun
       if (skill.effect.stun) {
@@ -221,33 +255,29 @@ export const InteractionHandler = {
         });
       }
 
-      // Extra knockback
+      // Knockback
       if (skill.effect.knockback) {
         enemy.applyKnockback(this.player.sprite.x, this.player.sprite.y, skill.effect.knockback);
       }
 
-      // Camera shake on hit
+      // Camera shake
       if (skill.effect.cameraShake) {
         this.events.emit('screenShake', skill.effect.cameraShake.intensity, skill.effect.cameraShake.duration);
       }
 
-      // Hit-stop
       this.events.emit('hitStop', 50);
-
-      // Rage gain
       this.player.addRage(8);
 
-      // Flash player sprite white
+      // Flash
       this.player.sprite.setTint(0xffffff);
       this.time.delayedCall(100, () => {
         if (this.player.sprite) this.player.sprite.clearTint();
       });
-
-    } else if (skill.effect.type === 'spin') {
-      // Whirlwind: multi-hit with reduced enemy i-frames
+    }
+    // ─── Multi-hit: spin ───
+    else if (effectType === 'spin') {
       const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
 
-      // Temporarily reduce enemy i-frames for whirlwind hits
       const originalIFrames = enemy.iFramesDuration;
       enemy.iFramesDuration = 180;
       enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
@@ -256,6 +286,7 @@ export const InteractionHandler = {
       this.events.emit('screenShake', 2, 50);
       this.player.addRage(4);
     }
+    // buff/taunt: no hitbox, shouldn't reach here
   },
 
   handleBreakableHit(b) {
