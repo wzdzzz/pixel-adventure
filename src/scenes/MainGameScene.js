@@ -1,10 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
-import { TEXTURES } from '../assets/AssetManager.js';
-import { Player, PlayerState } from '../entities/Player.js';
-import { Enemy, EnemyState } from '../entities/Enemy.js';
+import { PlayerState } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
-import { NPC, NPCState } from '../entities/NPC.js';
 import { InventorySystem } from '../systems/InventorySystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { UIManager } from '../systems/UIManager.js';
@@ -14,10 +11,10 @@ import { SkillTreeSystem } from '../systems/SkillTreeSystem.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
 import { LootEngine } from '../systems/LootEngine.js';
 import { WarFog } from '../systems/WarFog.js';
-import { levelData, LEVEL_TILE } from '../data/levels.js';
+import { levelData } from '../data/levels.js';
 import itemData from '../data/items.json';
-
-const TILE = LEVEL_TILE;
+import { LevelBuilder } from '../managers/LevelBuilder.js';
+import { InteractionHandler } from '../managers/InteractionHandler.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -159,394 +156,6 @@ export class MainGameScene extends Phaser.Scene {
     this.portalActivated = false;
   }
 
-  createMap(level) {
-    const ts = GAME_CONFIG.MAP.TILE_SIZE;
-    const mapData = level.generateMap();
-
-    this.walls = this.physics.add.staticGroup();
-    this.obstacles = this.physics.add.staticGroup();
-    this.decorations = this.add.group();
-    this.groundTiles = this.add.group();
-
-    for (let y = 0; y < mapData.length; y++) {
-      for (let x = 0; x < mapData[y].length; x++) {
-        const t = mapData[y][x];
-        const wx = x * ts + ts / 2;
-        const wy = y * ts + ts / 2;
-
-        // Ground layer: place grass under every non-water, non-wall tile
-        if (t !== TILE.WATER && t !== TILE.WALL) {
-          const ground = this.add.image(wx, wy, TEXTURES.GRASS).setDepth(-1);
-          this.groundTiles.add(ground);
-        }
-
-        switch (t) {
-          case TILE.WALL: {
-            const w = this.walls.create(wx, wy, TEXTURES.WALL);
-            w.setOrigin(0.5).setDepth(wy).refreshBody();
-            break;
-          }
-          case TILE.OBSTACLE: {
-            const o = this.obstacles.create(wx, wy, TEXTURES.OBSTACLE);
-            o.setOrigin(0.5).setDepth(wy).refreshBody();
-            break;
-          }
-          case TILE.END:
-            this.endZone = this.add.rectangle(wx, wy, ts, ts, 0x00ffff, 0.3);
-            this.physics.add.existing(this.endZone, true);
-            break;
-          case TILE.TREE: {
-            const tr = this.physics.add.staticSprite(wx, wy, TEXTURES.TREE);
-            tr.setOrigin(0.5, 0.5).setDepth(wy);
-            tr.body.setSize(24, 20);
-            tr.body.setOffset(4, 28);
-            this.decorations.add(tr);
-            break;
-          }
-          case TILE.TREE_PINE: {
-            const tp = this.physics.add.staticSprite(wx, wy, TEXTURES.TREE_PINE);
-            tp.setOrigin(0.5, 0.5).setDepth(wy);
-            tp.body.setSize(20, 18);
-            tp.body.setOffset(6, 30);
-            this.decorations.add(tp);
-            break;
-          }
-          case TILE.GRASS: {
-            const g = this.add.image(wx, wy, TEXTURES.GRASS).setDepth(1);
-            this.decorations.add(g);
-            break;
-          }
-          case TILE.GRASS_TALL: {
-            const gt = this.physics.add.staticSprite(wx, wy, TEXTURES.GRASS_TALL);
-            gt.setDepth(1);
-            this.decorations.add(gt);
-            break;
-          }
-          case TILE.WATER: {
-            const wa = this.add.image(wx, wy, TEXTURES.WATER).setDepth(0);
-            this.decorations.add(wa);
-            break;
-          }
-          case TILE.STONE: {
-            const s = this.physics.add.staticSprite(wx, wy, TEXTURES.STONE);
-            s.setOrigin(0.5, 0.5).setDepth(wy);
-            s.setDisplaySize(32, 28);
-            s.body.setSize(28, 24);
-            s.body.setOffset(2, 4);
-            this.decorations.add(s);
-            break;
-          }
-          case TILE.FLOWER: {
-            const f = this.add.image(wx, wy, TEXTURES.FLOWER).setDepth(1);
-            this.decorations.add(f);
-            break;
-          }
-          case TILE.MUSHROOM: {
-            const m = this.add.image(wx, wy, TEXTURES.MUSHROOM).setDepth(1);
-            this.decorations.add(m);
-            break;
-          }
-          case TILE.BRIDGE: {
-            const b = this.add.image(wx, wy, TEXTURES.BRIDGE).setDepth(1);
-            this.decorations.add(b);
-            break;
-          }
-          case TILE.FENCE: {
-            const fe = this.physics.add.staticSprite(wx, wy, TEXTURES.FENCE);
-            fe.setOrigin(0.5, 0.5).setDepth(wy);
-            fe.body.setSize(32, 16);
-            fe.body.setOffset(0, 4);
-            fe.refreshBody();
-            this.decorations.add(fe);
-            break;
-          }
-          case TILE.CAMPFIRE: {
-            const cf = this.add.image(wx, wy, TEXTURES.CAMPFIRE).setDepth(wy);
-            cf.setDisplaySize(28, 40);
-            cf.setOrigin(0.5, 0.7);
-            this.decorations.add(cf);
-            this.tweens.add({
-              targets: cf,
-              scaleX: cf.scaleX * 1.1, scaleY: cf.scaleY * 0.9,
-              duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-            });
-            break;
-          }
-          case TILE.CHEST:
-            this.createChest(wx, wy, false);
-            break;
-          case TILE.CHEST_LOCKED:
-            this.createChest(wx, wy, true);
-            break;
-          case TILE.PORTAL:
-            this.createPortal(wx, wy, level);
-            break;
-        }
-      }
-    }
-
-    this.mapData = mapData;
-    const mapWidth = mapData[0].length * ts;
-    const mapHeight = mapData.length * ts;
-    this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
-  }
-
-  createChest(x, y, locked) {
-    const sprite = this.physics.add.sprite(x, y, locked ? TEXTURES.CHEST_LOCKED : TEXTURES.CHEST_CLOSED);
-    sprite.setOrigin(0.5, 0.5).setDepth(y);
-    sprite.setDisplaySize(32, 28);
-    sprite.body.setImmovable(true);
-    sprite.body.setAllowGravity(false);
-
-    const label = this.add.text(x, y - 24, locked ? '需要钥匙' : '按 E 打开', {
-      fontSize: '10px', fill: locked ? '#ff6666' : '#aaaaaa',
-      fontFamily: 'Courier New'
-    }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
-
-    const chest = {
-      sprite, label, locked, opened: false,
-      reward: locked ? { score: 50, healAmount: 25 } : { score: 20, healAmount: 0 }
-    };
-
-    // NPC-like interaction
-    sprite.chestInstance = chest;
-    this.chests.push(chest);
-  }
-
-  createPortal(x, y, level) {
-    this.portalSprite = this.physics.add.sprite(x, y, TEXTURES.PORTAL);
-    this.portalSprite.setOrigin(0.5, 0.5).setDepth(y).setDisplaySize(32, 32);
-    this.portalSprite.body.setImmovable(true);
-    this.portalSprite.body.setAllowGravity(false);
-
-    const requiredKeys = level.portalRequiredKeys || 0;
-    this.portalRequiredKeys = requiredKeys;
-
-    this.portalLabel = this.add.text(x, y - 28, `需要 ${requiredKeys} 把钥匙`, {
-      fontSize: '10px', fill: '#ff6666',
-      fontFamily: 'Courier New'
-    }).setOrigin(0.5).setDepth(y + 1);
-
-    // Inactive state: gray tint
-    this.portalSprite.setTint(0x666666);
-    this.portalSprite.setAlpha(0.6);
-
-    // Rotation animation
-    this.tweens.add({
-      targets: this.portalSprite,
-      angle: 360,
-      duration: 3000,
-      repeat: -1,
-      ease: 'Linear'
-    });
-
-    this.portalSprite.portalInstance = true;
-  }
-
-  updatePortalState() {
-    if (!this.portalSprite) return;
-    const gs = this.registry.get('gameState');
-    const hasEnoughKeys = gs.keysCollected >= this.portalRequiredKeys;
-
-    if (hasEnoughKeys && !this.portalActivated) {
-      this.portalActivated = true;
-      this.portalSprite.clearTint();
-      this.portalSprite.setAlpha(1);
-      this.portalLabel.setText('按 E 传送');
-      this.portalLabel.setFill('#00ff00');
-
-      // Activation glow pulse
-      this.portalGlow = this.tweens.add({
-        targets: this.portalSprite,
-        scaleX: 1.2, scaleY: 1.2,
-        duration: 800, yoyo: true, repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    } else if (!hasEnoughKeys) {
-      this.portalLabel.setText(`需要 ${this.portalRequiredKeys} 把钥匙 (${gs.keysCollected}/${this.portalRequiredKeys})`);
-    }
-  }
-
-  getEmptyTiles() {
-    const ts = GAME_CONFIG.MAP.TILE_SIZE;
-    const level = levelData[this.currentLevel];
-    const startX = level.playerStart.x;
-    const startY = level.playerStart.y;
-    const empty = [];
-    for (let y = 2; y < this.mapData.length - 2; y++) {
-      for (let x = 2; x < this.mapData[0].length - 2; x++) {
-        if (this.mapData[y][x] === TILE.EMPTY) {
-          const wx = x * ts + ts / 2;
-          const wy = y * ts + ts / 2;
-          const distToStart = Phaser.Math.Distance.Between(wx, wy, startX, startY);
-          if (distToStart > 200) {
-            empty.push({ x: wx, y: wy });
-          }
-        }
-      }
-    }
-    return empty;
-  }
-
-  pickRandomPositions(emptyTiles, count) {
-    const shuffled = [...emptyTiles].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
-  }
-
-  createPlayer(level) {
-    const savedData = this.registry.get('savedPlayerData');
-    const startX = savedData?.position?.x || level.playerStart.x;
-    const startY = savedData?.position?.y || level.playerStart.y;
-    this.player = new Player(this, startX, startY);
-    if (savedData?.hp) {
-      this.player.hp = Math.min(savedData.hp, this.player.maxHp);
-    }
-    if (savedData?.stamina !== undefined) {
-      this.player.stamina = Math.min(savedData.stamina, this.player.maxStamina);
-    }
-    // Emit initial HP/resource so UI shows correct values
-    this.player.onHpChanged();
-  }
-
-  createEnemies(level) {
-    const empty = this.getEmptyTiles();
-    // Support both array and legacy single-object format
-    const groups = Array.isArray(level.enemies) ? level.enemies : [level.enemies];
-    groups.forEach(group => {
-      const config = itemData.enemies[group.type];
-      if (!config) return;
-      const positions = this.pickRandomPositions(empty, group.count);
-      positions.forEach(pos => {
-        this.enemies.push(new Enemy(this, pos.x, pos.y, config));
-      });
-    });
-  }
-
-  createItems(level) {
-    const gs = this.registry.get('gameState');
-    const collected = gs?.collectedItems || [];
-    const empty = this.getEmptyTiles();
-    const cfg = level.items;
-
-    const coinPos = this.pickRandomPositions(empty, cfg.coins);
-    coinPos.forEach((pos, i) => {
-      const id = `L${this.currentLevel}_coin_${i}`;
-      if (!collected.includes(id)) {
-        this.items.push(new Item(this, pos.x, pos.y, 'coin', {
-          id, ...itemData.items.coin,
-          onCollect: (item) => {
-            const g = this.registry.get('gameState');
-            g.score += item.value;
-            this.registry.set('gameState', g);
-            this.events.emit('scoreChanged', g.score);
-          }
-        }));
-      }
-    });
-
-    const remaining = empty.filter(e => !coinPos.includes(e));
-    const keyPos = this.pickRandomPositions(remaining, cfg.keys);
-    keyPos.forEach((pos, i) => {
-      const id = `L${this.currentLevel}_key_${i}`;
-      if (!collected.includes(id)) {
-        this.items.push(new Item(this, pos.x, pos.y, 'key', {
-          id, ...itemData.items.key,
-          onCollect: () => {
-            const g = this.registry.get('gameState');
-            g.keysCollected += 1;
-            this.registry.set('gameState', g);
-            this.events.emit('keysChanged', g.keysCollected);
-          }
-        }));
-      }
-    });
-
-    const potionPos = this.pickRandomPositions(remaining, cfg.potions);
-    potionPos.forEach((pos, i) => {
-      const id = `L${this.currentLevel}_potion_${i}`;
-      if (!collected.includes(id)) {
-        this.items.push(new Item(this, pos.x, pos.y, 'potion', {
-          id, ...itemData.items.potion,
-          onCollect: (item) => this.player.heal(item.value)
-        }));
-      }
-    });
-
-    if (cfg.hasArtifact && !collected.includes(`L${this.currentLevel}_artifact_0`)) {
-      const artifactPos = this.pickRandomPositions(remaining, 1)[0];
-      if (artifactPos) {
-        this.items.push(new Item(this, artifactPos.x, artifactPos.y, 'artifact', {
-          id: `L${this.currentLevel}_artifact_0`, ...itemData.items.artifact,
-          onCollect: () => {
-            const g = this.registry.get('gameState');
-            g.hasArtifact = true;
-            this.registry.set('gameState', g);
-            this.events.emit('artifactCollected');
-          }
-        }));
-      }
-    }
-  }
-
-  createNPCs(level) {
-    level.npcs.forEach(npcData => {
-      const npc = new NPC(this, npcData.x, npcData.y, {
-        id: npcData.id,
-        name: npcData.name,
-        dialogues: npcData.dialogues,
-        stateCondition: npcData.hasStateCondition
-          ? (inv) => inv.some(i => i.type === 'KEY' || i.type === 'key') ? NPCState.READY : NPCState.IDLE
-          : null
-      });
-      this.npcs.push(npc);
-    });
-  }
-
-  createBreakables() {
-    const empty = this.getEmptyTiles();
-    const positions = this.pickRandomPositions(empty, 5);
-    positions.forEach(pos => {
-      const b = this.physics.add.sprite(pos.x, pos.y, TEXTURES.BARREL);
-      b.setOrigin(0.5, 0.5).setDepth(pos.y).setDisplaySize(28, 34);
-      b.body.setImmovable(true);
-      b.body.setAllowGravity(false);
-      b.hp = 2;
-      b.isBroken = false;
-      this.breakables.push(b);
-    });
-  }
-
-  createTriggerZones() {
-    const empty = this.getEmptyTiles();
-    const positions = this.pickRandomPositions(empty, 3);
-    const messages = ['你发现了新区域...', '前方似乎有危险的气息...', '神器就在不远处...'];
-    positions.forEach((pos, i) => {
-      const rect = this.add.rectangle(pos.x, pos.y, 100, 100, 0xff00ff, 0);
-      this.physics.add.existing(rect, true);
-      rect.triggerMessage = messages[i] || messages[0];
-      rect.triggered = false;
-      this.triggerZones.push(rect);
-    });
-  }
-
-  createHelpSigns(level) {
-    const signs = level.signs || [];
-    signs.forEach(s => {
-      const signSprite = this.physics.add.staticSprite(s.x, s.y, TEXTURES.SIGN);
-      signSprite.setDisplaySize(28, 44);
-      signSprite.setOrigin(0.5, 0.7);
-      signSprite.setDepth(s.y);
-      signSprite.npcInstance = {
-        name: '告示牌',
-        isDialoguing: false,
-        getNextDialogue: () => s.text,
-        dialogues: [s.text],
-        setTalking: () => {}
-      };
-      this.npcs.push(signSprite);
-    });
-  }
-
   setupCollisions() {
     this.physics.add.collider(this.player.sprite, this.walls);
     this.physics.add.collider(this.player.sprite, this.obstacles);
@@ -579,11 +188,27 @@ export class MainGameScene extends Phaser.Scene {
       this.physics.add.overlap(this.player.sprite, item.sprite, () => this.handleItemPickup(item), null, this);
     });
 
-    // Player can't be pushed by enemies
-    this.player.sprite.body.pushable = false;
-
     this.enemies.forEach(enemy => {
-      this.physics.add.collider(this.player.sprite, enemy.sprite, () => this.handleEnemyContact(enemy), null, this);
+      this.physics.add.collider(
+        this.player.sprite, enemy.sprite,
+        () => this.handleEnemyContact(enemy),
+        // Process callback: controls whether collision is applied
+        (playerSprite, enemySprite) => {
+          // During charge dash: pass through enemies (no collision)
+          if (this.player.state === PlayerState.SKILL_CASTING) {
+            const activeSkill = this.player.skillEngine.getActiveSkill();
+            if (activeSkill && activeSkill.effect.type === 'dash') {
+              return false;
+            }
+          }
+          // Normal collision: block each other, neither pushes
+          // Player pushable=false is set in constructor;
+          // enemy pushable=false here, reset to true each frame in update()
+          enemySprite.body.pushable = false;
+          return true;
+        },
+        this
+      );
       this.physics.add.overlap(this.player.attackHitbox, enemy.sprite, () => this.handleAttackHit(enemy), null, this);
       // Skill hitbox overlaps (charge, whirlwind)
       this.physics.add.overlap(this.player.skillHitbox, enemy.sprite, () => this.handleSkillHit(enemy), null, this);
@@ -838,137 +463,6 @@ export class MainGameScene extends Phaser.Scene {
     });
   }
 
-  // --- Chest System ---
-
-  handleChestProximity(chest) {
-    if (this.dialoguing || chest.opened) return;
-    this.player.setInteractTarget(chest.sprite);
-    chest.label.setVisible(true);
-  }
-
-  handleChestInteract(chest) {
-    if (chest.opened) return;
-
-    if (chest.locked) {
-      const gs = this.registry.get('gameState');
-      if (gs.keysCollected <= 0) {
-        // Show "need key" message
-        this.showQuickMessage('需要一把钥匙才能打开！');
-        return;
-      }
-      // Consume a key
-      gs.keysCollected -= 1;
-      this.registry.set('gameState', gs);
-      this.events.emit('keysChanged', gs.keysCollected);
-    }
-
-    // Open chest
-    chest.opened = true;
-    chest.sprite.setTexture(TEXTURES.CHEST_OPEN);
-    chest.label.setVisible(false);
-    this.player.canInteract = false;
-    this.player.interactTarget = null;
-
-    // Reward
-    const gs = this.registry.get('gameState');
-    gs.score += chest.reward.score;
-    this.registry.set('gameState', gs);
-    this.events.emit('scoreChanged', gs.score);
-
-    if (chest.reward.healAmount > 0) {
-      this.player.heal(chest.reward.healAmount);
-    }
-
-    // Open animation
-    this.tweens.add({
-      targets: chest.sprite,
-      scaleY: 1.2, scaleX: 0.9,
-      duration: 100, yoyo: true,
-      onComplete: () => {
-        // Sparkle particles
-        for (let i = 0; i < 5; i++) {
-          const p = this.add.image(chest.sprite.x, chest.sprite.y, TEXTURES.PARTICLE);
-          p.setTint(0xffd700);
-          p.setDepth(chest.sprite.y + 10);
-          this.tweens.add({
-            targets: p,
-            x: chest.sprite.x + (Math.random() - 0.5) * 40,
-            y: chest.sprite.y - 20 - Math.random() * 30,
-            alpha: 0, scaleX: 0, scaleY: 0,
-            duration: 400 + Math.random() * 200,
-            onComplete: () => p.destroy()
-          });
-        }
-        // Fade out and destroy opened chest
-        this.tweens.add({
-          targets: chest.sprite,
-          alpha: 0,
-          duration: 500,
-          delay: 300,
-          onComplete: () => {
-            if (chest.sprite.body) chest.sprite.body.enable = false;
-            chest.sprite.setVisible(false);
-          }
-        });
-      }
-    });
-
-    this.showQuickMessage(`获得 ${chest.reward.score} 分！${chest.reward.healAmount > 0 ? ` 恢复 ${chest.reward.healAmount} HP！` : ''}`);
-  }
-
-  // --- Portal System ---
-
-  handlePortalProximity() {
-    if (this.dialoguing) return;
-    if (this.portalSprite) {
-      this.player.setInteractTarget(this.portalSprite);
-    }
-  }
-
-  handlePortalInteract() {
-    if (!this.portalActivated) {
-      const gs = this.registry.get('gameState');
-      this.showQuickMessage(`需要 ${this.portalRequiredKeys} 把钥匙！(当前: ${gs.keysCollected})`);
-      return;
-    }
-
-    // Show confirmation dialogue
-    this.dialoguing = true;
-    const windowObj = this.uiManager.createDialogueWindow();
-    this.activeDialogueWindow = windowObj;
-
-    this.uiManager.openWindow(windowObj, '传送门', ['是否传送到下一关？按 [E] 确认传送。'], () => {
-      // On all complete (E pressed after reading)
-      this.uiManager.closeWindow(windowObj);
-      this.activeDialogueWindow = null;
-      this.dialoguing = false;
-      this.startLevelTransition();
-    });
-  }
-
-  startLevelTransition() {
-    // Fade out
-    this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      const gs = this.registry.get('gameState');
-      gs.currentLevel = this.currentLevel + 1;
-      gs.keysCollected = 0; // Reset keys for new level
-      gs.collectedItems = []; // Reset collected items for new level
-      this.registry.set('gameState', gs);
-
-      // Clear saved position so new level uses its own start
-      this.registry.remove('savedPlayerData');
-
-      if (this.currentLevel + 1 < levelData.length) {
-        this.loadLevel(this.currentLevel + 1);
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-      } else {
-        // No more levels - victory
-        this.handleVictory();
-      }
-    });
-  }
-
   showQuickMessage(text) {
     const msg = this.add.text(
       this.cameras.main.width / 2,
@@ -985,8 +479,6 @@ export class MainGameScene extends Phaser.Scene {
     });
   }
 
-  // --- Standard Handlers ---
-
   startHitStop(duration) {
     this.hitStopTimer = duration;
     this.physics.pause();
@@ -1001,214 +493,6 @@ export class MainGameScene extends Phaser.Scene {
     if (SaveSystem.hasSave()) {
       SaveSystem.load(this);
     }
-  }
-
-  handleItemPickup(item) {
-    if (item.isCollected) return;
-    const result = item.collect();
-    if (result) {
-      // Use full item definition from items.json for proper stacking/type
-      const fullData = itemData.items[item.type] || result;
-      const qty = item.spawnQuantity || 1;
-      this.inventory.addItem(fullData, qty);
-
-      // Floating text for gold pickup
-      if (fullData.type === 'currency' && this.player) {
-        const goldAmount = (fullData.value || 0) * qty;
-        if (goldAmount > 0) {
-          const goldText = this.add.text(
-            this.player.sprite.x, this.player.sprite.y - 20,
-            `+${goldAmount} Gold`,
-            { fontSize: '12px', fill: '#ffd700', fontFamily: 'Courier New',
-              fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
-          ).setOrigin(0.5).setDepth(200);
-          this.tweens.add({
-            targets: goldText, y: goldText.y - 30, alpha: 0,
-            duration: 1000,
-            onComplete: () => goldText.destroy()
-          });
-        }
-      }
-
-      const gs = this.registry.get('gameState');
-      if (item.id) {
-        gs.collectedItems.push(item.id);
-        this.registry.set('gameState', gs);
-      }
-      const idx = this.items.indexOf(item);
-      if (idx > -1) this.items.splice(idx, 1);
-
-      // Rarity notification for rare+ equipment
-      const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-      if (fullData.type === 'equipment' && rarityOrder.indexOf(fullData.rarity) >= 2) {
-        const color = fullData.rarity === 'legendary' ? 0xffaa00 : fullData.rarity === 'epic' ? 0xaa44aa : 0x4444ff;
-        this.showQuickMessage(`获得了 ${fullData.name}！`, color);
-      }
-    }
-  }
-
-  handleEnemyContact(enemy) {
-    if (this.player.isInvulnerable || this.player.state === PlayerState.DEAD) return;
-    if (enemy.state === EnemyState.DEAD) return;
-    this.player.takeDamage(enemy.getAttack(), enemy.sprite.x, enemy.sprite.y);
-  }
-
-  handleAttackHit(enemy) {
-    if (!this.player.attackHitbox.body.enable) return;
-    if (this.player.attackHitRegistered) return;
-    if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
-    enemy.takeDamage(this.player.getAttack(), this.player.sprite.x, this.player.sprite.y);
-    this.player.onAttackHit();
-    // Disable hitbox immediately after hit to prevent same-frame duplicates
-    this.player.attackHitbox.body.enable = false;
-  }
-
-  handleSkillHit(enemy) {
-    if (!this.player.skillHitbox.body.enable) return;
-    if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
-
-    const skillEngine = this.player.skillEngine;
-    const skill = skillEngine.getActiveSkill();
-    if (!skill) return;
-
-    if (skill.effect.type === 'dash') {
-      // Charge: single-hit per enemy
-      if (skillEngine.hasHitTarget(enemy)) return;
-      skillEngine.markTargetHit(enemy);
-
-      const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
-      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
-
-      // Stun
-      if (skill.effect.stun) {
-        enemy.setState(EnemyState.HURT);
-        enemy.sprite.setVelocity(0, 0);
-        enemy.attackCooldown = skill.effect.stun;
-        this.time.delayedCall(skill.effect.stun, () => {
-          if (enemy.hp > 0 && enemy.state === EnemyState.HURT) {
-            enemy.setState(EnemyState.CHASE);
-          }
-        });
-      }
-
-      // Extra knockback
-      if (skill.effect.knockback) {
-        enemy.applyKnockback(this.player.sprite.x, this.player.sprite.y, skill.effect.knockback);
-      }
-
-      // Camera shake on hit
-      if (skill.effect.cameraShake) {
-        this.events.emit('screenShake', skill.effect.cameraShake.intensity, skill.effect.cameraShake.duration);
-      }
-
-      // Hit-stop
-      this.events.emit('hitStop', 50);
-
-      // Rage gain
-      this.player.addRage(8);
-
-      // Flash player sprite white
-      this.player.sprite.setTint(0xffffff);
-      this.time.delayedCall(100, () => {
-        if (this.player.sprite) this.player.sprite.clearTint();
-      });
-
-    } else if (skill.effect.type === 'spin') {
-      // Whirlwind: multi-hit with reduced enemy i-frames
-      const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
-
-      // Temporarily reduce enemy i-frames for whirlwind hits
-      const originalIFrames = enemy.iFramesDuration;
-      enemy.iFramesDuration = 180;
-      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
-      enemy.iFramesDuration = originalIFrames;
-
-      this.events.emit('screenShake', 2, 50);
-      this.player.addRage(4);
-    }
-  }
-
-  handleBreakableHit(b) {
-    if (!this.player.attackHitbox.body.enable || b.isBroken || this.player.attackHitRegistered) return;
-    b.hp--;
-    this.player.onAttackHit();
-    this.screenShakeIntensity = 3;
-    this.screenShakeTimer = 60;
-    this.tweens.add({
-      targets: b, scaleX: 0.8, scaleY: 1.2, duration: 50, yoyo: true,
-      onComplete: () => {
-        if (b.hp <= 0) {
-          b.isBroken = true;
-          this.events.emit('enemyDropLoot', 'barrel', b.x, b.y);
-          this.tweens.add({
-            targets: b, alpha: 0, scaleX: 0, scaleY: 0, duration: 300,
-            onComplete: () => b.destroy()
-          });
-        }
-      }
-    });
-  }
-
-  handleNPCProximity(npc) {
-    if (this.dialoguing) return;
-    const sprite = npc.sprite || npc;
-    this.player.setInteractTarget(sprite);
-  }
-
-  handleNPCDialogue(npc) {
-    if (this.dialoguing) return;
-    if (npc.isDialoguing) return;
-
-    // Get all dialogues for pagination
-    const dialogues = npc.dialogues || [npc.getNextDialogue()];
-    if (npc.setTalking) npc.setTalking(true);
-    this.dialoguing = true;
-    this.activeDialogueNpc = npc;
-
-    const windowObj = this.uiManager.createDialogueWindow();
-    this.activeDialogueWindow = windowObj;
-
-    this.uiManager.openWindow(windowObj, npc.name || '???', dialogues, () => {
-      // All pages read - auto close
-      if (npc.setTalking) npc.setTalking(false);
-      this.dialoguing = false;
-      this.activeDialogueWindow = null;
-      this.activeDialogueNpc = null;
-    });
-  }
-
-  closeCurrentDialogue() {
-    if (this.activeDialogueWindow) {
-      this.uiManager.closeWindow(this.activeDialogueWindow);
-      this.activeDialogueWindow = null;
-    }
-    if (this.activeDialogueNpc && this.activeDialogueNpc.setTalking) {
-      this.activeDialogueNpc.setTalking(false);
-    }
-    this.activeDialogueNpc = null;
-    this.dialoguing = false;
-  }
-
-  handleTriggerZone(zone) {
-    if (zone.triggered || this.dialoguing) return;
-    zone.triggered = true;
-    this.showQuickMessage(zone.triggerMessage);
-  }
-
-  handleVictoryZone() {
-    const gs = this.registry.get('gameState');
-    if (gs.hasArtifact) this.handleVictory();
-  }
-
-  handleVictory() {
-    SaveSystem.save(this);
-    this.physics.pause();
-    this.time.delayedCall(500, () => this.scene.start('VictoryScene'));
-  }
-
-  handleGameOver() {
-    this.physics.pause();
-    this.time.delayedCall(1000, () => this.scene.start('GameOverScene'));
   }
 
   pauseGame() {
@@ -1239,6 +523,13 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     if (this.gamePaused) return;
+
+    // Reset enemy pushable each frame (player-enemy collider sets it false,
+    // but enemies need to stay pushable for enemy-enemy collisions)
+    for (let i = 0; i < this.enemies.length; i++) {
+      const body = this.enemies[i].sprite?.body;
+      if (body) body.pushable = true;
+    }
 
     if (this.screenShakeTimer > 0) {
       this.screenShakeTimer -= delta;
@@ -1328,3 +619,7 @@ export class MainGameScene extends Phaser.Scene {
     }
   }
 }
+
+// Mix in level building and interaction handling methods
+Object.assign(MainGameScene.prototype, LevelBuilder);
+Object.assign(MainGameScene.prototype, InteractionHandler);

@@ -242,9 +242,12 @@ export class Actor {
     if (!this.isInvulnerable) return;
     this.iFramesTimer -= delta;
     if (this.iFramesTimer <= 0) {
-      this.isInvulnerable = false;
       this.iFramesTimer = 0;
-      this.sprite.setAlpha(1);
+      // Don't clear invulnerability if a skill is granting it
+      if (!this._whirlwindSuperArmor) {
+        this.isInvulnerable = false;
+        this.sprite.setAlpha(1);
+      }
     }
   }
 

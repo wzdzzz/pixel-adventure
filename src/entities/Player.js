@@ -25,6 +25,7 @@ export class Player extends Actor {
     this.sprite.setBounce(0);
     this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
     this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_SPEED, GAME_CONFIG.PHYSICS.PLAYER_SPEED);
+    this.sprite.body.pushable = false;  // Player cannot be pushed by enemies
     this.sprite.playerInstance = this;
 
     this.iFramesDuration = 800;
@@ -339,6 +340,12 @@ export class Player extends Actor {
     this.attackHitbox.body.enable = false;
     this.setState(PlayerState.SKILL_CASTING);
     this.playAnim('attack', false); // reuse attack anim for now
+
+    // Whirlwind: invulnerable from startup (not just active phase)
+    if (skill.effect.type === 'spin') {
+      this._whirlwindSuperArmor = true;
+      this.isInvulnerable = true;
+    }
   }
 
   /** Handle SKILL_CASTING state each frame. */
@@ -455,18 +462,21 @@ export class Player extends Actor {
 
   // ─── Charge Skill ───
 
-  /** Begin the Charge dash: dash toward mouse cursor position. */
+  /** Begin the Charge dash: dash in current movement direction (or facing). */
   startChargeDash(skill) {
     const effect = skill.effect;
 
-    // Calculate direction from player to mouse cursor
-    const pointer = this.scene.input.activePointer;
-    const cam = this.scene.cameras.main;
-    const targetX = pointer.x + cam.scrollX;
-    const targetY = pointer.y + cam.scrollY;
-    const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, targetX, targetY);
-    const dirX = Math.cos(angle);
-    const dirY = Math.sin(angle);
+    // Read keyboard input directly (velocity is already zeroed by trySkill)
+    const input = this.getInputDirection();
+    let dirX, dirY;
+    if (input.x !== 0 || input.y !== 0) {
+      const len = Math.sqrt(input.x * input.x + input.y * input.y);
+      dirX = input.x / len;
+      dirY = input.y / len;
+    } else {
+      dirX = this.facing;
+      dirY = 0;
+    }
 
     // Update facing based on dash direction
     if (dirX !== 0) {
@@ -485,7 +495,7 @@ export class Player extends Actor {
     this.skillHitbox.setPosition(hx, hy);
     this.skillHitbox.body.enable = true;
 
-    // Set dash velocity toward mouse
+    // Set dash velocity along movement direction
     this._chargeDashVelocity = {
       vx: dirX * effect.speed,
       vy: dirY * effect.speed
