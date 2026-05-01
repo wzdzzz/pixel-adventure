@@ -196,6 +196,7 @@ export class Player extends Actor {
     if (this.stateTimer >= 150) {
       if (this.pendingAttack) {
         this.pendingAttack = false;
+        this.setState(PlayerState.IDLE);
         this.tryAttack();
       } else {
         this.setState(PlayerState.IDLE);
