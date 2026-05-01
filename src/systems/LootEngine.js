@@ -10,7 +10,7 @@
 import { LOOT_TABLES, RARITY_MULTIPLIERS } from '../data/lootTables.js';
 import itemData from '../data/items.json';
 
-export default class LootEngine {
+export class LootEngine {
 
   // ── Public ───────────────────────────────────────────────────────────────
 
