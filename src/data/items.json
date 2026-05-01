@@ -71,7 +71,8 @@
       "speed": 60,
       "patrolRange": 120,
       "detectionRange": 150,
-      "stats": { "con": 3, "str": 5, "int": 1, "agi": 1 }
+      "level": 2,
+      "stats": { "con": 3, "str": 5, "int": 1, "agi": 1, "per": 1, "lck": 1 }
     },
     "skeleton": {
       "id": "skeleton",
@@ -82,7 +83,8 @@
       "speed": 50,
       "patrolRange": 100,
       "detectionRange": 180,
-      "stats": { "con": 5, "str": 7, "int": 2, "agi": 1 }
+      "level": 3,
+      "stats": { "con": 5, "str": 7, "int": 2, "agi": 1, "per": 2, "lck": 1 }
     },
     "goblin": {
       "id": "goblin",
@@ -93,7 +95,8 @@
       "speed": 70,
       "patrolRange": 100,
       "detectionRange": 160,
-      "stats": { "con": 3, "str": 6, "int": 1, "agi": 3 }
+      "level": 3,
+      "stats": { "con": 3, "str": 6, "int": 1, "agi": 3, "per": 2, "lck": 2 }
     },
     "spider": {
       "id": "spider",
@@ -104,7 +107,8 @@
       "speed": 80,
       "patrolRange": 140,
       "detectionRange": 170,
-      "stats": { "con": 2, "str": 4, "int": 1, "agi": 4 }
+      "level": 3,
+      "stats": { "con": 2, "str": 4, "int": 1, "agi": 4, "per": 3, "lck": 1 }
     },
     "bat": {
       "id": "bat",
@@ -115,7 +119,8 @@
       "speed": 90,
       "patrolRange": 160,
       "detectionRange": 200,
-      "stats": { "con": 2, "str": 3, "int": 1, "agi": 5 }
+      "level": 3,
+      "stats": { "con": 2, "str": 3, "int": 1, "agi": 5, "per": 4, "lck": 1 }
     },
     "orc_warrior": {
       "id": "orc_warrior",
@@ -126,7 +131,8 @@
       "speed": 45,
       "patrolRange": 80,
       "detectionRange": 160,
-      "stats": { "con": 7, "str": 9, "int": 1, "agi": 1 }
+      "level": 4,
+      "stats": { "con": 7, "str": 9, "int": 1, "agi": 1, "per": 2, "lck": 1 }
     },
     "fire_mage": {
       "id": "fire_mage",
@@ -137,7 +143,8 @@
       "speed": 45,
       "patrolRange": 100,
       "detectionRange": 200,
-      "stats": { "con": 4, "str": 3, "int": 8, "agi": 2 }
+      "level": 4,
+      "stats": { "con": 4, "str": 3, "int": 8, "agi": 2, "per": 3, "lck": 2 }
     },
     "giant_skeleton": {
       "id": "giant_skeleton",
@@ -148,7 +155,8 @@
       "speed": 35,
       "patrolRange": 80,
       "detectionRange": 180,
-      "stats": { "con": 10, "str": 11, "int": 2, "agi": 1 }
+      "level": 5,
+      "stats": { "con": 10, "str": 11, "int": 2, "agi": 1, "per": 2, "lck": 1 }
     },
     "skeleton_king": {
       "id": "skeleton_king",
@@ -159,7 +167,8 @@
       "speed": 30,
       "patrolRange": 60,
       "detectionRange": 220,
-      "stats": { "con": 15, "str": 13, "int": 5, "agi": 1 }
+      "level": 7,
+      "stats": { "con": 15, "str": 13, "int": 5, "agi": 1, "per": 3, "lck": 2 }
     }
   },
   "npcs": {

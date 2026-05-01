@@ -28,7 +28,9 @@ export class Enemy extends Actor {
       con: Math.ceil(mergedConfig.hp / 10),
       str: Math.ceil(mergedConfig.damage / 2),
       int: 1,
-      agi: Math.ceil(mergedConfig.speed / 10)
+      agi: Math.ceil(mergedConfig.speed / 10),
+      per: 1,
+      lck: 1
     };
 
     // Determine character type and texture from config

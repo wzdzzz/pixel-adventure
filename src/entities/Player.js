@@ -15,7 +15,7 @@ export const PlayerState = {
 
 export class Player extends Actor {
   constructor(scene, x, y) {
-    const statsConfig = { con: 10, str: 8, int: 5, agi: 8 };
+    const statsConfig = { con: 10, str: 8, int: 5, agi: 8, per: 5, lck: 3 };
     super(scene, x, y, 'hero_00', statsConfig, 'hero');
 
     this.sprite.setBounce(0.1);

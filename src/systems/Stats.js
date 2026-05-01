@@ -4,36 +4,38 @@
  * 基础属性:
  *   CON (体质): +10 MaxHP, +0.5/s HP回复
  *   STR (力量): +2 物理攻击, +0.1 暴击伤害倍率
- *   INT (智力): +10 MaxMP, +1 法术强度
- *   AGI (敏捷): +1% 攻击速度, +0.5 移动速度
+ *   INT (智力): +15 MaxMP, +1 法术强度
+ *   AGI (敏捷): +1% 攻击速度, +20 移动速度
+ *   PER (感知): +0.5% 暴击率, +0.5 护甲穿透
+ *   LCK (幸运): +√LCK% 掉落加成
  */
 
 // 默认基础属性
 export const DEFAULT_BASE_STATS = {
-  con: 10,
-  str: 8,
-  int: 5,
-  agi: 8
+  con: 10, str: 8, int: 5, agi: 8, per: 5, lck: 3
 };
 
 export class Stats {
   constructor(base = {}) {
-    // 基础四维
+    // 基础六维
     this.base = {
       con: base.con ?? DEFAULT_BASE_STATS.con,
       str: base.str ?? DEFAULT_BASE_STATS.str,
       int: base.int ?? DEFAULT_BASE_STATS.int,
-      agi: base.agi ?? DEFAULT_BASE_STATS.agi
+      agi: base.agi ?? DEFAULT_BASE_STATS.agi,
+      per: base.per ?? DEFAULT_BASE_STATS.per,
+      lck: base.lck ?? DEFAULT_BASE_STATS.lck
     };
 
     // 装备/buff 提供的额外加成 (flat bonuses)
-    this.bonuses = { con: 0, str: 0, int: 0, agi: 0 };
+    this.bonuses = { con: 0, str: 0, int: 0, agi: 0, per: 0, lck: 0 };
 
     // 额外的二级属性加成 (来自装备直接加成)
     this.flatBonuses = {
       maxHp: 0, maxMp: 0, attack: 0, spellPower: 0,
       moveSpeed: 0, attackSpeed: 0, hpRegen: 0, critDmg: 0,
-      tenacity: 0, defense: 0
+      tenacity: 0, defense: 0,
+      critRate: 0, armorPen: 0, dropBonus: 0, cdr: 0, encumbrance: 0
     };
 
     // 缓存计算结果
@@ -53,18 +55,25 @@ export class Stats {
     const str = this.getEffective('str');
     const int = this.getEffective('int');
     const agi = this.getEffective('agi');
+    const per = this.getEffective('per');
+    const lck = this.getEffective('lck');
 
     this._cache = {
       maxHp:       con * 10         + this.flatBonuses.maxHp,
-      maxMp:       int * 10         + this.flatBonuses.maxMp,
+      maxMp:       int * 15         + this.flatBonuses.maxMp,
       attack:      str * 2          + this.flatBonuses.attack,
       spellPower:  int * 1          + this.flatBonuses.spellPower,
       moveSpeed:   agi * 20 + 40    + this.flatBonuses.moveSpeed,
       attackSpeed: 1.0 + agi * 0.01 + this.flatBonuses.attackSpeed,
       hpRegen:     con * 0.5        + this.flatBonuses.hpRegen,
       critDmg:     1.5 + str * 0.1  + this.flatBonuses.critDmg,
-      tenacity:    Math.min(0.5, con * 0.01 + this.flatBonuses.tenacity),
-      defense:     this.flatBonuses.defense
+      critRate:    per * 0.5         + (this.flatBonuses.critRate || 0),
+      tenacity:    con * 0.5 + str * 0.2 + this.flatBonuses.tenacity,
+      armorPen:    str * 0.3 + per * 0.5 + (this.flatBonuses.armorPen || 0),
+      defense:     this.flatBonuses.defense,
+      dropBonus:   Math.sqrt(lck) * 1.0 + (this.flatBonuses.dropBonus || 0),
+      cdr:         Math.min(40, int * 0.2) + (this.flatBonuses.cdr || 0),
+      encumbrance: this.flatBonuses.encumbrance || 0
     };
     return this._cache;
   }
@@ -104,6 +113,8 @@ export class Stats {
     this.base.str += 1;
     this.base.int += 1;
     this.base.agi += 1;
+    this.base.per += 1;
+    this.base.lck += 1;
     this.invalidate();
   }
 
