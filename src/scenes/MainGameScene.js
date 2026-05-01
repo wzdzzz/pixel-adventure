@@ -1056,7 +1056,7 @@ export class MainGameScene extends Phaser.Scene {
       onComplete: () => {
         if (b.hp <= 0) {
           b.isBroken = true;
-          this.events.emit('spawnItem', Math.random() < 0.6 ? 'coin' : 'potion', b.x, b.y);
+          this.events.emit('enemyDropLoot', 'barrel', b.x, b.y);
           this.tweens.add({
             targets: b, alpha: 0, scaleX: 0, scaleY: 0, duration: 300,
             onComplete: () => b.destroy()
