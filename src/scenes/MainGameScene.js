@@ -737,6 +737,17 @@ export class MainGameScene extends Phaser.Scene {
         onComplete: () => lvlText.destroy()
       });
     });
+
+    // Item use handler
+    this.events.on('useItem', (itemData) => {
+      if (itemData.effect) {
+        switch (itemData.effect.type) {
+          case 'heal':
+            if (this.player) this.player.heal(itemData.effect.amount);
+            break;
+        }
+      }
+    });
   }
 
   // --- Chest System ---
