@@ -79,6 +79,8 @@ export class PanelScene extends Phaser.Scene {
 
     // Open animation
     this.playOpenAnimation();
+    this.refreshCharacterTab();
+    this.refreshInventoryTab();
   }
 
   createTabBar() {
@@ -205,31 +207,66 @@ export class PanelScene extends Phaser.Scene {
     if (this.anims.exists('hero_idle')) preview.play('hero_idle');
     container.add(preview);
 
-    // 8 equipment slots (gray boxes with labels)
-    const slotDefs = [
-      { x: 0, y: -100, label: '武器' },
-      { x: 0, y: -60, label: '头盔' },
-      { x: -55, y: -30, label: '项链' },
-      { x: 55, y: -30, label: '戒指' },
-      { x: -55, y: 30, label: '副手' },
-      { x: 55, y: 30, label: '戒指' },
-      { x: 0, y: 60, label: '护甲' },
-      { x: 0, y: 100, label: '靴子' }
+    // 8 equipment slots — interactive with equip data
+    const slotMapping = [
+      { slot: 'weapon',   x: 0,   y: -100, label: '武器' },
+      { slot: 'helmet',   x: 0,   y: -60,  label: '头盔' },
+      { slot: 'necklace', x: -55, y: -30,  label: '项链' },
+      { slot: 'ring1',    x: 55,  y: -30,  label: '戒指' },
+      { slot: 'offhand',  x: -55, y: 30,   label: '副手' },
+      { slot: 'ring2',    x: 55,  y: 30,   label: '戒指' },
+      { slot: 'armor',    x: 0,   y: 60,   label: '护甲' },
+      { slot: 'boots',    x: 0,   y: 100,  label: '靴子' }
     ];
-    slotDefs.forEach(pos => {
-      const slot = this.add.rectangle(leftX + pos.x, previewY + pos.y, 34, 34, 0x2a2a3a, 0.7)
-        .setStrokeStyle(1, 0x555555);
-      const label = this.add.text(leftX + pos.x, previewY + pos.y + 20, pos.label, {
+
+    this.equipSlotUI = {};
+    const SLOT_ICONS = {
+      weapon: '⚔', offhand: '🛡', helmet: '⛑', armor: '🛡',
+      boots: '👢', necklace: '📿', ring1: '💍', ring2: '💍'
+    };
+
+    slotMapping.forEach(def => {
+      const sx = leftX + def.x;
+      const sy = previewY + def.y;
+
+      const cell = this.add.rectangle(sx, sy, 34, 34, 0x2a2a3a, 0.7)
+        .setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
+      const icon = this.add.text(sx, sy, '', {
+        fontSize: '16px', fontFamily: 'Courier New'
+      }).setOrigin(0.5).setVisible(false);
+      const label = this.add.text(sx, sy + 20, def.label, {
         fontSize: '8px', fill: '#555566', fontFamily: 'Courier New'
       }).setOrigin(0.5);
-      container.add([slot, label]);
-    });
 
-    // Equipment system notice
-    const devText = this.add.text(leftX, previewY + 130, '装备系统开发中...', {
-      fontSize: '10px', fill: '#444455', fontFamily: 'Courier New'
-    }).setOrigin(0.5);
-    container.add(devText);
+      // Click to unequip
+      cell.on('pointerdown', () => {
+        const equip = this.gameScene?.equipmentSystem;
+        if (!equip) return;
+        const equipped = equip.getSlot(def.slot);
+        if (equipped) {
+          equip.unequipToInventory(def.slot);
+          this.refreshCharacterTab();
+          this.refreshInventoryTab();
+        }
+      });
+
+      // Hover tooltip for equipped item
+      cell.on('pointerover', () => {
+        const equip = this.gameScene?.equipmentSystem;
+        if (!equip) return;
+        const equipped = equip.getSlot(def.slot);
+        if (equipped) {
+          this.showEquipTooltip(equipped, sx + 25, sy);
+        }
+      });
+
+      cell.on('pointerout', () => {
+        this.hideTooltip();
+      });
+
+      container.add([cell, icon, label]);
+      this.equipSlotUI[def.slot] = { cell, icon };
+    });
 
     // Level + XP bar
     const xpBarY = previewY + 150;
@@ -539,6 +576,12 @@ export class PanelScene extends Phaser.Scene {
     this.invDropBtn.on('pointerdown', () => this.dropSelectedItem());
     container.add(this.invDropBtn);
 
+    this.invEquipBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 56, '[装备]', {
+      fontSize: '12px', fill: '#44ff44', fontFamily: 'Courier New', fontStyle: 'bold'
+    }).setInteractive({ useHandCursor: true }).setVisible(false);
+    this.invEquipBtn.on('pointerdown', () => this.equipSelectedItem());
+    container.add(this.invEquipBtn);
+
     this.invSelectedSlot = -1;
 
     // Context menu container (scene-level, high depth)
@@ -618,12 +661,14 @@ export class PanelScene extends Phaser.Scene {
       this.invDetailDesc.setText(item.description || '');
 
       this.invUseBtn.setVisible(item.type === 'consumable');
+      this.invEquipBtn.setVisible(item.type === 'equipment');
       this.invDropBtn.setVisible(item.type !== 'quest');
     } else {
       this.invDetailName.setText('');
       this.invDetailRarity.setText('');
       this.invDetailDesc.setText('选择一个物品查看详情');
       this.invUseBtn.setVisible(false);
+      this.invEquipBtn.setVisible(false);
       this.invDropBtn.setVisible(false);
     }
 
@@ -672,6 +717,17 @@ export class PanelScene extends Phaser.Scene {
     inv.removeItem(this.invSelectedSlot, 1);
     this.refreshInventoryTab();
     this.selectInventoryItem(this.invSelectedSlot);
+  }
+
+  equipSelectedItem() {
+    const equip = this.gameScene?.equipmentSystem;
+    if (!equip || this.invSelectedSlot < 0) return;
+    const success = equip.equipFromInventory(this.invSelectedSlot);
+    if (success) {
+      this.refreshInventoryTab();
+      this.refreshCharacterTab();
+      this.selectInventoryItem(this.invSelectedSlot);
+    }
   }
 
   showItemTooltip(slotIndex, x, y) {
@@ -772,6 +828,33 @@ export class PanelScene extends Phaser.Scene {
     this.charDerivedTexts.armorPen.setText(`${derived.armorPen.toFixed(1)}`);
     this.charDerivedTexts.moveSpeed.setText(`${derived.moveSpeed}`);
     this.charDerivedTexts.dropBonus.setText(`${derived.dropBonus.toFixed(1)}%`);
+
+    // Update equipment slot visuals
+    const equip = this.gameScene?.equipmentSystem;
+    if (equip && this.equipSlotUI) {
+      const SLOT_ICONS = {
+        weapon: '⚔', offhand: '🛡', helmet: '⛑', armor: '🛡',
+        boots: '👢', necklace: '📿', ring1: '💍', ring2: '💍'
+      };
+
+      for (const [slotName, ui] of Object.entries(this.equipSlotUI)) {
+        const item = equip.getSlot(slotName);
+        if (item) {
+          const rarity = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
+          ui.cell.setFillStyle(rarity.bg, 0.9);
+          ui.cell.setStrokeStyle(1, rarity.border);
+          ui.icon.setText(SLOT_ICONS[slotName] || '?');
+          ui.icon.setVisible(true);
+        } else {
+          ui.cell.setFillStyle(0x2a2a3a, 0.7);
+          ui.cell.setStrokeStyle(1, 0x555555);
+          ui.icon.setVisible(false);
+        }
+      }
+    }
+
+    // Refresh derived stats if the method exists
+    if (this.updateDerivedStats) this.updateDerivedStats();
   }
 
   handleStatAllocation(statName) {
@@ -848,6 +931,39 @@ export class PanelScene extends Phaser.Scene {
 
   hideTooltip() {
     if (this.tooltipContainer) this.tooltipContainer.setVisible(false);
+  }
+
+  showEquipTooltip(item, x, y) {
+    if (!this.tooltipContainer) return;
+
+    const RARITY_NAMES = {
+      common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说'
+    };
+    const STAT_NAMES = {
+      attack: '攻击', defense: '防御', maxHp: '生命', maxMp: '法力',
+      spellPower: '法强', moveSpeed: '移速', attackSpeed: '攻速',
+      critRate: '暴击率', critDmg: '暴击伤害', hpRegen: 'HP回复'
+    };
+    const BASE_NAMES = { con: '体质', str: '力量', int: '智力', agi: '敏捷', per: '感知', lck: '幸运' };
+
+    let text = `${item.name}\n[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}\n`;
+    if (item.baseStats) {
+      for (const [k, v] of Object.entries(item.baseStats)) {
+        text += `  ${STAT_NAMES[k] || k}: +${v}\n`;
+      }
+    }
+    if (item.statBonuses) {
+      for (const [k, v] of Object.entries(item.statBonuses)) {
+        if (v > 0) text += `  ${BASE_NAMES[k] || k}: +${v}\n`;
+      }
+    }
+    text += `\n点击卸下装备`;
+
+    this.tooltipText.setText(text);
+    const bounds = this.tooltipText.getBounds();
+    this.tooltipBg.setSize(bounds.width + 16, bounds.height + 12);
+    this.tooltipContainer.setPosition(x, y);
+    this.tooltipContainer.setVisible(true);
   }
 
   createSkillTreeTab() {
