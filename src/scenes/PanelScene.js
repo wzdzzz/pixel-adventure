@@ -41,8 +41,10 @@ export class PanelScene extends Phaser.Scene {
     this.createCharacterTab();
     // Inventory tab has dedicated implementation
     this.createInventoryTab();
+    // Skill tree tab has dedicated implementation
+    this.createSkillTreeTab();
     // Other tabs use placeholder
-    ['skillTree', 'questLog'].forEach(tab => {
+    ['questLog'].forEach(tab => {
       this.tabContainers[tab] = this.createTabContainer(tab);
     });
 
@@ -144,6 +146,7 @@ export class PanelScene extends Phaser.Scene {
     // Refresh tab content when switching
     if (tabName === 'character') this.refreshCharacterTab();
     if (tabName === 'inventory') this.refreshInventoryTab();
+    if (tabName === 'skillTree') this.refreshSkillTreeTab();
   }
 
   createTabContainer(tabName) {
@@ -846,6 +849,214 @@ export class PanelScene extends Phaser.Scene {
 
   hideTooltip() {
     if (this.tooltipContainer) this.tooltipContainer.setVisible(false);
+  }
+
+  createSkillTreeTab() {
+    const container = this.add.container(0, 0).setDepth(5).setVisible(false);
+    this.tabContainers.skillTree = container;
+
+    const contentTop = this.panelTop + 50;
+    const contentW = this.panelW - 20;
+    const contentH = this.panelH - 60;
+
+    // Content background
+    const contentBg = this.add.rectangle(
+      this.panelX, contentTop + contentH / 2,
+      contentW, contentH, 0x12121e, 0.8
+    ).setStrokeStyle(1, 0x3a3a5a);
+    container.add(contentBg);
+
+    // Skill points display
+    this.skillPointsText = this.add.text(this.panelLeft + 20, contentTop + 10, '技能点: 0', {
+      fontSize: '13px', fill: '#00ccff', fontFamily: 'Courier New'
+    });
+    container.add(this.skillPointsText);
+
+    // "技能内容待填充" notice
+    const noticeText = this.add.text(this.panelLeft + contentW - 20, contentTop + 10, '技能内容待填充', {
+      fontSize: '10px', fill: '#555566', fontFamily: 'Courier New'
+    }).setOrigin(1, 0);
+    container.add(noticeText);
+
+    // Tree visualization
+    const centerX = this.panelX;
+    const startY = contentTop + 60;
+    const spacingX = 80;
+    const spacingY = 80;
+
+    const skillTree = this.registry.get('skillTreeSystem');
+    if (!skillTree) return;
+
+    // Draw connection lines first (lower depth)
+    this.skillLines = [];
+    skillTree.nodes.forEach(node => {
+      node.prerequisites.forEach(preReqId => {
+        const preReq = skillTree.getNode(preReqId);
+        if (!preReq) return;
+
+        const fromX = centerX + preReq.x * spacingX;
+        const fromY = startY + preReq.y * spacingY;
+        const toX = centerX + node.x * spacingX;
+        const toY = startY + node.y * spacingY;
+
+        const line = this.add.graphics();
+        line.lineStyle(2, 0x444466);
+        line.beginPath();
+        line.moveTo(fromX, fromY);
+        line.lineTo(toX, toY);
+        line.strokePath();
+        container.add(line);
+        this.skillLines.push({ line, fromId: preReqId, toId: node.id });
+      });
+    });
+
+    // Draw nodes
+    this.skillNodeElements = {};
+    skillTree.nodes.forEach(node => {
+      const nx = centerX + node.x * spacingX;
+      const ny = startY + node.y * spacingY;
+
+      // Node shape: circle for passive, rounded rectangle for active
+      const size = node.type === 'passive' ? 28 : 32;
+      let shape;
+      if (node.type === 'passive') {
+        shape = this.add.circle(nx, ny, size / 2, 0x2a2a3a)
+          .setStrokeStyle(2, 0x555555);
+      } else {
+        shape = this.add.rectangle(nx, ny, size, size, 0x2a2a3a)
+          .setStrokeStyle(2, 0x555555);
+      }
+      shape.setInteractive({ useHandCursor: true });
+
+      // Node label
+      const label = this.add.text(nx, ny, node.name === '???' ? '?' : node.name.charAt(0), {
+        fontSize: '12px', fill: '#888888', fontFamily: 'Courier New'
+      }).setOrigin(0.5);
+
+      // Rank indicator
+      const rankText = this.add.text(nx, ny + size / 2 + 8, `${node.currentRank}/${node.maxRank}`, {
+        fontSize: '8px', fill: '#666666', fontFamily: 'Courier New'
+      }).setOrigin(0.5);
+
+      // Interaction
+      shape.on('pointerover', () => {
+        this.showSkillTooltip(node, nx, ny);
+      });
+      shape.on('pointerout', () => {
+        this.hideTooltip();
+      });
+      shape.on('pointerdown', () => {
+        this.handleSkillNodeClick(node.id);
+      });
+
+      container.add([shape, label, rankText]);
+      this.skillNodeElements[node.id] = { shape, label, rankText };
+    });
+
+    // Bottom detail panel
+    const detailY = startY + 4 * spacingY + 10;
+    this.skillDetailText = this.add.text(this.panelX, detailY, '', {
+      fontSize: '11px', fill: '#aaaaaa', fontFamily: 'Courier New',
+      align: 'center', wordWrap: { width: contentW - 40 }
+    }).setOrigin(0.5, 0);
+    container.add(this.skillDetailText);
+
+    this.refreshSkillTreeTab();
+  }
+
+  refreshSkillTreeTab() {
+    const skillTree = this.registry.get('skillTreeSystem');
+    const levelSystem = this.registry.get('levelSystem');
+    if (!skillTree || !this.skillNodeElements) return;
+
+    if (this.skillPointsText) {
+      this.skillPointsText.setText(`技能点: ${levelSystem ? levelSystem.skillPoints : 0}`);
+    }
+
+    // Update node visuals based on state
+    const STATE_COLORS = {
+      maxed:     { fill: 0x3a3a1a, border: 0xffd700, label: '#ffd700' },  // Gold
+      unlocked:  { fill: 0x2a3a2a, border: 0x44bb44, label: '#44bb44' },  // Green
+      available: { fill: 0x2a2a3a, border: 0xcccccc, label: '#cccccc' },  // White
+      locked:    { fill: 0x2a2a2a, border: 0x444444, label: '#555555' }   // Gray
+    };
+
+    skillTree.nodes.forEach(node => {
+      const el = this.skillNodeElements[node.id];
+      if (!el) return;
+
+      const state = skillTree.getNodeState(node.id);
+      const colors = STATE_COLORS[state] || STATE_COLORS.locked;
+
+      el.shape.setFillStyle(colors.fill);
+      el.shape.setStrokeStyle(2, colors.border);
+      el.label.setColor(colors.label);
+      el.rankText.setText(`${node.currentRank}/${node.maxRank}`);
+      el.rankText.setColor(colors.label);
+    });
+
+    // Update connection line colors
+    if (this.skillLines) {
+      this.skillLines.forEach(({ line, fromId, toId }) => {
+        const fromState = skillTree.getNodeState(fromId);
+        const toState = skillTree.getNodeState(toId);
+        line.clear();
+        const lineColor = (fromState === 'unlocked' || fromState === 'maxed') ? 0x44bb44 : 0x444466;
+        const fromNode = skillTree.getNode(fromId);
+        const toNode = skillTree.getNode(toId);
+        const centerX = this.panelX;
+        const startY = this.panelTop + 50 + 60;
+        const spacingX = 80;
+        const spacingY = 80;
+        line.lineStyle(2, lineColor);
+        line.beginPath();
+        line.moveTo(centerX + fromNode.x * spacingX, startY + fromNode.y * spacingY);
+        line.lineTo(centerX + toNode.x * spacingX, startY + toNode.y * spacingY);
+        line.strokePath();
+      });
+    }
+  }
+
+  showSkillTooltip(node, x, y) {
+    if (!this.tooltipContainer) return;
+    const skillTree = this.registry.get('skillTreeSystem');
+    const state = skillTree ? skillTree.getNodeState(node.id) : 'locked';
+
+    const stateLabels = { maxed: '已满级', unlocked: '已解锁', available: '可解锁', locked: '未解锁' };
+
+    let text = `${node.name}\n`;
+    text += `类型: ${node.type === 'passive' ? '被动' : '主动'}\n`;
+    text += `等级: ${node.currentRank}/${node.maxRank}\n`;
+    text += `状态: ${stateLabels[state] || '未知'}\n`;
+    text += `需要等级: ${node.requiredLevel}\n`;
+    if (node.cost > 0) text += `消耗: ${node.cost} 技能点\n`;
+    text += `${node.description}`;
+
+    this.tooltipText.setText(text);
+    this.tooltipContainer.setPosition(x + 30, y - 20);
+    this.tooltipContainer.setVisible(true);
+  }
+
+  handleSkillNodeClick(nodeId) {
+    const skillTree = this.registry.get('skillTreeSystem');
+    if (!skillTree) return;
+
+    const state = skillTree.getNodeState(nodeId);
+    if (state !== 'available') return;
+
+    // Try to unlock
+    if (skillTree.unlock(nodeId)) {
+      // Success animation
+      const el = this.skillNodeElements[nodeId];
+      if (el) {
+        this.tweens.add({
+          targets: el.shape,
+          scaleX: 1.3, scaleY: 1.3,
+          duration: 150, yoyo: true, ease: 'Back.easeOut'
+        });
+      }
+      this.refreshSkillTreeTab();
+    }
   }
 
   playOpenAnimation() {

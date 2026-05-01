@@ -10,6 +10,7 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import { UIManager } from '../systems/UIManager.js';
 import { LevelSystem } from '../systems/LevelSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
+import { SkillTreeSystem } from '../systems/SkillTreeSystem.js';
 import { WarFog } from '../systems/WarFog.js';
 import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
@@ -49,6 +50,8 @@ export class MainGameScene extends Phaser.Scene {
     this.registry.set('levelSystem', this.levelSystem);
     this.equipmentSystem = new EquipmentSystem(this);
     this.registry.set('equipmentSystem', this.equipmentSystem);
+    this.skillTreeSystem = new SkillTreeSystem(this);
+    this.registry.set('skillTreeSystem', this.skillTreeSystem);
 
     const gs = this.registry.get('gameState');
     this.currentLevel = gs.currentLevel || 0;
