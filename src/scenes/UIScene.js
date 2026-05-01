@@ -19,6 +19,11 @@ export class UIScene extends Phaser.Scene {
 
     // Listen for resize events to reposition all HUD elements
     this.scale.on('resize', this.onResize, this);
+
+    // Cleanup resize listener when the scene shuts down
+    this.events.on('shutdown', () => {
+      this.scale.off('resize', this.onResize, this);
+    });
   }
 
   createHUD() {
@@ -112,11 +117,11 @@ export class UIScene extends Phaser.Scene {
 
     // Top bar: full width
     this.hudBg.setPosition(0, 0);
-    this.hudBg.width = width;
+    this.hudBg.setSize(width, 50);
 
     // Bottom bar: full width, anchored to bottom
     this.bottomBar.setPosition(0, height - 30);
-    this.bottomBar.width = width;
+    this.bottomBar.setSize(width, 30);
 
     // HP/MP bars: top-left, fixed offset (20, 18) — no change needed for these
     // (heartIcon, hpBarBg, hpBar, hpText, mpBarBg, mpBar, mpText stay at fixed left positions)

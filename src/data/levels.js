@@ -43,17 +43,26 @@ function generateLevel1Map() {
   for (let y = 50; y < 56; y++) map[y][30] = TILE.WALL;
 
   // 水池区域 — scaled
+  // Pool 1: y=24..28, x=32..39 — chest at [26][34], bridge path connects west edge (x=31) to chest
   for (let y = 24; y < 29; y++) for (let x = 32; x < 40; x++) map[y][x] = TILE.WATER;
+  map[26][32] = TILE.BRIDGE; // west edge — connects to dry land at x=31
+  map[26][33] = TILE.BRIDGE;
   map[26][35] = TILE.BRIDGE; map[26][36] = TILE.BRIDGE;
   map[26][37] = TILE.BRIDGE;
+  map[26][38] = TILE.BRIDGE; map[26][39] = TILE.BRIDGE; // east edge — connects to dry land at x=40
 
+  // Pool 2: y=48..53, x=56..66 — locked chest at [51][58], bridge path connects west edge (x=55) to island
   for (let y = 48; y < 54; y++) for (let x = 56; x < 67; x++) map[y][x] = TILE.WATER;
+  map[50][56] = TILE.BRIDGE; map[50][57] = TILE.BRIDGE; map[50][58] = TILE.BRIDGE; // west edge to island
   map[50][59] = TILE.BRIDGE; map[50][60] = TILE.BRIDGE;
+  map[51][56] = TILE.BRIDGE; map[51][57] = TILE.BRIDGE; // extra width for access
   map[51][59] = TILE.BRIDGE; map[51][60] = TILE.BRIDGE;
 
   // Additional water feature in top-right
+  // Pool 3: y=4..6, x=68..73 — bridge path connects south edge (y=6→dry y=7) to bridges
   for (let y = 4; y < 7; y++) for (let x = 68; x < 74; x++) map[y][x] = TILE.WATER;
   map[5][70] = TILE.BRIDGE; map[5][71] = TILE.BRIDGE;
+  map[6][70] = TILE.BRIDGE; map[6][71] = TILE.BRIDGE; // south edge — connects to dry land at y=7
 
   // 树木 — scaled and expanded
   const trees = [
