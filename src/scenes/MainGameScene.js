@@ -61,6 +61,7 @@ export class MainGameScene extends Phaser.Scene {
     this.currentLevel = gs.currentLevel || 0;
 
     this.loadLevel(this.currentLevel);
+    this.tryLoadSave();
     this.setupEvents();
 
     // Panel toggle keys
@@ -105,7 +106,6 @@ export class MainGameScene extends Phaser.Scene {
     this.createHelpSigns(level);
     this.setupCollisions();
     this.setupCamera();
-    this.tryLoadSave();
 
     // War fog disabled for now
     // this.warFog = new WarFog(this, { radius: 180, alpha: 0.7 });
@@ -401,7 +401,10 @@ export class MainGameScene extends Phaser.Scene {
     if (savedData?.hp) {
       this.player.hp = Math.min(savedData.hp, this.player.maxHp);
     }
-    // Emit initial HP/MP so UI shows correct values
+    if (savedData?.stamina !== undefined) {
+      this.player.stamina = Math.min(savedData.stamina, this.player.maxStamina);
+    }
+    // Emit initial HP/resource so UI shows correct values
     this.player.onHpChanged();
   }
 
@@ -582,6 +585,8 @@ export class MainGameScene extends Phaser.Scene {
     this.enemies.forEach(enemy => {
       this.physics.add.collider(this.player.sprite, enemy.sprite, () => this.handleEnemyContact(enemy), null, this);
       this.physics.add.overlap(this.player.attackHitbox, enemy.sprite, () => this.handleAttackHit(enemy), null, this);
+      // Skill hitbox overlaps (charge, whirlwind)
+      this.physics.add.overlap(this.player.skillHitbox, enemy.sprite, () => this.handleSkillHit(enemy), null, this);
     });
 
     this.npcs.forEach(npc => {
@@ -894,6 +899,17 @@ export class MainGameScene extends Phaser.Scene {
             onComplete: () => p.destroy()
           });
         }
+        // Fade out and destroy opened chest
+        this.tweens.add({
+          targets: chest.sprite,
+          alpha: 0,
+          duration: 500,
+          delay: 300,
+          onComplete: () => {
+            if (chest.sprite.body) chest.sprite.body.enable = false;
+            chest.sprite.setVisible(false);
+          }
+        });
       }
     });
 
@@ -991,12 +1007,14 @@ export class MainGameScene extends Phaser.Scene {
     if (item.isCollected) return;
     const result = item.collect();
     if (result) {
-      const qty = item.config?.spawnQuantity || 1;
-      this.inventory.addItem(result, qty);
+      // Use full item definition from items.json for proper stacking/type
+      const fullData = itemData.items[item.type] || result;
+      const qty = item.spawnQuantity || 1;
+      this.inventory.addItem(fullData, qty);
 
       // Floating text for gold pickup
-      if (result.type === 'currency' && this.player) {
-        const goldAmount = (result.value || 0) * qty;
+      if (fullData.type === 'currency' && this.player) {
+        const goldAmount = (fullData.value || 0) * qty;
         if (goldAmount > 0) {
           const goldText = this.add.text(
             this.player.sprite.x, this.player.sprite.y - 20,
@@ -1022,9 +1040,9 @@ export class MainGameScene extends Phaser.Scene {
 
       // Rarity notification for rare+ equipment
       const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-      if (result.type === 'equipment' && rarityOrder.indexOf(result.rarity) >= 2) {
-        const color = result.rarity === 'legendary' ? 0xffaa00 : result.rarity === 'epic' ? 0xaa44aa : 0x4444ff;
-        this.showQuickMessage(`获得了 ${result.name}！`, color);
+      if (fullData.type === 'equipment' && rarityOrder.indexOf(fullData.rarity) >= 2) {
+        const color = fullData.rarity === 'legendary' ? 0xffaa00 : fullData.rarity === 'epic' ? 0xaa44aa : 0x4444ff;
+        this.showQuickMessage(`获得了 ${fullData.name}！`, color);
       }
     }
   }
@@ -1043,6 +1061,71 @@ export class MainGameScene extends Phaser.Scene {
     this.player.onAttackHit();
     // Disable hitbox immediately after hit to prevent same-frame duplicates
     this.player.attackHitbox.body.enable = false;
+  }
+
+  handleSkillHit(enemy) {
+    if (!this.player.skillHitbox.body.enable) return;
+    if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
+
+    const skillEngine = this.player.skillEngine;
+    const skill = skillEngine.getActiveSkill();
+    if (!skill) return;
+
+    if (skill.effect.type === 'dash') {
+      // Charge: single-hit per enemy
+      if (skillEngine.hasHitTarget(enemy)) return;
+      skillEngine.markTargetHit(enemy);
+
+      const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
+      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
+
+      // Stun
+      if (skill.effect.stun) {
+        enemy.setState(EnemyState.HURT);
+        enemy.sprite.setVelocity(0, 0);
+        enemy.attackCooldown = skill.effect.stun;
+        this.time.delayedCall(skill.effect.stun, () => {
+          if (enemy.hp > 0 && enemy.state === EnemyState.HURT) {
+            enemy.setState(EnemyState.CHASE);
+          }
+        });
+      }
+
+      // Extra knockback
+      if (skill.effect.knockback) {
+        enemy.applyKnockback(this.player.sprite.x, this.player.sprite.y, skill.effect.knockback);
+      }
+
+      // Camera shake on hit
+      if (skill.effect.cameraShake) {
+        this.events.emit('screenShake', skill.effect.cameraShake.intensity, skill.effect.cameraShake.duration);
+      }
+
+      // Hit-stop
+      this.events.emit('hitStop', 50);
+
+      // Rage gain
+      this.player.addRage(8);
+
+      // Flash player sprite white
+      this.player.sprite.setTint(0xffffff);
+      this.time.delayedCall(100, () => {
+        if (this.player.sprite) this.player.sprite.clearTint();
+      });
+
+    } else if (skill.effect.type === 'spin') {
+      // Whirlwind: multi-hit with reduced enemy i-frames
+      const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
+
+      // Temporarily reduce enemy i-frames for whirlwind hits
+      const originalIFrames = enemy.iFramesDuration;
+      enemy.iFramesDuration = 180;
+      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
+      enemy.iFramesDuration = originalIFrames;
+
+      this.events.emit('screenShake', 2, 50);
+      this.player.addRage(4);
+    }
   }
 
   handleBreakableHit(b) {

@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { TEXTURES } from '../assets/AssetManager.js';
 import { Actor } from './Actor.js';
+import { SkillEngine } from '../systems/SkillEngine.js';
+import { SKILL_SLOTS } from '../data/warriorSkills.js';
 
 export const PlayerState = {
   IDLE: 'IDLE',
@@ -9,6 +11,8 @@ export const PlayerState = {
   ATTACK_STARTUP: 'ATTACK_STARTUP',
   ATTACK_ACTIVE: 'ATTACK_ACTIVE',
   ATTACK_RECOVERY: 'ATTACK_RECOVERY',
+  SKILL_CASTING: 'SKILL_CASTING',
+  DODGE: 'DODGE',
   HURT: 'HURT',
   DEAD: 'DEAD'
 };
@@ -18,7 +22,7 @@ export class Player extends Actor {
     const statsConfig = { con: 10, str: 8, int: 5, agi: 8, per: 5, lck: 3 };
     super(scene, x, y, 'hero_00', statsConfig, 'hero');
 
-    this.sprite.setBounce(0.05);
+    this.sprite.setBounce(0);
     this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
     this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_SPEED, GAME_CONFIG.PHYSICS.PLAYER_SPEED);
     this.sprite.playerInstance = this;
@@ -66,6 +70,38 @@ export class Player extends Actor {
     this._onEKeyDown = () => this.tryInteract();
     scene.input.on('pointerdown', this._onPointerDown);
     this.eKey.on('down', this._onEKeyDown);
+
+    // Skill system
+    this.skillEngine = new SkillEngine(scene, this);
+
+    // Skill hitbox (reusable, separate from attackHitbox)
+    this.skillHitbox = scene.add.rectangle(0, 0, 10, 10, 0xff0000, 0);
+    scene.physics.add.existing(this.skillHitbox, false);
+    this.skillHitbox.body.enable = false;
+
+    // Bind number keys 1-4 to skill slots
+    this.skillKeys = [
+      scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+      scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+      scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
+      scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR)
+    ];
+
+    this._onSkillKeyDown = [];
+    this.skillKeys.forEach((key, index) => {
+      const handler = () => this.trySkill(index);
+      this._onSkillKeyDown.push(handler);
+      key.on('down', handler);
+    });
+
+    // Charge skill dash state
+    this._chargeDashVelocity = null;
+    this._chargeHitRegistered = false;
+
+    // Whirlwind skill state
+    this._whirlwindSuperArmor = false;
+    this._whirlwindMoveSpeedMod = 0;
+    this._whirlwindTween = null;
   }
 
   setState(newState) {
@@ -93,9 +129,17 @@ export class Player extends Actor {
       case PlayerState.ATTACK_RECOVERY:
         this.handleAttackRecovery();
         break;
+      case PlayerState.SKILL_CASTING:
+        this.handleSkillCasting(delta);
+        break;
       case PlayerState.HURT:
       case PlayerState.DEAD:
         break;
+    }
+
+    // Tick skill cooldowns even when not casting
+    if (this.state !== PlayerState.SKILL_CASTING) {
+      this.skillEngine.update(delta);
     }
 
     this.updateInteractHint();
@@ -197,19 +241,53 @@ export class Player extends Actor {
   isAttacking() {
     return this.state === PlayerState.ATTACK_STARTUP ||
            this.state === PlayerState.ATTACK_ACTIVE ||
-           this.state === PlayerState.ATTACK_RECOVERY;
+           this.state === PlayerState.ATTACK_RECOVERY ||
+           this.state === PlayerState.SKILL_CASTING;
   }
 
   onAttackHit() {
     if (this.attackHitRegistered) return;
     this.attackHitRegistered = true;
+
+    // Rage gain on dealing damage
+    this.addRage(8);
   }
 
   // Player has no knockback — override to do nothing
   applyKnockback() {}
 
   takeDamage(damage, attackerX, attackerY) {
+    // Super armor: take damage but don't stagger
+    if (this._whirlwindSuperArmor) {
+      const defense = this.stats.getDerived().defense;
+      const finalDamage = Math.max(1, damage - defense);
+      this.hp = Math.max(0, this.hp - finalDamage);
+      this.isInvulnerable = true;
+      this.iFramesTimer = this.iFramesDuration;
+      this.flashDamage();
+      this.onHpChanged();
+      this.addRage(12);
+      if (this.hp <= 0) {
+        this.skillEngine.cancelActiveSkill();
+        this._whirlwindSuperArmor = false;
+        if (this._whirlwindTween) { this._whirlwindTween.stop(); this._whirlwindTween = null; }
+        this.sprite.setAngle(0);
+        this.skillHitbox.body.enable = false;
+        this.scene.time.delayedCall(300, () => this.die());
+      }
+      return;
+    }
+
     if (this.isInvulnerable || this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
+
+    // Cancel any active skill on hit
+    if (this.state === PlayerState.SKILL_CASTING) {
+      this.skillEngine.cancelActiveSkill();
+      this.skillHitbox.body.enable = false;
+      this._chargeDashVelocity = null;
+      if (this._whirlwindTween) { this._whirlwindTween.stop(); this._whirlwindTween = null; }
+      this.sprite.setAngle(0);
+    }
 
     this.attackHitbox.body.enable = false;
 
@@ -219,6 +297,9 @@ export class Player extends Actor {
     this.playAnim('hurt', false);
 
     super.takeDamage(damage, attackerX, attackerY);
+
+    // Rage gain on taking damage
+    this.addRage(12);
 
     this.scene.time.delayedCall(200, () => {
       if (this.state === PlayerState.HURT && this.hp > 0) {
@@ -233,7 +314,12 @@ export class Player extends Actor {
   }
 
   onHpChanged() {
-    this.scene.events.emit('playerHpChanged', this.hp, this.maxHp, this.mp, this.maxMp);
+    this.scene.events.emit('playerHpChanged', this.hp, this.maxHp);
+    this.scene.events.emit('playerResourceChanged', this.stamina, this.maxStamina, this.rage, this.maxRage);
+  }
+
+  onResourceChanged() {
+    this.scene.events.emit('playerResourceChanged', this.stamina, this.maxStamina, this.rage, this.maxRage);
   }
 
   die() {
@@ -250,6 +336,191 @@ export class Player extends Actor {
       duration: 1000,
       onComplete: () => this.scene.events.emit('playerDeath')
     });
+  }
+
+  // ─── Skill System ───
+
+  /** Try to activate a skill by slot index (0-3). */
+  trySkill(slotIndex) {
+    if (this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
+    if (this.state === PlayerState.SKILL_CASTING) return;
+    if (this.scene.gamePaused) return;
+
+    const skillId = SKILL_SLOTS[slotIndex];
+    if (!skillId) return;
+
+    const skill = this.skillEngine.execute(skillId);
+    if (!skill) return;
+
+    // Stop movement, enter casting state
+    this.sprite.setVelocity(0, 0);
+    this.attackHitbox.body.enable = false;
+    this.setState(PlayerState.SKILL_CASTING);
+    this.playAnim('attack', false); // reuse attack anim for now
+  }
+
+  /** Handle SKILL_CASTING state each frame. */
+  handleSkillCasting(delta) {
+    const activeSkill = this.skillEngine.getActiveSkill();
+
+    // Allow movement during whirlwind active phase
+    if (activeSkill && this.skillEngine.activePhase === 'active' && activeSkill.effect.type === 'spin') {
+      const input = this.getInputDirection();
+      if (input.x !== 0 || input.y !== 0) {
+        this.updateFacing(input);
+        const baseSpeed = this.getMoveSpeed();
+        const modifiedSpeed = baseSpeed * (1 + this._whirlwindMoveSpeedMod);
+        const len = Math.sqrt(input.x * input.x + input.y * input.y) || 1;
+        this.sprite.setVelocity(
+          (input.x / len) * modifiedSpeed,
+          (input.y / len) * modifiedSpeed
+        );
+      } else {
+        this.sprite.setVelocity(0, 0);
+      }
+    }
+
+    // Update active skill hitbox position
+    if (activeSkill && this.skillEngine.activePhase === 'active') {
+      if (activeSkill.effect.type === 'dash') {
+        // Keep charge hitbox in front of player during dash
+        this.skillHitbox.setPosition(
+          this.sprite.x + this.facing * 22,
+          this.sprite.y
+        );
+        // Maintain dash velocity
+        if (this._chargeDashVelocity) {
+          this.sprite.setVelocity(this._chargeDashVelocity.vx, this._chargeDashVelocity.vy);
+        }
+      } else if (activeSkill.effect.type === 'spin') {
+        // Keep spin hitbox centered on player
+        this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+      }
+    }
+
+    // Tick the skill engine
+    const result = this.skillEngine.update(delta);
+    if (!result) return;
+
+    const skill = result.skill;
+
+    switch (result.event) {
+      case 'phase_active':
+        this.onSkillActive(skill);
+        break;
+      case 'skill_tick':
+        this.onSkillTick(skill);
+        break;
+      case 'phase_recovery':
+        this.onSkillRecovery(skill);
+        break;
+      case 'skill_complete':
+        this.onSkillComplete(skill);
+        break;
+    }
+  }
+
+  /** Called when skill enters active phase. */
+  onSkillActive(skill) {
+    if (skill.effect.type === 'dash') {
+      this.startChargeDash(skill);
+    } else if (skill.effect.type === 'spin') {
+      this.startWhirlwind(skill);
+    }
+  }
+
+  /** Called on each tick of a multi-hit skill. */
+  onSkillTick(skill) {
+    if (skill.effect.type === 'spin') {
+      this.whirlwindTick(skill);
+    }
+  }
+
+  /** Called when skill enters recovery phase. */
+  onSkillRecovery(skill) {
+    this.skillHitbox.body.enable = false;
+    this._whirlwindSuperArmor = false;
+    this._chargeDashVelocity = null;
+    this.sprite.setVelocity(0, 0);
+    if (this._whirlwindTween) {
+      this._whirlwindTween.stop();
+      this._whirlwindTween = null;
+    }
+    this.sprite.setAngle(0);
+  }
+
+  /** Called when skill fully completes. */
+  onSkillComplete(skill) {
+    this.skillHitbox.body.enable = false;
+    this._whirlwindSuperArmor = false;
+    this._chargeDashVelocity = null;
+    if (this._whirlwindTween) {
+      this._whirlwindTween.stop();
+      this._whirlwindTween = null;
+    }
+    this.sprite.setAngle(0);
+    this.setState(PlayerState.IDLE);
+  }
+
+  // ─── Charge Skill ───
+
+  /** Begin the Charge dash: set velocity in facing direction. */
+  startChargeDash(skill) {
+    const effect = skill.effect;
+
+    // Activate skill hitbox in front of player
+    const hx = this.sprite.x + this.facing * 22;
+    const hy = this.sprite.y;
+    this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
+    this.skillHitbox.setPosition(hx, hy);
+    this.skillHitbox.body.enable = true;
+
+    // Set dash velocity
+    this._chargeDashVelocity = {
+      vx: this.facing * effect.speed,
+      vy: 0
+    };
+    this._chargeHitRegistered = false;
+
+    this.sprite.setVelocity(this._chargeDashVelocity.vx, this._chargeDashVelocity.vy);
+  }
+
+  // ─── Whirlwind Skill ───
+
+  /** Begin Whirlwind: create circular hitbox, enable super armor. */
+  startWhirlwind(skill) {
+    const effect = skill.effect;
+
+    // Circular hitbox centered on player (using a square approximation)
+    const size = effect.radius * 2;
+    this.skillHitbox.setSize(size, size);
+    this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+    this.skillHitbox.body.enable = true;
+
+    // Enable super armor
+    this._whirlwindSuperArmor = true;
+
+    // Store the move speed modifier
+    this._whirlwindMoveSpeedMod = effect.moveSpeedMod;
+
+    // Visual spin effect -- rotate sprite
+    const spinDuration = skill.phases.active;
+    const rotations = 4;
+    this._whirlwindTween = this.scene.tweens.add({
+      targets: this.sprite,
+      angle: 360 * rotations,
+      duration: spinDuration,
+      ease: 'Linear',
+      onComplete: () => {
+        this.sprite.setAngle(0);
+      }
+    });
+  }
+
+  /** Process a whirlwind damage tick. */
+  whirlwindTick(skill) {
+    // Re-center hitbox on player
+    this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
   }
 
   updateInteractHint() {
@@ -295,7 +566,16 @@ export class Player extends Actor {
     if (this._onPointerDown) this.scene.input.off('pointerdown', this._onPointerDown);
     if (this._onEKeyDown && this.eKey) this.eKey.off('down', this._onEKeyDown);
     if (this.attackHitbox) this.attackHitbox.destroy();
+    if (this.skillHitbox) this.skillHitbox.destroy();
     if (this.interactText) this.interactText.destroy();
+
+    // Clean up skill key listeners
+    if (this.skillKeys && this._onSkillKeyDown) {
+      this.skillKeys.forEach((key, i) => {
+        if (this._onSkillKeyDown[i]) key.off('down', this._onSkillKeyDown[i]);
+      });
+    }
+
     this.destroyActor();
   }
 }

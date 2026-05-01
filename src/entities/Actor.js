@@ -4,7 +4,7 @@ import { CHARACTERS } from '../assets/AssetManager.js';
 
 /**
  * Actor 基类 — Player 和 Enemy 共享的逻辑
- * 提供: Stats属性、HP/MP管理、受伤/击退、I-Frames、死亡
+ * 提供: Stats属性、HP/Stamina/Rage管理、受伤/击退、I-Frames、死亡
  */
 export class Actor {
   constructor(scene, x, y, textureKey, statsConfig = {}, characterType = null) {
@@ -15,11 +15,19 @@ export class Actor {
     this.stats = new Stats(statsConfig);
     const derived = this.stats.getDerived();
 
-    // 生命/魔法
+    // 生命
     this.hp = derived.maxHp;
     this.maxHp = derived.maxHp;
-    this.mp = derived.maxMp;
-    this.maxMp = derived.maxMp;
+
+    // Stamina (replaces MP) — based on CON
+    this.stamina = this.getMaxStamina();
+    this.maxStamina = this.getMaxStamina();
+
+    // Rage — combat resource, 0-100
+    this.rage = 0;
+    this.maxRage = 100;
+    this.rageCombatTimer = 0;   // time since last combat action (for decay)
+    this.staminaIdleTimer = 0;  // time since last stamina use (for regen delay)
 
     // I-Frames (无敌帧)
     this.isInvulnerable = false;
@@ -43,7 +51,7 @@ export class Actor {
     const dw = this.sprite.displayWidth;
     const dh = this.sprite.displayHeight;
     const bodyW = dw * 0.85;
-    const bodyH = dh * 0.55;
+    const bodyH = dh * 0.75;
     // Convert display-space body dimensions to unscaled texture coords
     const scaleX = this.sprite.scaleX || 1;
     const scaleY = this.sprite.scaleY || 1;
@@ -67,14 +75,13 @@ export class Actor {
     }
   }
 
-  /** 刷新属性缓存并同步 maxHp/maxMp */
+  /** 刷新属性缓存并同步 maxHp/maxStamina */
   refreshStats() {
     const derived = this.stats.getDerived();
     this.maxHp = derived.maxHp;
-    this.maxMp = derived.maxMp;
-    // 不超过上限
+    this.maxStamina = this.getMaxStamina();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
-    if (this.mp > this.maxMp) this.mp = this.maxMp;
+    if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
   }
 
   /** 获取攻击力 */
@@ -86,6 +93,46 @@ export class Actor {
   getMoveSpeed() {
     return this.stats.getDerived().moveSpeed;
   }
+
+  /** Max stamina based on CON */
+  getMaxStamina() {
+    const con = this.stats.getEffective('con');
+    return con * 8 + 60;
+  }
+
+  /** Stamina regen rate per second based on CON */
+  getStaminaRegenRate() {
+    const con = this.stats.getEffective('con');
+    return con * 0.8;
+  }
+
+  /** Use stamina. Returns true if enough, false otherwise. */
+  useStamina(amount) {
+    if (this.stamina < amount) return false;
+    this.stamina -= amount;
+    this.staminaIdleTimer = 0;
+    this.onResourceChanged();
+    return true;
+  }
+
+  /** Add rage (clamped to 0-100) */
+  addRage(amount) {
+    this.rage = Math.min(this.maxRage, this.rage + amount);
+    this.rageCombatTimer = 0;
+    this.onResourceChanged();
+  }
+
+  /** Use rage. Returns true if enough, false otherwise. */
+  useRage(amount) {
+    if (this.rage < amount) return false;
+    this.rage -= amount;
+    this.rageCombatTimer = 0;
+    this.onResourceChanged();
+    return true;
+  }
+
+  /** Subclass override for resource change notification */
+  onResourceChanged() {}
 
   /** 受伤 (通用) */
   takeDamage(damage, attackerX, attackerY) {
@@ -156,27 +203,37 @@ export class Actor {
     this.onHpChanged();
   }
 
-  /** MP 消耗 */
-  useMp(amount) {
-    if (this.mp < amount) return false;
-    this.mp -= amount;
-    this.onHpChanged(); // Also notifies MP change to UI
-    return true;
-  }
-
-  /** HP/MP 回复 (每帧调用) */
+  /** HP/Stamina/Rage 回复 (每帧调用) */
   updateRegen(delta) {
     if (this.hp <= 0) return;
-    const hpRegen = this.stats.getDerived().hpRegen;
-    if (hpRegen <= 0) return;
 
-    this.regenTimer += delta;
-    if (this.regenTimer >= 1000) {
-      this.regenTimer -= 1000;
-      if (this.hp < this.maxHp) {
-        this.hp = Math.min(this.maxHp, this.hp + hpRegen);
-        this.onHpChanged();
+    // HP regen
+    const hpRegen = this.stats.getDerived().hpRegen;
+    if (hpRegen > 0) {
+      this.regenTimer += delta;
+      if (this.regenTimer >= 1000) {
+        this.regenTimer -= 1000;
+        if (this.hp < this.maxHp) {
+          this.hp = Math.min(this.maxHp, this.hp + hpRegen);
+          this.onHpChanged();
+        }
       }
+    }
+
+    // Stamina regen (after 1s idle)
+    this.staminaIdleTimer += delta;
+    if (this.staminaIdleTimer >= 1000 && this.stamina < this.maxStamina) {
+      const regenPerFrame = this.getStaminaRegenRate() * (delta / 1000);
+      this.stamina = Math.min(this.maxStamina, this.stamina + regenPerFrame);
+      this.onResourceChanged();
+    }
+
+    // Rage decay (5/sec after 3s of no combat)
+    this.rageCombatTimer += delta;
+    if (this.rageCombatTimer >= 3000 && this.rage > 0) {
+      const decayPerFrame = 5 * (delta / 1000);
+      this.rage = Math.max(0, this.rage - decayPerFrame);
+      this.onResourceChanged();
     }
   }
 

@@ -1,3 +1,5 @@
+import masterItemData from '../data/items.json';
+
 export class InventorySystem {
   constructor(scene) {
     this.scene = scene;
@@ -172,7 +174,47 @@ export class InventorySystem {
       }
       this.gold = data.gold || 0;
     }
+    // Fix up item properties from master data and merge stackables
+    this._fixupAndMerge();
     this.scene.events.emit('inventoryUpdated', this.slots);
     this.scene.events.emit('goldChanged', this.gold);
+  }
+
+  /**
+   * Fix stackable/maxStack from master data and merge duplicate stackable items.
+   * Handles old saves where items were stored without stackable flag.
+   */
+  _fixupAndMerge() {
+    // Phase 1: Fix up properties from master item data
+    this.slots.forEach(slot => {
+      if (!slot) return;
+      const master = masterItemData.items?.[slot.id];
+      if (master) {
+        slot.stackable = master.stackable ?? slot.stackable ?? false;
+        slot.maxStack = master.maxStack ?? slot.maxStack ?? 1;
+      }
+    });
+
+    // Phase 2: Merge duplicate stackable items
+    const merged = new Map();
+    const result = [];
+
+    this.slots.forEach(slot => {
+      if (!slot) return;
+      if (slot.stackable && merged.has(slot.id)) {
+        merged.get(slot.id).quantity += slot.quantity;
+      } else if (slot.stackable) {
+        const copy = { ...slot };
+        merged.set(slot.id, copy);
+        result.push(copy);
+      } else {
+        result.push(slot);
+      }
+    });
+
+    this.slots.fill(null);
+    result.forEach((item, i) => {
+      if (i < 32) this.slots[i] = item;
+    });
   }
 }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/AssetManager.js';
+import { WARRIOR_SKILLS, SKILL_SLOTS, getSkillAtLevel } from '../data/warriorSkills.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -16,6 +17,7 @@ export class UIScene extends Phaser.Scene {
     this.createGoldDisplay();
     this.createLevelDisplay();
     this.createControlsHint();
+    this.createSkillBar();
     this.setupEvents();
     this.createQuestTracker();
 
@@ -32,7 +34,7 @@ export class UIScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    this.hudBg = this.add.rectangle(0, 0, width, 60, 0x000000, 0.7).setOrigin(0, 0);
+    this.hudBg = this.add.rectangle(0, 0, width, 70, 0x000000, 0.7).setOrigin(0, 0);
     this.bottomBar = this.add.rectangle(0, height - 30, width, 30, 0x000000, 0.5).setOrigin(0, 0);
 
     this.hudBg.setDepth(1);
@@ -57,21 +59,31 @@ export class UIScene extends Phaser.Scene {
       fontSize: '11px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // MP
-    this.mpBarBg = this.add.rectangle(50, 35, 150, 10, 0x333333).setOrigin(0, 0.5).setDepth(2);
-    this.mpBarBg.setStrokeStyle(1, 0x444466);
-    this.mpBar = this.add.rectangle(51, 35, 148, 8, 0x4488ff).setOrigin(0, 0.5).setDepth(3);
-    this.mpText = this.add.text(210, 35, '50/50', {
+    // Stamina bar (replaces MP) - yellow
+    this.staminaBarBg = this.add.rectangle(50, 35, 150, 10, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    this.staminaBarBg.setStrokeStyle(1, 0x444433);
+    this.staminaBar = this.add.rectangle(51, 35, 148, 8, 0xddcc00).setOrigin(0, 0.5).setDepth(3);
+    this.staminaText = this.add.text(210, 35, '140/140', {
       fontSize: '11px',
-      fill: '#aaccff',
+      fill: '#ddcc44',
       fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // XP bar
-    this.xpBarBg = this.add.rectangle(50, 48, 150, 8, 0x222233).setOrigin(0, 0.5).setDepth(2);
+    // Rage bar - red, below stamina
+    this.rageBarBg = this.add.rectangle(50, 48, 150, 8, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    this.rageBarBg.setStrokeStyle(1, 0x443333);
+    this.rageBar = this.add.rectangle(51, 48, 0, 6, 0xff3333).setOrigin(0, 0.5).setDepth(3);
+    this.rageText = this.add.text(210, 48, '0/100', {
+      fontSize: '9px',
+      fill: '#ff6644',
+      fontFamily: 'Courier New'
+    }).setOrigin(0, 0.5).setDepth(3);
+
+    // XP bar (moved down)
+    this.xpBarBg = this.add.rectangle(50, 58, 150, 6, 0x222233).setOrigin(0, 0.5).setDepth(2);
     this.xpBarBg.setStrokeStyle(1, 0x333344);
-    this.xpBar = this.add.rectangle(51, 48, 0, 6, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
-    this.xpText = this.add.text(210, 48, 'XP: 0/40', {
+    this.xpBar = this.add.rectangle(51, 58, 0, 4, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
+    this.xpText = this.add.text(210, 58, 'XP: 0/40', {
       fontSize: '9px', fill: '#9988cc', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
   }
@@ -124,11 +136,59 @@ export class UIScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    this.controlsText = this.add.text(width / 2, height - 15, 'WASD:移动 | 左键:攻击 | E:交互 | TAB:面板', {
+    this.controlsText = this.add.text(width / 2, height - 15, 'WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板', {
       fontSize: '12px',
       fill: '#888888',
       fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(2);
+  }
+
+  createSkillBar() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+    const slotSize = 36;
+    const gap = 6;
+    const totalW = 4 * slotSize + 3 * gap;
+    const startX = width / 2 - totalW / 2;
+    const slotY = height - 52; // above bottom bar
+
+    this.skillSlots = [];
+
+    for (let i = 0; i < 4; i++) {
+      const x = startX + i * (slotSize + gap) + slotSize / 2;
+      const skillId = SKILL_SLOTS[i];
+      const base = skillId ? WARRIOR_SKILLS[skillId] : null;
+
+      // Slot background
+      const bg = this.add.rectangle(x, slotY, slotSize, slotSize, 0x1a1a2e, 0.85)
+        .setStrokeStyle(1, base ? 0x5a5a8a : 0x333344).setDepth(4);
+
+      // Skill icon text
+      const icon = this.add.text(x, slotY - 2, base ? base.icon : '', {
+        fontSize: '16px', fontFamily: 'Courier New'
+      }).setOrigin(0.5).setDepth(5);
+
+      // Key label
+      const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `${i + 1}`, {
+        fontSize: '8px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      }).setDepth(6);
+
+      // Cooldown overlay (darkening rectangle)
+      const cdOverlay = this.add.rectangle(x, slotY, slotSize - 2, 0, 0x000000, 0.6)
+        .setOrigin(0.5, 1).setDepth(5.5);
+
+      // Cooldown text
+      const cdText = this.add.text(x, slotY + 2, '', {
+        fontSize: '10px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(6).setVisible(false);
+
+      // Level text
+      const lvText = this.add.text(x + slotSize / 2 - 2, slotY + slotSize / 2 - 2, '', {
+        fontSize: '7px', fill: '#aaccff', fontFamily: 'Courier New'
+      }).setOrigin(1, 1).setDepth(6);
+
+      this.skillSlots.push({ bg, icon, keyLabel, cdOverlay, cdText, lvText, skillId, x, y: slotY, size: slotSize });
+    }
   }
 
   onResize(gameSize) {
@@ -140,7 +200,7 @@ export class UIScene extends Phaser.Scene {
 
     // Top bar: full width
     this.hudBg.setPosition(0, 0);
-    this.hudBg.setSize(width, 60);
+    this.hudBg.setSize(width, 70);
 
     // Bottom bar: full width, anchored to bottom
     this.bottomBar.setPosition(0, height - 30);
@@ -163,6 +223,27 @@ export class UIScene extends Phaser.Scene {
     // Controls hint: bottom-center
     this.controlsText.setPosition(width / 2, height - 15);
 
+    // Skill bar: bottom-center above controls
+    if (this.skillSlots) {
+      const slotSize = 36;
+      const gap = 6;
+      const totalW = 4 * slotSize + 3 * gap;
+      const startX = width / 2 - totalW / 2;
+      const slotY = height - 52;
+
+      this.skillSlots.forEach((slot, i) => {
+        const x = startX + i * (slotSize + gap) + slotSize / 2;
+        slot.x = x;
+        slot.y = slotY;
+        slot.bg.setPosition(x, slotY);
+        slot.icon.setPosition(x, slotY - 2);
+        slot.keyLabel.setPosition(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1);
+        slot.cdOverlay.setPosition(x, slotY + (slotSize - 2) / 2);
+        slot.cdText.setPosition(x, slotY + 2);
+        slot.lvText.setPosition(x + slotSize / 2 - 2, slotY + slotSize / 2 - 2);
+      });
+    }
+
     // Gold display
     if (this.goldText) this.goldText.setPosition(width - 200, 40);
 
@@ -177,9 +258,13 @@ export class UIScene extends Phaser.Scene {
 
   setupEvents() {
     if (this.gameScene) {
-      this.gameScene.events.on('playerHpChanged', (hp, maxHp, mp, maxMp) => {
+      this.gameScene.events.on('playerHpChanged', (hp, maxHp) => {
         this.updateHealthBar(hp, maxHp);
-        if (mp !== undefined) this.updateMpBar(mp, maxMp);
+      });
+
+      this.gameScene.events.on('playerResourceChanged', (stamina, maxStamina, rage, maxRage) => {
+        this.updateStaminaBar(stamina, maxStamina);
+        this.updateRageBar(rage, maxRage);
       });
 
       this.gameScene.events.on('scoreChanged', (score) => {
@@ -203,6 +288,13 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.on('levelUp', (level) => {
         if (this.playerLevelText) this.playerLevelText.setText(`LV.${level}`);
       });
+
+      // Sync initial level/XP from loaded save
+      const levelSystem = this.gameScene.registry?.get('levelSystem');
+      if (levelSystem) {
+        if (this.playerLevelText) this.playerLevelText.setText(`LV.${levelSystem.level}`);
+        this.updateXpBar(levelSystem.xp, levelSystem.getXpRequired());
+      }
 
       // Gold changes
       this.gameScene.events.on('goldChanged', (gold) => {
@@ -257,11 +349,30 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  updateMpBar(mp, maxMp) {
-    if (!maxMp || maxMp <= 0) return;
-    const percentage = mp / maxMp;
-    this.mpBar.width = Math.max(0, 148 * percentage);
-    this.mpText.setText(`${Math.floor(mp)}/${maxMp}`);
+  updateStaminaBar(stamina, maxStamina) {
+    if (!maxStamina || maxStamina <= 0) return;
+    const percentage = stamina / maxStamina;
+    this.staminaBar.width = Math.max(0, 148 * percentage);
+    this.staminaText.setText(`${Math.floor(stamina)}/${maxStamina}`);
+  }
+
+  updateRageBar(rage, maxRage) {
+    const percentage = rage / maxRage;
+    this.rageBar.width = Math.max(0, 148 * percentage);
+    this.rageText.setText(`${Math.floor(rage)}/${maxRage}`);
+
+    // Rage bar pulses when full
+    if (rage >= maxRage && !this._ragePulsing) {
+      this._ragePulsing = true;
+      this._ragePulseTween = this.tweens.add({
+        targets: this.rageBar, alpha: 0.6,
+        duration: 400, yoyo: true, repeat: -1
+      });
+    } else if (rage < maxRage && this._ragePulsing) {
+      this._ragePulsing = false;
+      if (this._ragePulseTween) this._ragePulseTween.stop();
+      this.rageBar.setAlpha(1);
+    }
   }
 
   updateScore(score) {
@@ -343,5 +454,48 @@ export class UIScene extends Phaser.Scene {
     this.questTrackerObj2.setText(objs[1] ? `○ ${objs[1].text} (${objs[1].current}/${objs[1].required})` : '');
   }
 
-  update() {}
+  update() {
+    this.updateSkillBar();
+  }
+
+  updateSkillBar() {
+    if (!this.skillSlots || !this.gameScene?.player?.skillEngine) return;
+    const engine = this.gameScene.player.skillEngine;
+
+    for (const slot of this.skillSlots) {
+      if (!slot.skillId) continue;
+
+      const cdInfo = engine.getCooldownInfo(slot.skillId);
+      const level = engine.getSkillLevel(slot.skillId);
+
+      // Level display
+      slot.lvText.setText(`Lv${level}`);
+
+      if (cdInfo.remaining > 0) {
+        // On cooldown
+        const fraction = cdInfo.fraction;
+        slot.cdOverlay.setSize(slot.size - 2, (slot.size - 2) * fraction);
+        slot.cdOverlay.setPosition(slot.x, slot.y + (slot.size - 2) / 2);
+        slot.cdText.setText(`${(cdInfo.remaining / 1000).toFixed(1)}`);
+        slot.cdText.setVisible(true);
+        slot.bg.setStrokeStyle(1, 0x444444);
+      } else {
+        // Ready
+        slot.cdOverlay.setSize(slot.size - 2, 0);
+        slot.cdText.setVisible(false);
+
+        const check = engine.canUse(slot.skillId);
+        if (check.canUse) {
+          slot.bg.setStrokeStyle(1, 0x66aaff);
+        } else {
+          slot.bg.setStrokeStyle(1, 0x664444); // insufficient resource
+        }
+      }
+
+      // Highlight when actively casting this skill
+      if (engine.activeSkillId === slot.skillId) {
+        slot.bg.setStrokeStyle(2, 0xffdd44);
+      }
+    }
+  }
 }

@@ -23,6 +23,7 @@ export class SaveSystem {
           position: playerPosition,
           hp: scene.player ? scene.player.hp : 100,
           maxHp: scene.player ? scene.player.maxHp : 100,
+          stamina: scene.player ? scene.player.stamina : 140,
           stats: scene.player ? scene.player.stats.toJSON() : null
         },
         gameState: {
@@ -36,6 +37,7 @@ export class SaveSystem {
         levelSystem: scene.levelSystem ? scene.levelSystem.toJSON() : null,
         equipment: scene.equipmentSystem ? scene.equipmentSystem.toJSON() : null,
         skillTree: scene.skillTreeSystem ? scene.skillTreeSystem.toJSON() : null,
+        skillEngine: scene.player?.skillEngine ? scene.player.skillEngine.toJSON() : null,
         quests: scene.questSystem ? scene.questSystem.toJSON() : null
       };
 
@@ -104,6 +106,11 @@ export class SaveSystem {
       // Restore skill tree
       if (scene.skillTreeSystem && saveData.skillTree) {
         scene.skillTreeSystem.fromJSON(saveData.skillTree);
+      }
+
+      // Restore skill engine (skill levels)
+      if (scene.player?.skillEngine && saveData.skillEngine) {
+        scene.player.skillEngine.fromJSON(saveData.skillEngine);
       }
 
       // Restore quest progress

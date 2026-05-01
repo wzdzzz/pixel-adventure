@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { WARRIOR_SKILLS, SKILL_SLOTS, getSkillAtLevel, getSkillDescription } from '../data/warriorSkills.js';
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog'];
 const TAB_LABELS = ['角色', '背包', '技能', '日志'];
@@ -354,7 +355,7 @@ export class PanelScene extends Phaser.Scene {
 
     const derivedStats = [
       { key: 'hp', label: 'HP' },
-      { key: 'mp', label: 'MP' },
+      { key: 'stamina', label: '体力' },
       { key: 'attack', label: '攻击' },
       { key: 'spellPower', label: '法强' },
       { key: 'critRate', label: '暴击率' },
@@ -609,15 +610,25 @@ export class PanelScene extends Phaser.Scene {
       ? inv.slots
       : inv.filterBy(this.invActiveFilter);
 
+    // Build compact display: non-null items only, track original slot indices
+    this._gridToSlot = [];
+    const compactItems = [];
+    filtered.forEach((item, slotIdx) => {
+      if (item !== null) {
+        compactItems.push(item);
+        this._gridToSlot.push(slotIdx);
+      }
+    });
+
     // Item name abbreviations for icon display
     const ITEM_ICONS = {
       potion: '药', heart: '♥', key: '🔑', artifact: '✦',
       coin: '●'
     };
 
-    // Update each slot
-    this.invSlots.forEach(({ cell, icon, countText, index }) => {
-      const item = filtered[index];
+    // Update each slot — compact display without gaps
+    this.invSlots.forEach(({ cell, icon, countText }, gridIdx) => {
+      const item = compactItems[gridIdx];
 
       if (item) {
         const rarity = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
@@ -647,12 +658,18 @@ export class PanelScene extends Phaser.Scene {
     }
   }
 
+  // Map grid display index to actual inventory slot index
+  _actualSlot(gridIndex) {
+    return this._gridToSlot?.[gridIndex] ?? -1;
+  }
+
   selectInventoryItem(slotIndex) {
     this.invSelectedSlot = slotIndex;
     const inv = this.gameScene?.inventory;
     if (!inv) return;
 
-    const item = inv.getSlot(slotIndex);
+    const actualSlot = this._actualSlot(slotIndex);
+    const item = actualSlot >= 0 ? inv.getSlot(actualSlot) : null;
 
     // Update detail panel
     if (item) {
@@ -677,7 +694,7 @@ export class PanelScene extends Phaser.Scene {
         const currentEquip = equip ? equip.getSlot(compareSlot) : null;
 
         const STAT_NAMES = {
-          attack: '攻击', defense: '防御', maxHp: '生命', maxMp: '法力',
+          attack: '攻击', defense: '防御', maxHp: '生命', maxStamina: '体力',
           spellPower: '法强', moveSpeed: '移速', attackSpeed: '攻速',
           critRate: '暴击率', critDmg: '暴击伤害', hpRegen: 'HP回复'
         };
@@ -726,14 +743,15 @@ export class PanelScene extends Phaser.Scene {
     });
   }
 
-  restoreSlotBorder(slotIndex) {
+  restoreSlotBorder(gridIndex) {
     const inv = this.gameScene?.inventory;
-    if (!inv || !this.invSlots[slotIndex]) return;
+    if (!inv || !this.invSlots[gridIndex]) return;
 
-    const item = inv.getSlot(slotIndex);
-    const cell = this.invSlots[slotIndex].cell;
+    const actualSlot = this._actualSlot(gridIndex);
+    const item = actualSlot >= 0 ? inv.getSlot(actualSlot) : null;
+    const cell = this.invSlots[gridIndex].cell;
 
-    if (slotIndex === this.invSelectedSlot) {
+    if (gridIndex === this.invSelectedSlot) {
       cell.setStrokeStyle(2, 0xffffff);
       return;
     }
@@ -749,16 +767,19 @@ export class PanelScene extends Phaser.Scene {
   useSelectedItem() {
     const inv = this.gameScene?.inventory;
     if (!inv || this.invSelectedSlot < 0) return;
-    inv.useItem(this.invSelectedSlot);
+    const actualSlot = this._actualSlot(this.invSelectedSlot);
+    if (actualSlot < 0) return;
+    inv.useItem(actualSlot);
     this.refreshInventoryTab();
-    // Re-select to update detail panel
     this.selectInventoryItem(this.invSelectedSlot);
   }
 
   dropSelectedItem() {
     const inv = this.gameScene?.inventory;
     if (!inv || this.invSelectedSlot < 0) return;
-    inv.removeItem(this.invSelectedSlot, 1);
+    const actualSlot = this._actualSlot(this.invSelectedSlot);
+    if (actualSlot < 0) return;
+    inv.removeItem(actualSlot, 1);
     this.refreshInventoryTab();
     this.selectInventoryItem(this.invSelectedSlot);
   }
@@ -766,7 +787,9 @@ export class PanelScene extends Phaser.Scene {
   equipSelectedItem() {
     const equip = this.gameScene?.equipmentSystem;
     if (!equip || this.invSelectedSlot < 0) return;
-    const success = equip.equipFromInventory(this.invSelectedSlot);
+    const actualSlot = this._actualSlot(this.invSelectedSlot);
+    if (actualSlot < 0) return;
+    const success = equip.equipFromInventory(actualSlot);
     if (success) {
       this.refreshInventoryTab();
       this.refreshCharacterTab();
@@ -774,10 +797,11 @@ export class PanelScene extends Phaser.Scene {
     }
   }
 
-  showItemTooltip(slotIndex, x, y) {
+  showItemTooltip(gridIndex, x, y) {
     const inv = this.gameScene?.inventory;
     if (!inv) return;
-    const item = inv.getSlot(slotIndex);
+    const actualSlot = this._actualSlot(gridIndex);
+    const item = actualSlot >= 0 ? inv.getSlot(actualSlot) : null;
     if (!item) return;
 
     if (!this.tooltipContainer) return;
@@ -793,10 +817,11 @@ export class PanelScene extends Phaser.Scene {
     this.tooltipContainer.setVisible(true);
   }
 
-  showContextMenu(slotIndex, pointer) {
+  showContextMenu(gridIndex, pointer) {
     const inv = this.gameScene?.inventory;
     if (!inv) return;
-    const item = inv.getSlot(slotIndex);
+    const actualSlot = this._actualSlot(gridIndex);
+    const item = actualSlot >= 0 ? inv.getSlot(actualSlot) : null;
     if (!item) return;
 
     // Clear previous context menu
@@ -824,8 +849,8 @@ export class PanelScene extends Phaser.Scene {
       optionY += 20;
     };
 
-    if (item.type === 'consumable') addOption('使用', '#44cc44', () => { inv.useItem(slotIndex); this.refreshInventoryTab(); });
-    if (item.type !== 'quest') addOption('丢弃', '#cc4444', () => { inv.removeItem(slotIndex, 1); this.refreshInventoryTab(); });
+    if (item.type === 'consumable') addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
+    if (item.type !== 'quest') addOption('丢弃', '#cc4444', () => { inv.removeItem(actualSlot, 1); this.refreshInventoryTab(); });
 
     bg.setSize(80, optionY + 4);
 
@@ -864,7 +889,7 @@ export class PanelScene extends Phaser.Scene {
     // Update derived stats
     const derived = player.stats.getDerived();
     this.charDerivedTexts.hp.setText(`${player.hp}/${player.maxHp}`);
-    this.charDerivedTexts.mp.setText(`${player.mp}/${player.maxMp}`);
+    this.charDerivedTexts.stamina.setText(`${Math.floor(player.stamina)}/${player.maxStamina}`);
     this.charDerivedTexts.attack.setText(`${derived.attack}`);
     this.charDerivedTexts.spellPower.setText(`${derived.spellPower}`);
     this.charDerivedTexts.critRate.setText(`${derived.critRate.toFixed(1)}%`);
@@ -984,7 +1009,7 @@ export class PanelScene extends Phaser.Scene {
       common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说'
     };
     const STAT_NAMES = {
-      attack: '攻击', defense: '防御', maxHp: '生命', maxMp: '法力',
+      attack: '攻击', defense: '防御', maxHp: '生命', maxStamina: '体力',
       spellPower: '法强', moveSpeed: '移速', attackSpeed: '攻速',
       critRate: '暴击率', critDmg: '暴击伤害', hpRegen: 'HP回复'
     };
@@ -1031,190 +1056,194 @@ export class PanelScene extends Phaser.Scene {
     });
     container.add(this.skillPointsText);
 
-    // "技能内容待填充" notice
-    const noticeText = this.add.text(this.panelLeft + contentW - 20, contentTop + 10, '技能内容待填充', {
-      fontSize: '10px', fill: '#555566', fontFamily: 'Courier New'
-    }).setOrigin(1, 0);
-    container.add(noticeText);
+    // --- Skill Cards ---
+    const cardStartY = contentTop + 40;
+    const cardW = contentW - 40;
+    const cardH = 90;
+    const cardGap = 10;
+    const cardX = this.panelX;
 
-    // Tree visualization
-    const centerX = this.panelX;
-    const startY = contentTop + 60;
-    const spacingX = 80;
-    const spacingY = 80;
+    this.skillCards = {};
 
-    const skillTree = this.registry.get('skillTreeSystem');
-    if (!skillTree) return;
+    const allSkillIds = Object.keys(WARRIOR_SKILLS);
+    allSkillIds.forEach((skillId, idx) => {
+      const base = WARRIOR_SKILLS[skillId];
+      const cy = cardStartY + idx * (cardH + cardGap) + cardH / 2;
 
-    // Draw connection lines first (lower depth)
-    this.skillLines = [];
-    skillTree.nodes.forEach(node => {
-      node.prerequisites.forEach(preReqId => {
-        const preReq = skillTree.getNode(preReqId);
-        if (!preReq) return;
+      // Card background
+      const cardBg = this.add.rectangle(cardX, cy, cardW, cardH, 0x1e1e30, 0.9)
+        .setStrokeStyle(1, 0x4a4a6a);
+      container.add(cardBg);
 
-        const fromX = centerX + preReq.x * spacingX;
-        const fromY = startY + preReq.y * spacingY;
-        const toX = centerX + node.x * spacingX;
-        const toY = startY + node.y * spacingY;
+      // Skill icon (large)
+      const iconText = this.add.text(cardX - cardW / 2 + 30, cy, base.icon || '?', {
+        fontSize: '24px', fontFamily: 'Courier New'
+      }).setOrigin(0.5);
+      container.add(iconText);
 
-        const line = this.add.graphics();
-        line.lineStyle(2, 0x444466);
-        line.beginPath();
-        line.moveTo(fromX, fromY);
-        line.lineTo(toX, toY);
-        line.strokePath();
-        container.add(line);
-        this.skillLines.push({ line, fromId: preReqId, toId: node.id });
+      // Skill name
+      const nameText = this.add.text(cardX - cardW / 2 + 60, cy - 28, base.name, {
+        fontSize: '13px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
       });
-    });
+      container.add(nameText);
 
-    // Draw nodes
-    this.skillNodeElements = {};
-    skillTree.nodes.forEach(node => {
-      const nx = centerX + node.x * spacingX;
-      const ny = startY + node.y * spacingY;
+      // Level text
+      const lvText = this.add.text(cardX - cardW / 2 + 60 + 100, cy - 28, 'Lv.1/5', {
+        fontSize: '11px', fill: '#aaccff', fontFamily: 'Courier New'
+      });
+      container.add(lvText);
 
-      // Node shape: circle for passive, rounded rectangle for active
-      const size = node.type === 'passive' ? 28 : 32;
-      let shape;
-      if (node.type === 'passive') {
-        shape = this.add.circle(nx, ny, size / 2, 0x2a2a3a)
-          .setStrokeStyle(2, 0x555555);
-      } else {
-        shape = this.add.rectangle(nx, ny, size, size, 0x2a2a3a)
-          .setStrokeStyle(2, 0x555555);
+      // Description
+      const descText = this.add.text(cardX - cardW / 2 + 60, cy - 10, '', {
+        fontSize: '10px', fill: '#aaaaaa', fontFamily: 'Courier New',
+        wordWrap: { width: cardW - 180 }
+      });
+      container.add(descText);
+
+      // Stats line (cost, cooldown)
+      const statsText = this.add.text(cardX - cardW / 2 + 60, cy + 22, '', {
+        fontSize: '9px', fill: '#888899', fontFamily: 'Courier New'
+      });
+      container.add(statsText);
+
+      // Slot key hint
+      const slotIdx = SKILL_SLOTS.indexOf(skillId);
+      if (slotIdx >= 0) {
+        const keyHint = this.add.text(cardX - cardW / 2 + 12, cy - 30, `[${slotIdx + 1}]`, {
+          fontSize: '9px', fill: '#666688', fontFamily: 'Courier New'
+        });
+        container.add(keyHint);
       }
-      shape.setInteractive({ useHandCursor: true });
 
-      // Node label
-      const label = this.add.text(nx, ny, node.name === '???' ? '?' : node.name.charAt(0), {
-        fontSize: '12px', fill: '#888888', fontFamily: 'Courier New'
+      // Upgrade button
+      const btnX = cardX + cardW / 2 - 45;
+      const btnW = 70;
+      const btnH = 26;
+      const btnBg = this.add.rectangle(btnX, cy + 5, btnW, btnH, 0x2a3a2a)
+        .setStrokeStyle(1, 0x44bb44).setInteractive({ useHandCursor: true });
+      container.add(btnBg);
+
+      const btnText = this.add.text(btnX, cy + 5, '升级', {
+        fontSize: '11px', fill: '#44bb44', fontFamily: 'Courier New'
       }).setOrigin(0.5);
+      container.add(btnText);
 
-      // Rank indicator
-      const rankText = this.add.text(nx, ny + size / 2 + 8, `${node.currentRank}/${node.maxRank}`, {
-        fontSize: '8px', fill: '#666666', fontFamily: 'Courier New'
+      // Next level preview
+      const nextLvText = this.add.text(btnX, cy + 24, '', {
+        fontSize: '8px', fill: '#666688', fontFamily: 'Courier New'
       }).setOrigin(0.5);
+      container.add(nextLvText);
 
-      // Interaction
-      shape.on('pointerover', () => {
-        this.showSkillTooltip(node, nx, ny);
+      btnBg.on('pointerdown', () => {
+        this.handleSkillUpgrade(skillId);
       });
-      shape.on('pointerout', () => {
-        this.hideTooltip();
+      btnBg.on('pointerover', () => {
+        btnBg.setFillStyle(0x3a4a3a);
       });
-      shape.on('pointerdown', () => {
-        this.handleSkillNodeClick(node.id);
+      btnBg.on('pointerout', () => {
+        btnBg.setFillStyle(0x2a3a2a);
       });
 
-      container.add([shape, label, rankText]);
-      this.skillNodeElements[node.id] = { shape, label, rankText };
+      this.skillCards[skillId] = { cardBg, iconText, nameText, lvText, descText, statsText, btnBg, btnText, nextLvText };
     });
 
-    // Bottom detail panel
-    const detailY = startY + 4 * spacingY + 10;
-    this.skillDetailText = this.add.text(this.panelX, detailY, '', {
-      fontSize: '11px', fill: '#aaaaaa', fontFamily: 'Courier New',
-      align: 'center', wordWrap: { width: contentW - 40 }
+    // Bottom hint
+    const hintY = cardStartY + allSkillIds.length * (cardH + cardGap) + 10;
+    this.skillHintText = this.add.text(this.panelX, hintY, '每3级获得1个技能点', {
+      fontSize: '10px', fill: '#555566', fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
-    container.add(this.skillDetailText);
+    container.add(this.skillHintText);
 
     this.refreshSkillTreeTab();
   }
 
   refreshSkillTreeTab() {
-    const skillTree = this.registry.get('skillTreeSystem');
     const levelSystem = this.registry.get('levelSystem');
-    if (!skillTree || !this.skillNodeElements) return;
+    const player = this.gameScene?.player;
+    const engine = player?.skillEngine;
+    if (!engine || !this.skillCards) return;
 
     if (this.skillPointsText) {
       this.skillPointsText.setText(`技能点: ${levelSystem ? levelSystem.skillPoints : 0}`);
     }
 
-    // Update node visuals based on state
-    const STATE_COLORS = {
-      maxed:     { fill: 0x3a3a1a, border: 0xffd700, label: '#ffd700' },  // Gold
-      unlocked:  { fill: 0x2a3a2a, border: 0x44bb44, label: '#44bb44' },  // Green
-      available: { fill: 0x2a2a3a, border: 0xcccccc, label: '#cccccc' },  // White
-      locked:    { fill: 0x2a2a2a, border: 0x444444, label: '#555555' }   // Gray
-    };
+    const skillPoints = levelSystem ? levelSystem.skillPoints : 0;
 
-    skillTree.nodes.forEach(node => {
-      const el = this.skillNodeElements[node.id];
-      if (!el) return;
+    Object.keys(WARRIOR_SKILLS).forEach(skillId => {
+      const card = this.skillCards[skillId];
+      if (!card) return;
 
-      const state = skillTree.getNodeState(node.id);
-      const colors = STATE_COLORS[state] || STATE_COLORS.locked;
+      const base = WARRIOR_SKILLS[skillId];
+      const level = engine.getSkillLevel(skillId);
+      const scaled = getSkillAtLevel(skillId, level);
+      const isMaxed = level >= base.maxLevel;
 
-      el.shape.setFillStyle(colors.fill);
-      el.shape.setStrokeStyle(2, colors.border);
-      el.label.setColor(colors.label);
-      el.rankText.setText(`${node.currentRank}/${node.maxRank}`);
-      el.rankText.setColor(colors.label);
+      // Update level
+      card.lvText.setText(`Lv.${level}/${base.maxLevel}`);
+      card.lvText.setColor(isMaxed ? '#ffd700' : '#aaccff');
+
+      // Update description
+      card.descText.setText(getSkillDescription(skillId, level));
+
+      // Update stats line
+      const resourceName = base.resource === 'stamina' ? '体力' : base.resource === 'rage' ? '怒气' : '';
+      card.statsText.setText(`${resourceName}: ${scaled.cost} | 冷却: ${(scaled.cooldown / 1000).toFixed(1)}s | 伤害: ${Math.round(scaled.effect.damageMultiplier * 100)}%`);
+
+      // Update card border
+      card.cardBg.setStrokeStyle(1, isMaxed ? 0xffd700 : 0x4a4a6a);
+
+      // Update upgrade button
+      if (isMaxed) {
+        card.btnText.setText('已满级');
+        card.btnText.setColor('#ffd700');
+        card.btnBg.setStrokeStyle(1, 0x665500);
+        card.btnBg.setFillStyle(0x2a2a1a);
+        card.btnBg.disableInteractive();
+        card.nextLvText.setText('');
+      } else if (skillPoints >= base.upgradeCost) {
+        card.btnText.setText(`升级 (${base.upgradeCost}点)`);
+        card.btnText.setColor('#44bb44');
+        card.btnBg.setStrokeStyle(1, 0x44bb44);
+        card.btnBg.setFillStyle(0x2a3a2a);
+        card.btnBg.setInteractive({ useHandCursor: true });
+        // Next level preview
+        const nextScaled = getSkillAtLevel(skillId, level + 1);
+        const nextDmg = Math.round(nextScaled.effect.damageMultiplier * 100);
+        card.nextLvText.setText(`下级: ${nextDmg}%伤害`);
+        card.nextLvText.setColor('#558855');
+      } else {
+        card.btnText.setText(`升级 (${base.upgradeCost}点)`);
+        card.btnText.setColor('#666666');
+        card.btnBg.setStrokeStyle(1, 0x444444);
+        card.btnBg.setFillStyle(0x2a2a2a);
+        card.btnBg.disableInteractive();
+        card.nextLvText.setText('技能点不足');
+        card.nextLvText.setColor('#664444');
+      }
     });
-
-    // Update connection line colors
-    if (this.skillLines) {
-      this.skillLines.forEach(({ line, fromId, toId }) => {
-        const fromState = skillTree.getNodeState(fromId);
-        const toState = skillTree.getNodeState(toId);
-        line.clear();
-        const lineColor = (fromState === 'unlocked' || fromState === 'maxed') ? 0x44bb44 : 0x444466;
-        const fromNode = skillTree.getNode(fromId);
-        const toNode = skillTree.getNode(toId);
-        const centerX = this.panelX;
-        const startY = this.panelTop + 50 + 60;
-        const spacingX = 80;
-        const spacingY = 80;
-        line.lineStyle(2, lineColor);
-        line.beginPath();
-        line.moveTo(centerX + fromNode.x * spacingX, startY + fromNode.y * spacingY);
-        line.lineTo(centerX + toNode.x * spacingX, startY + toNode.y * spacingY);
-        line.strokePath();
-      });
-    }
   }
 
-  showSkillTooltip(node, x, y) {
-    if (!this.tooltipContainer) return;
-    const skillTree = this.registry.get('skillTreeSystem');
-    const state = skillTree ? skillTree.getNodeState(node.id) : 'locked';
+  handleSkillUpgrade(skillId) {
+    const player = this.gameScene?.player;
+    if (!player?.skillEngine) return;
 
-    const stateLabels = { maxed: '已满级', unlocked: '已解锁', available: '可解锁', locked: '未解锁' };
-
-    let text = `${node.name}\n`;
-    text += `类型: ${node.type === 'passive' ? '被动' : '主动'}\n`;
-    text += `等级: ${node.currentRank}/${node.maxRank}\n`;
-    text += `状态: ${stateLabels[state] || '未知'}\n`;
-    text += `需要等级: ${node.requiredLevel}\n`;
-    if (node.cost > 0) text += `消耗: ${node.cost} 技能点\n`;
-    text += `${node.description}`;
-
-    this.tooltipText.setText(text);
-    this.tooltipContainer.setPosition(x + 30, y - 20);
-    this.tooltipContainer.setVisible(true);
-  }
-
-  handleSkillNodeClick(nodeId) {
-    const skillTree = this.registry.get('skillTreeSystem');
-    if (!skillTree) return;
-
-    const state = skillTree.getNodeState(nodeId);
-    if (state !== 'available') return;
-
-    // Try to unlock
-    if (skillTree.unlock(nodeId)) {
+    if (player.skillEngine.upgradeSkill(skillId)) {
       // Success animation
-      const el = this.skillNodeElements[nodeId];
-      if (el) {
+      const card = this.skillCards[skillId];
+      if (card) {
         this.tweens.add({
-          targets: el.shape,
-          scaleX: 1.3, scaleY: 1.3,
-          duration: 150, yoyo: true, ease: 'Back.easeOut'
+          targets: card.cardBg,
+          scaleX: 1.02, scaleY: 1.02,
+          duration: 100, yoyo: true, ease: 'Back.easeOut'
+        });
+        // Flash the card border gold briefly
+        card.cardBg.setStrokeStyle(2, 0xffdd44);
+        this.time.delayedCall(300, () => {
+          if (card.cardBg) card.cardBg.setStrokeStyle(1, 0x4a4a6a);
         });
       }
       this.refreshSkillTreeTab();
+      this.refreshCharacterTab();
     }
   }
 

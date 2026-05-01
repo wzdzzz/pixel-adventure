@@ -19,6 +19,7 @@ export class Item {
     this.isCollected = false;
 
     this.onCollect = config.onCollect || null;
+    this.spawnQuantity = config.spawnQuantity || 1;
 
     const textureKey = AssetManager.getTextureKey(type);
 
