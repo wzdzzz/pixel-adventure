@@ -58,7 +58,7 @@ export const WARRIOR_SKILLS = {
       radius: 50,
       tickInterval: 200,
       baseDamageMultiplier: 0.6,  // +0.1 per level
-      moveSpeedMod: -0.3,
+      moveSpeedMod: 0.2,
       superArmor: true
     }
   }

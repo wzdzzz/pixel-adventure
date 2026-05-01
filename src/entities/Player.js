@@ -257,34 +257,15 @@ export class Player extends Actor {
   applyKnockback() {}
 
   takeDamage(damage, attackerX, attackerY) {
-    // Super armor: take damage but don't stagger
-    if (this._whirlwindSuperArmor) {
-      const defense = this.stats.getDerived().defense;
-      const finalDamage = Math.max(1, damage - defense);
-      this.hp = Math.max(0, this.hp - finalDamage);
-      this.isInvulnerable = true;
-      this.iFramesTimer = this.iFramesDuration;
-      this.flashDamage();
-      this.onHpChanged();
-      this.addRage(12);
-      if (this.hp <= 0) {
-        this.skillEngine.cancelActiveSkill();
-        this._whirlwindSuperArmor = false;
-        if (this._whirlwindTween) { this._whirlwindTween.stop(); this._whirlwindTween = null; }
-        this.sprite.setAngle(0);
-        this.skillHitbox.body.enable = false;
-        this.scene.time.delayedCall(300, () => this.die());
-      }
-      return;
-    }
-
+    // Whirlwind: fully invulnerable (isInvulnerable is already true)
     if (this.isInvulnerable || this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
 
-    // Cancel any active skill on hit
+    // Cancel any active skill on hit (e.g. charge gets interrupted)
     if (this.state === PlayerState.SKILL_CASTING) {
       this.skillEngine.cancelActiveSkill();
       this.skillHitbox.body.enable = false;
       this._chargeDashVelocity = null;
+      this._chargeDashDir = null;
       if (this._whirlwindTween) { this._whirlwindTween.stop(); this._whirlwindTween = null; }
       this.sprite.setAngle(0);
     }
@@ -383,10 +364,11 @@ export class Player extends Actor {
     // Update active skill hitbox position
     if (activeSkill && this.skillEngine.activePhase === 'active') {
       if (activeSkill.effect.type === 'dash') {
-        // Keep charge hitbox in front of player during dash
+        // Keep charge hitbox in front of player along dash direction
+        const dir = this._chargeDashDir || { x: this.facing, y: 0 };
         this.skillHitbox.setPosition(
-          this.sprite.x + this.facing * 22,
-          this.sprite.y
+          this.sprite.x + dir.x * 22,
+          this.sprite.y + dir.y * 22
         );
         // Maintain dash velocity
         if (this._chargeDashVelocity) {
@@ -439,8 +421,12 @@ export class Player extends Actor {
   /** Called when skill enters recovery phase. */
   onSkillRecovery(skill) {
     this.skillHitbox.body.enable = false;
-    this._whirlwindSuperArmor = false;
+    if (this._whirlwindSuperArmor) {
+      this._whirlwindSuperArmor = false;
+      this.isInvulnerable = false;
+    }
     this._chargeDashVelocity = null;
+    this._chargeDashDir = null;
     this.sprite.setVelocity(0, 0);
     if (this._whirlwindTween) {
       this._whirlwindTween.stop();
@@ -452,8 +438,12 @@ export class Player extends Actor {
   /** Called when skill fully completes. */
   onSkillComplete(skill) {
     this.skillHitbox.body.enable = false;
-    this._whirlwindSuperArmor = false;
+    if (this._whirlwindSuperArmor) {
+      this._whirlwindSuperArmor = false;
+      this.isInvulnerable = false;
+    }
     this._chargeDashVelocity = null;
+    this._chargeDashDir = null;
     if (this._whirlwindTween) {
       this._whirlwindTween.stop();
       this._whirlwindTween = null;
@@ -464,21 +454,39 @@ export class Player extends Actor {
 
   // ─── Charge Skill ───
 
-  /** Begin the Charge dash: set velocity in facing direction. */
+  /** Begin the Charge dash: dash toward mouse cursor position. */
   startChargeDash(skill) {
     const effect = skill.effect;
 
-    // Activate skill hitbox in front of player
-    const hx = this.sprite.x + this.facing * 22;
-    const hy = this.sprite.y;
+    // Calculate direction from player to mouse cursor
+    const pointer = this.scene.input.activePointer;
+    const cam = this.scene.cameras.main;
+    const targetX = pointer.x + cam.scrollX;
+    const targetY = pointer.y + cam.scrollY;
+    const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, targetX, targetY);
+    const dirX = Math.cos(angle);
+    const dirY = Math.sin(angle);
+
+    // Update facing based on dash direction
+    if (dirX !== 0) {
+      this.facing = dirX > 0 ? 1 : -1;
+      this.sprite.setFlipX(this.facing < 0);
+    }
+
+    // Store dash direction for hitbox tracking
+    this._chargeDashDir = { x: dirX, y: dirY };
+
+    // Activate skill hitbox in front of player along dash direction
+    const hx = this.sprite.x + dirX * 22;
+    const hy = this.sprite.y + dirY * 22;
     this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
     this.skillHitbox.setPosition(hx, hy);
     this.skillHitbox.body.enable = true;
 
-    // Set dash velocity
+    // Set dash velocity toward mouse
     this._chargeDashVelocity = {
-      vx: this.facing * effect.speed,
-      vy: 0
+      vx: dirX * effect.speed,
+      vy: dirY * effect.speed
     };
     this._chargeHitRegistered = false;
 
@@ -487,7 +495,7 @@ export class Player extends Actor {
 
   // ─── Whirlwind Skill ───
 
-  /** Begin Whirlwind: create circular hitbox, enable super armor. */
+  /** Begin Whirlwind: create circular hitbox, enable invincibility. */
   startWhirlwind(skill) {
     const effect = skill.effect;
 
@@ -497,8 +505,9 @@ export class Player extends Actor {
     this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
     this.skillHitbox.body.enable = true;
 
-    // Enable super armor
+    // Full invincibility during spin
     this._whirlwindSuperArmor = true;
+    this.isInvulnerable = true;
 
     // Store the move speed modifier
     this._whirlwindMoveSpeedMod = effect.moveSpeedMod;
