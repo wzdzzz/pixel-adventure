@@ -12,6 +12,7 @@ import { LevelSystem } from '../systems/LevelSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { SkillTreeSystem } from '../systems/SkillTreeSystem.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
+import { LootEngine } from '../systems/LootEngine.js';
 import { WarFog } from '../systems/WarFog.js';
 import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
@@ -695,19 +696,36 @@ export class MainGameScene extends Phaser.Scene {
       }
     });
 
-    this.events.on('spawnItem', (type, x, y) => {
+    this.events.on('enemyDropLoot', (enemyId, x, y) => {
+      const dropBonus = this.player ? this.player.stats.getDerived().dropBonus : 0;
+      const drops = LootEngine.roll(enemyId, dropBonus);
+
+      drops.forEach((drop, i) => {
+        // Scatter drops in a circle to prevent stacking
+        const angle = (Math.PI * 2 / Math.max(drops.length, 1)) * i + Math.random() * 0.5;
+        const dist = 20 + Math.random() * 15;
+        const dx = x + Math.cos(angle) * dist;
+        const dy = y + Math.sin(angle) * dist;
+
+        this.events.emit('spawnItem', drop.itemData.id, dx, dy, drop.quantity);
+      });
+    });
+
+    this.events.on('spawnItem', (type, x, y, quantity = 1) => {
       const config = itemData.items[type];
       if (config) {
         const item = new Item(this, x, y, type, {
-          id: `${type}_${Date.now()}`, ...config,
+          id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          ...config,
+          spawnQuantity: quantity,
           onCollect: (item) => {
             if (type === 'coin') {
               const g = this.registry.get('gameState');
-              g.score += item.value;
+              g.score += item.value * quantity;
               this.registry.set('gameState', g);
               this.events.emit('scoreChanged', g.score);
-            } else if (type === 'potion') {
-              this.player.heal(item.value);
+            } else if (type === 'potion' || type === 'heart') {
+              // Consumable items handled by inventory
             }
           }
         });
@@ -939,7 +957,8 @@ export class MainGameScene extends Phaser.Scene {
     if (item.isCollected) return;
     const result = item.collect();
     if (result) {
-      this.inventory.addItem(result);
+      const qty = item.config?.spawnQuantity || 1;
+      this.inventory.addItem(result, qty);
       const gs = this.registry.get('gameState');
       if (item.id) {
         gs.collectedItems.push(item.id);
@@ -947,6 +966,13 @@ export class MainGameScene extends Phaser.Scene {
       }
       const idx = this.items.indexOf(item);
       if (idx > -1) this.items.splice(idx, 1);
+
+      // Rarity notification for rare+ equipment
+      const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+      if (result.type === 'equipment' && rarityOrder.indexOf(result.rarity) >= 2) {
+        const color = result.rarity === 'legendary' ? 0xffaa00 : result.rarity === 'epic' ? 0xaa44aa : 0x4444ff;
+        this.showQuickMessage(`获得了 ${result.name}！`, color);
+      }
     }
   }
 

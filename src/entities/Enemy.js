@@ -274,12 +274,7 @@ export class Enemy extends Actor {
   // ── Loot ───────────────────────────────────────────────────────
 
   dropLoot() {
-    const dropChance = Math.random();
-    if (dropChance < 0.5) {
-      this.scene.events.emit('spawnItem', 'coin', this.sprite.x, this.sprite.y);
-    } else if (dropChance < 0.7) {
-      this.scene.events.emit('spawnItem', 'potion', this.sprite.x, this.sprite.y);
-    }
+    this.scene.events.emit('enemyDropLoot', this.config.id, this.sprite.x, this.sprite.y);
   }
 
   // ── Cleanup ────────────────────────────────────────────────────
