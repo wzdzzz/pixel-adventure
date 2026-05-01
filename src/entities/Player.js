@@ -29,7 +29,6 @@ export class Player extends Actor {
     this.state = PlayerState.IDLE;
     this.stateTimer = 0;
     this.attackHitRegistered = false;
-    this.pendingAttack = false;
 
     // Facing direction: 1 = right, -1 = left
     this.facing = 1;
@@ -149,10 +148,7 @@ export class Player extends Actor {
 
   tryAttack() {
     if (this.state === PlayerState.DEAD) return;
-    if (this.isAttacking()) {
-      this.pendingAttack = true;
-      return;
-    }
+    if (this.isAttacking()) return;
 
     this.sprite.setVelocity(0, 0);
     this.attackHitRegistered = false;
@@ -194,13 +190,7 @@ export class Player extends Actor {
   handleAttackRecovery() {
     this.sprite.setVelocity(0, 0);
     if (this.stateTimer >= 150) {
-      if (this.pendingAttack) {
-        this.pendingAttack = false;
-        this.setState(PlayerState.IDLE);
-        this.tryAttack();
-      } else {
-        this.setState(PlayerState.IDLE);
-      }
+      this.setState(PlayerState.IDLE);
     }
   }
 
