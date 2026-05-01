@@ -11,6 +11,7 @@ import { UIManager } from '../systems/UIManager.js';
 import { LevelSystem } from '../systems/LevelSystem.js';
 import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { SkillTreeSystem } from '../systems/SkillTreeSystem.js';
+import { QuestSystem } from '../systems/QuestSystem.js';
 import { WarFog } from '../systems/WarFog.js';
 import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
@@ -52,6 +53,8 @@ export class MainGameScene extends Phaser.Scene {
     this.registry.set('equipmentSystem', this.equipmentSystem);
     this.skillTreeSystem = new SkillTreeSystem(this);
     this.registry.set('skillTreeSystem', this.skillTreeSystem);
+    this.questSystem = new QuestSystem(this);
+    this.registry.set('questSystem', this.questSystem);
 
     const gs = this.registry.get('gameState');
     this.currentLevel = gs.currentLevel || 0;
@@ -109,6 +112,10 @@ export class MainGameScene extends Phaser.Scene {
     // Emit level change to UI
     this.events.emit('levelChanged', level.name, levelIndex);
 
+    // Activate quests for this level
+    if (this.questSystem) {
+      this.questSystem.activateQuestsForLevel(levelIndex);
+    }
   }
 
   cleanupLevel() {
