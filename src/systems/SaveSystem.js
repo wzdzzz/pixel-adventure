@@ -30,7 +30,8 @@ export class SaveSystem {
           hasArtifact: gameState.hasArtifact,
           collectedItems: gameState.collectedItems || []
         },
-        inventory: scene.inventory ? scene.inventory.exportData() : []
+        inventory: scene.inventory ? scene.inventory.exportData() : [],
+        levelSystem: scene.levelSystem ? scene.levelSystem.toJSON() : null
       };
 
       localStorage.setItem(SaveSystem.SAVE_KEY, JSON.stringify(saveData));
@@ -75,6 +76,17 @@ export class SaveSystem {
       // 恢复背包
       if (scene.inventory && saveData.inventory) {
         scene.inventory.importData(saveData.inventory);
+      }
+
+      // Restore level system
+      if (scene.levelSystem && saveData.levelSystem) {
+        scene.levelSystem.fromJSON(saveData.levelSystem);
+        // Re-apply level bonus to maxHp
+        if (scene.player) {
+          scene.player.stats.setFlatBonus('maxHp', (scene.levelSystem.level - 1) * 5);
+          scene.player.stats.invalidate();
+          scene.player.refreshStats();
+        }
       }
 
       // 恢复玩家位置（在 MainGameScene 中处理）

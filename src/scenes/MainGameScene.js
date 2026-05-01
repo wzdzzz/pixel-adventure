@@ -8,6 +8,7 @@ import { NPC, NPCState } from '../entities/NPC.js';
 import { InventorySystem } from '../systems/InventorySystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { UIManager } from '../systems/UIManager.js';
+import { LevelSystem } from '../systems/LevelSystem.js';
 import { WarFog } from '../systems/WarFog.js';
 import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
@@ -43,6 +44,8 @@ export class MainGameScene extends Phaser.Scene {
   create() {
     this.inventory = new InventorySystem(this);
     this.uiManager = new UIManager(this);
+    this.levelSystem = new LevelSystem(this);
+    this.registry.set('levelSystem', this.levelSystem);
 
     const gs = this.registry.get('gameState');
     this.currentLevel = gs.currentLevel || 0;
@@ -636,6 +639,29 @@ export class MainGameScene extends Phaser.Scene {
       g.score += 20;
       this.registry.set('gameState', g);
       this.events.emit('scoreChanged', g.score);
+
+      // Grant XP for kill
+      let xpAmount = 0;
+      if (this.levelSystem) {
+        xpAmount = this.levelSystem.getEnemyXp(enemy.config);
+        this.levelSystem.addXp(xpAmount, enemy.config.level || 1);
+      }
+
+      // Show XP floating text
+      if (enemy.sprite && xpAmount > 0) {
+        const xpText = this.add.text(
+          enemy.sprite.x, enemy.sprite.y - 20,
+          `+${xpAmount} XP`, {
+            fontSize: '12px', fill: '#aa88ff', fontFamily: 'Courier New', fontStyle: 'bold'
+          }
+        ).setOrigin(0.5).setDepth(100);
+
+        this.tweens.add({
+          targets: xpText, y: xpText.y - 30, alpha: 0,
+          duration: 1200,
+          onComplete: () => xpText.destroy()
+        });
+      }
     });
 
     this.events.on('spawnItem', (type, x, y) => {
@@ -662,6 +688,55 @@ export class MainGameScene extends Phaser.Scene {
     this.events.on('playerDeath', () => this.handleGameOver());
     this.events.on('hitStop', (d) => this.startHitStop(d));
     this.events.on('screenShake', (i, d) => this.startScreenShake(i, d));
+
+    this.events.on('levelUp', (level, statPoints, skillPoints) => {
+      // Apply level bonus to maxHp: Level*5
+      if (this.player) {
+        this.player.stats.setFlatBonus('maxHp', (level - 1) * 5);
+        this.player.stats.invalidate();
+        this.player.refreshStats();
+
+        // Full HP/MP restore
+        this.player.hp = this.player.maxHp;
+        this.player.mp = this.player.maxMp;
+        this.player.onHpChanged();
+      }
+
+      // White flash effect
+      const flash = this.add.rectangle(
+        this.cameras.main.width / 2,
+        this.cameras.main.height / 2,
+        this.cameras.main.width, this.cameras.main.height,
+        0xffffff, 0
+      ).setDepth(200).setScrollFactor(0);
+
+      this.tweens.add({
+        targets: flash, alpha: 0.6, duration: 150, yoyo: true,
+        onComplete: () => flash.destroy()
+      });
+
+      // Gold tint on player
+      if (this.player && this.player.sprite) {
+        this.player.sprite.setTint(0xffd700);
+        this.time.delayedCall(1000, () => {
+          if (this.player && this.player.sprite) this.player.sprite.clearTint();
+        });
+      }
+
+      // "LEVEL UP!" floating text
+      const lvlText = this.add.text(
+        this.cameras.main.width / 2, this.cameras.main.height / 2 - 50,
+        `LEVEL UP! LV.${level}`, {
+          fontSize: '28px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+        }
+      ).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+      this.tweens.add({
+        targets: lvlText, y: lvlText.y - 60, alpha: 0,
+        scaleX: 1.5, scaleY: 1.5, duration: 2000,
+        onComplete: () => lvlText.destroy()
+      });
+    });
   }
 
   // --- Chest System ---
