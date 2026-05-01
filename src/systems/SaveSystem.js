@@ -111,10 +111,20 @@ export class SaveSystem {
       }
 
       // Restore player stats if saved
-      if (scene.player && saveData.player?.stats?.base) {
-        Object.keys(saveData.player.stats.base).forEach(key => {
-          scene.player.stats.setBase(key, saveData.player.stats.base[key]);
-        });
+      if (scene.player && saveData.player?.stats) {
+        const saved = saveData.player.stats;
+        if (saved.base) {
+          Object.keys(saved.base).forEach(key => {
+            scene.player.stats.setBase(key, saved.base[key]);
+          });
+        }
+        if (saved.bonuses) {
+          Object.assign(scene.player.stats.bonuses, saved.bonuses);
+        }
+        if (saved.flatBonuses) {
+          Object.assign(scene.player.stats.flatBonuses, saved.flatBonuses);
+        }
+        scene.player.stats.invalidate();
         scene.player.refreshStats();
       }
 

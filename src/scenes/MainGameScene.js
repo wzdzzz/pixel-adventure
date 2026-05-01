@@ -1071,7 +1071,7 @@ export class MainGameScene extends Phaser.Scene {
       this.hitStopTimer -= delta;
       if (this.hitStopTimer <= 0) {
         this.hitStopTimer = 0;
-        this.physics.resume();
+        if (!this.gamePaused) this.physics.resume();
       }
       return;
     }

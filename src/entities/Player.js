@@ -62,7 +62,7 @@ export class Player extends Actor {
 
     // Store handler references for cleanup
     this._onPointerDown = (pointer) => {
-      if (pointer.leftButtonDown()) this.tryAttack();
+      if (pointer.leftButtonDown() && !scene.gamePaused) this.tryAttack();
     };
     this._onEKeyDown = () => this.tryInteract();
     scene.input.on('pointerdown', this._onPointerDown);

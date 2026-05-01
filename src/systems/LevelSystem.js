@@ -16,7 +16,7 @@ export class LevelSystem {
   }
 
   getXpRequired() {
-    return Math.floor(50 * Math.pow(this.level, 2.2) - this.level * 10);
+    return Math.max(1, Math.floor(50 * Math.pow(this.level, 2.2) - this.level * 10));
   }
 
   addXp(amount, enemyLevel = 0) {
