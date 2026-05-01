@@ -98,6 +98,7 @@ export class SaveSystem {
       // Restore equipment system
       if (scene.equipmentSystem && saveData.equipment) {
         scene.equipmentSystem.fromJSON(saveData.equipment);
+        scene.equipmentSystem._applyBonuses();
       }
 
       // Restore skill tree

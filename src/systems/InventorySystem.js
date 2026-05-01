@@ -53,7 +53,12 @@ export class InventorySystem {
       sellPrice: itemData.sellPrice || 0,
       description: itemData.description || '',
       effect: itemData.effect || null,
-      quantity: quantity
+      quantity: quantity,
+      // Equipment-specific fields
+      slot: itemData.slot || null,
+      baseStats: itemData.baseStats || null,
+      statBonuses: itemData.statBonuses || null,
+      weaponType: itemData.weaponType || null
     };
     this.scene.events.emit('inventoryUpdated', this.slots);
     return true;
