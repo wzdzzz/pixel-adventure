@@ -77,6 +77,7 @@ export class Player extends Actor {
     // Skill hitbox (reusable, separate from attackHitbox)
     this.skillHitbox = scene.add.rectangle(0, 0, 10, 10, 0xff0000, 0);
     scene.physics.add.existing(this.skillHitbox, false);
+    this.skillHitbox.body.setAllowGravity(false);
     this.skillHitbox.body.enable = false;
 
     // Bind number keys 1-4 to skill slots
@@ -480,6 +481,7 @@ export class Player extends Actor {
     const hx = this.sprite.x + dirX * 22;
     const hy = this.sprite.y + dirY * 22;
     this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
+    this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
     this.skillHitbox.setPosition(hx, hy);
     this.skillHitbox.body.enable = true;
 
@@ -502,6 +504,7 @@ export class Player extends Actor {
     // Circular hitbox centered on player (using a square approximation)
     const size = effect.radius * 2;
     this.skillHitbox.setSize(size, size);
+    this.skillHitbox.body.setSize(size, size);
     this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
     this.skillHitbox.body.enable = true;
 
