@@ -708,6 +708,40 @@ export class MainGameScene extends Phaser.Scene {
         const dy = y + Math.sin(angle) * dist;
 
         this.events.emit('spawnItem', drop.itemData.id, dx, dy, drop.quantity);
+
+        // Rarity glow for equipment drops
+        if (drop.itemData.type === 'equipment') {
+          const rarityGlowColors = {
+            uncommon: 0x44aa44, rare: 0x4444ff, epic: 0xaa44aa, legendary: 0xffaa00
+          };
+          const glowColor = rarityGlowColors[drop.itemData.rarity];
+          if (glowColor) {
+            const glow = this.add.circle(dx, dy, 14, glowColor, 0.3).setDepth(0);
+            this.tweens.add({
+              targets: glow, alpha: 0.1, duration: 800, yoyo: true, repeat: -1
+            });
+            // Auto-destroy glow after 60 seconds
+            this.time.delayedCall(60000, () => { if (glow.active) glow.destroy(); });
+          }
+        }
+
+        // Legendary drop notification
+        if (drop.itemData.rarity === 'legendary') {
+          const msg = this.add.text(
+            this.cameras.main.width / 2, 60,
+            `传说装备掉落: ${drop.itemData.name}`,
+            {
+              fontSize: '16px', fill: '#ffaa00', fontFamily: 'Courier New',
+              fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+            }
+          ).setOrigin(0.5).setScrollFactor(0).setDepth(300);
+
+          this.tweens.add({
+            targets: msg, alpha: 0, y: msg.y - 20,
+            duration: 3000, delay: 1500,
+            onComplete: () => msg.destroy()
+          });
+        }
       });
     });
 
@@ -959,6 +993,25 @@ export class MainGameScene extends Phaser.Scene {
     if (result) {
       const qty = item.config?.spawnQuantity || 1;
       this.inventory.addItem(result, qty);
+
+      // Floating text for gold pickup
+      if (result.type === 'currency' && this.player) {
+        const goldAmount = (result.value || 0) * qty;
+        if (goldAmount > 0) {
+          const goldText = this.add.text(
+            this.player.sprite.x, this.player.sprite.y - 20,
+            `+${goldAmount} Gold`,
+            { fontSize: '12px', fill: '#ffd700', fontFamily: 'Courier New',
+              fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
+          ).setOrigin(0.5).setDepth(200);
+          this.tweens.add({
+            targets: goldText, y: goldText.y - 30, alpha: 0,
+            duration: 1000,
+            onComplete: () => goldText.destroy()
+          });
+        }
+      }
+
       const gs = this.registry.get('gameState');
       if (item.id) {
         gs.collectedItems.push(item.id);
