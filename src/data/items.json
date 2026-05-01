@@ -84,6 +84,373 @@
         "type": "heal",
         "amount": 50
       }
+    },
+    "iron_sword": {
+      "id": "iron_sword",
+      "name": "铁剑",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "heavy",
+      "texture": "weapon_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 15,
+      "description": "一把普通的铁剑，适合初学者使用",
+      "baseStats": {
+        "attack": 5
+      },
+      "statBonuses": {
+        "str": 1
+      }
+    },
+    "rusty_dagger": {
+      "id": "rusty_dagger",
+      "name": "锈蚀匕首",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "light",
+      "texture": "weapon_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 10,
+      "description": "一把生锈的匕首，但仍然锋利",
+      "baseStats": {
+        "attack": 3,
+        "attackSpeed": 0.05
+      },
+      "statBonuses": {
+        "agi": 1
+      }
+    },
+    "apprentice_staff": {
+      "id": "apprentice_staff",
+      "name": "学徒法杖",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "magic",
+      "texture": "weapon_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 12,
+      "description": "魔法学徒使用的基础法杖",
+      "baseStats": {
+        "spellPower": 4,
+        "attack": 2
+      },
+      "statBonuses": {
+        "int": 1
+      }
+    },
+    "wooden_shield": {
+      "id": "wooden_shield",
+      "name": "木盾",
+      "type": "equipment",
+      "slot": "offhand",
+      "texture": "shield_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 10,
+      "description": "简陋但实用的木制盾牌",
+      "baseStats": {
+        "defense": 3
+      },
+      "statBonuses": {
+        "con": 1
+      }
+    },
+    "leather_cap": {
+      "id": "leather_cap",
+      "name": "皮帽",
+      "type": "equipment",
+      "slot": "helmet",
+      "texture": "helmet_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 8,
+      "description": "柔软的皮革帽子，提供基本防护",
+      "baseStats": {
+        "defense": 1
+      },
+      "statBonuses": {
+        "per": 1
+      }
+    },
+    "cloth_robe": {
+      "id": "cloth_robe",
+      "name": "布甲",
+      "type": "equipment",
+      "slot": "armor",
+      "texture": "armor_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 12,
+      "description": "厚实的布制铠甲，聊胜于无",
+      "baseStats": {
+        "defense": 2,
+        "maxHp": 10
+      },
+      "statBonuses": {
+        "con": 1
+      }
+    },
+    "worn_boots": {
+      "id": "worn_boots",
+      "name": "旧靴",
+      "type": "equipment",
+      "slot": "boots",
+      "texture": "boots_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 6,
+      "description": "磨损的旧靴子，但仍能加快脚步",
+      "baseStats": {
+        "moveSpeed": 5
+      },
+      "statBonuses": {
+        "agi": 1
+      }
+    },
+    "copper_ring": {
+      "id": "copper_ring",
+      "name": "铜戒指",
+      "type": "equipment",
+      "slot": "ring1",
+      "texture": "ring_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 5,
+      "description": "简单的铜制戒指，微微泛光",
+      "baseStats": {
+        "critRate": 0.5
+      },
+      "statBonuses": {}
+    },
+    "bone_necklace": {
+      "id": "bone_necklace",
+      "name": "骨项链",
+      "type": "equipment",
+      "slot": "necklace",
+      "texture": "necklace_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 2,
+      "sellPrice": 20,
+      "description": "用野兽骨头串成的项链，蕴含原始力量",
+      "baseStats": {
+        "attack": 2,
+        "maxHp": 5
+      },
+      "statBonuses": {
+        "str": 1,
+        "con": 1
+      }
+    },
+    "steel_blade": {
+      "id": "steel_blade",
+      "name": "钢刃",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "heavy",
+      "texture": "weapon_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 35,
+      "description": "精锻的钢制大剑，锋利无比",
+      "baseStats": {
+        "attack": 8
+      },
+      "statBonuses": {
+        "str": 2
+      }
+    },
+    "chain_mail": {
+      "id": "chain_mail",
+      "name": "锁子甲",
+      "type": "equipment",
+      "slot": "armor",
+      "texture": "armor_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 40,
+      "description": "铁环交织而成的锁子甲，防御力出色",
+      "baseStats": {
+        "defense": 5,
+        "maxHp": 15
+      },
+      "statBonuses": {
+        "con": 2
+      }
+    },
+    "iron_helm": {
+      "id": "iron_helm",
+      "name": "铁盔",
+      "type": "equipment",
+      "slot": "helmet",
+      "texture": "helmet_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 25,
+      "description": "坚固的铁制头盔，保护头部要害",
+      "baseStats": {
+        "defense": 3
+      },
+      "statBonuses": {
+        "con": 1,
+        "per": 1
+      }
+    },
+    "shadow_dagger": {
+      "id": "shadow_dagger",
+      "name": "暗影匕首",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "light",
+      "texture": "weapon_icon",
+      "rarity": "rare",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 5,
+      "sellPrice": 80,
+      "description": "暗影之力铸就的匕首，攻击如鬼魅般迅捷",
+      "baseStats": {
+        "attack": 6,
+        "attackSpeed": 0.1,
+        "critRate": 1.5
+      },
+      "statBonuses": {
+        "agi": 3,
+        "per": 1
+      }
+    },
+    "flame_staff": {
+      "id": "flame_staff",
+      "name": "烈焰法杖",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "magic",
+      "texture": "weapon_icon",
+      "rarity": "rare",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 5,
+      "sellPrice": 85,
+      "description": "蕴含烈焰之力的法杖，灼烧一切敌人",
+      "baseStats": {
+        "spellPower": 10,
+        "attack": 4
+      },
+      "statBonuses": {
+        "int": 3
+      }
+    },
+    "guardian_plate": {
+      "id": "guardian_plate",
+      "name": "守护者板甲",
+      "type": "equipment",
+      "slot": "armor",
+      "texture": "armor_icon",
+      "rarity": "rare",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 5,
+      "sellPrice": 90,
+      "description": "古代守护者遗留的板甲，坚不可摧",
+      "baseStats": {
+        "defense": 10,
+        "maxHp": 30
+      },
+      "statBonuses": {
+        "con": 3,
+        "str": 1
+      }
+    },
+    "swift_boots": {
+      "id": "swift_boots",
+      "name": "疾风之靴",
+      "type": "equipment",
+      "slot": "boots",
+      "texture": "boots_icon",
+      "rarity": "rare",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 4,
+      "sellPrice": 60,
+      "description": "注入风之精华的靴子，穿上后健步如飞",
+      "baseStats": {
+        "moveSpeed": 15,
+        "attackSpeed": 0.03
+      },
+      "statBonuses": {
+        "agi": 3
+      }
+    },
+    "skull_king_crown": {
+      "id": "skull_king_crown",
+      "name": "骷髅王冠",
+      "type": "equipment",
+      "slot": "helmet",
+      "texture": "helmet_icon",
+      "rarity": "epic",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 7,
+      "sellPrice": 200,
+      "description": "骷髅王的王冠，散发着不祥的强大力量",
+      "baseStats": {
+        "defense": 6,
+        "attack": 4,
+        "maxHp": 20
+      },
+      "statBonuses": {
+        "str": 2,
+        "con": 2,
+        "per": 2
+      }
+    },
+    "lava_blade": {
+      "id": "lava_blade",
+      "name": "熔岩之刃",
+      "type": "equipment",
+      "slot": "weapon",
+      "weaponType": "heavy",
+      "texture": "weapon_icon",
+      "rarity": "legendary",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 7,
+      "sellPrice": 500,
+      "description": "以熔岩铸就的传说之剑，斩断一切阻碍",
+      "baseStats": {
+        "attack": 18,
+        "critDmg": 0.3
+      },
+      "statBonuses": {
+        "str": 4,
+        "agi": 2
+      }
     }
   },
   "enemies": {
