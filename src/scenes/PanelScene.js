@@ -563,6 +563,12 @@ export class PanelScene extends Phaser.Scene {
     });
     container.add(this.invDetailDesc);
 
+    this.invCompareText = this.add.text(this.panelLeft + 30, detailY + 70, '', {
+      fontSize: '10px', fill: '#aaaaaa', fontFamily: 'Courier New',
+      lineSpacing: 2
+    }).setVisible(false);
+    container.add(this.invCompareText);
+
     // Action buttons
     this.invUseBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 12, '[使用]', {
       fontSize: '12px', fill: '#44cc44', fontFamily: 'Courier New'
@@ -660,6 +666,43 @@ export class PanelScene extends Phaser.Scene {
       this.invDetailRarity.setText(`[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}  数量: ${item.quantity}`);
       this.invDetailDesc.setText(item.description || '');
 
+      // Equipment stat comparison
+      if (item.type === 'equipment' && this.invCompareText) {
+        const equip = this.gameScene?.equipmentSystem;
+        // Determine which slot to compare against
+        let compareSlot = item.slot;
+        if (compareSlot === 'ring1' || compareSlot === 'ring2') {
+          compareSlot = equip?.getSlot('ring1') ? 'ring1' : 'ring2';
+        }
+        const currentEquip = equip ? equip.getSlot(compareSlot) : null;
+
+        const STAT_NAMES = {
+          attack: '攻击', defense: '防御', maxHp: '生命', maxMp: '法力',
+          spellPower: '法强', moveSpeed: '移速', attackSpeed: '攻速',
+          critRate: '暴击率', critDmg: '暴击伤害', hpRegen: 'HP回复'
+        };
+
+        let compareText = '';
+        if (item.baseStats) {
+          for (const [stat, val] of Object.entries(item.baseStats)) {
+            const currentVal = currentEquip?.baseStats?.[stat] || 0;
+            const diff = val - currentVal;
+            const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
+            const color = diff > 0 ? '(+)' : diff < 0 ? '(-)' : '';
+            compareText += `${STAT_NAMES[stat] || stat}: ${val} ${arrow}${Math.abs(diff) > 0 ? Math.abs(diff) : ''} ${color}\n`;
+          }
+        }
+        if (currentEquip) {
+          compareText += `\n对比: ${currentEquip.name}`;
+        } else {
+          compareText += `\n当前: 空槽位`;
+        }
+        this.invCompareText.setText(compareText);
+        this.invCompareText.setVisible(true);
+      } else if (this.invCompareText) {
+        this.invCompareText.setVisible(false);
+      }
+
       this.invUseBtn.setVisible(item.type === 'consumable');
       this.invEquipBtn.setVisible(item.type === 'equipment');
       this.invDropBtn.setVisible(item.type !== 'quest');
@@ -670,6 +713,7 @@ export class PanelScene extends Phaser.Scene {
       this.invUseBtn.setVisible(false);
       this.invEquipBtn.setVisible(false);
       this.invDropBtn.setVisible(false);
+      if (this.invCompareText) this.invCompareText.setVisible(false);
     }
 
     // Highlight selected slot
