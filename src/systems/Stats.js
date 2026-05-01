@@ -67,13 +67,13 @@ export class Stats {
       attackSpeed: 1.0 + agi * 0.01 + this.flatBonuses.attackSpeed,
       hpRegen:     con * 0.5        + this.flatBonuses.hpRegen,
       critDmg:     1.5 + str * 0.1  + this.flatBonuses.critDmg,
-      critRate:    per * 0.5         + (this.flatBonuses.critRate || 0),
-      tenacity:    con * 0.5 + str * 0.2 + this.flatBonuses.tenacity,
-      armorPen:    str * 0.3 + per * 0.5 + (this.flatBonuses.armorPen || 0),
+      critRate:    per * 0.5         + this.flatBonuses.critRate,      // percentage points (2.5 = 2.5%)
+      tenacity:    con * 0.5 + str * 0.2 + this.flatBonuses.tenacity,  // raw value, consumed via diminishing returns
+      armorPen:    str * 0.3 + per * 0.5 + this.flatBonuses.armorPen,
       defense:     this.flatBonuses.defense,
-      dropBonus:   Math.sqrt(lck) * 1.0 + (this.flatBonuses.dropBonus || 0),
-      cdr:         Math.min(40, int * 0.2) + (this.flatBonuses.cdr || 0),
-      encumbrance: this.flatBonuses.encumbrance || 0
+      dropBonus:   Math.sqrt(lck) * 1.0 + this.flatBonuses.dropBonus,  // percentage points (1.7 = 1.7%)
+      cdr:         Math.min(40, int * 0.2 + this.flatBonuses.cdr),     // hard cap 40%
+      encumbrance: this.flatBonuses.encumbrance                        // reserved
     };
     return this._cache;
   }

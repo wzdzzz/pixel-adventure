@@ -123,9 +123,10 @@ export class Actor {
       attackerX, attackerY,
       this.sprite.x, this.sprite.y
     );
-    // 韧性减少击退
+    // 韧性减少击退 (diminishing returns: tenacity / (tenacity + 20))
     const tenacity = this.stats.getDerived().tenacity;
-    const finalForce = force * (1 - tenacity);
+    const reduction = tenacity / (tenacity + 20);
+    const finalForce = force * (1 - reduction);
     this.sprite.setVelocity(
       Math.cos(angle) * finalForce,
       Math.sin(angle) * finalForce
