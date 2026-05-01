@@ -18,7 +18,7 @@ export class Player extends Actor {
     const statsConfig = { con: 10, str: 8, int: 5, agi: 8, per: 5, lck: 3 };
     super(scene, x, y, 'hero_00', statsConfig, 'hero');
 
-    this.sprite.setBounce(0.1);
+    this.sprite.setBounce(0.05);
     this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
     this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_SPEED, GAME_CONFIG.PHYSICS.PLAYER_SPEED);
     this.sprite.playerInstance = this;
@@ -29,6 +29,7 @@ export class Player extends Actor {
     this.state = PlayerState.IDLE;
     this.stateTimer = 0;
     this.attackHitRegistered = false;
+    this.pendingAttack = false;
 
     // Facing direction: 1 = right, -1 = left
     this.facing = 1;
@@ -148,7 +149,10 @@ export class Player extends Actor {
 
   tryAttack() {
     if (this.state === PlayerState.DEAD) return;
-    if (this.isAttacking()) return;
+    if (this.isAttacking()) {
+      this.pendingAttack = true;
+      return;
+    }
 
     this.sprite.setVelocity(0, 0);
     this.attackHitRegistered = false;
@@ -190,7 +194,12 @@ export class Player extends Actor {
   handleAttackRecovery() {
     this.sprite.setVelocity(0, 0);
     if (this.stateTimer >= 150) {
-      this.setState(PlayerState.IDLE);
+      if (this.pendingAttack) {
+        this.pendingAttack = false;
+        this.tryAttack();
+      } else {
+        this.setState(PlayerState.IDLE);
+      }
     }
   }
 

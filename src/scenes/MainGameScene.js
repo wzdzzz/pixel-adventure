@@ -1059,6 +1059,13 @@ export class MainGameScene extends Phaser.Scene {
     this.gamePaused = false;
   }
 
+  getInteractionPriority(target) {
+    if (target.npcInstance && target.npcInstance.dialogues) return 10;
+    if (target.chestInstance) return 8;
+    if (target.portalInstance) return 6;
+    return 2;
+  }
+
   update(time, delta) {
     if (this.hitStopTimer > 0) {
       this.hitStopTimer -= delta;
@@ -1116,18 +1123,18 @@ export class MainGameScene extends Phaser.Scene {
 
     // Y-depth sorting for dynamic entities
     if (this.player?.sprite) {
-      this.player.sprite.setDepth(this.player.sprite.y);
+      this.player.sprite.setDepth(this.player.sprite.y + this.player.sprite.x * 0.001);
     }
 
     if (this.player && this.player.sprite) {
       this.enemies.forEach(e => {
         e.update(this.player.sprite, delta);
-        if (e.sprite) e.sprite.setDepth(e.sprite.y);
+        if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
       });
       this.npcs.forEach(n => {
         if (n.updateState) n.updateState(this.inventory.getItems());
         const sprite = n.sprite || n;
-        if (sprite) sprite.setDepth(sprite.y || 0);
+        if (sprite) sprite.setDepth((sprite.y || 0) + (sprite.x || 0) * 0.001);
       });
     }
 
