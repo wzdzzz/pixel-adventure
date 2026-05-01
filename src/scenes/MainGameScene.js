@@ -9,6 +9,7 @@ import { InventorySystem } from '../systems/InventorySystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { UIManager } from '../systems/UIManager.js';
 import { LevelSystem } from '../systems/LevelSystem.js';
+import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { WarFog } from '../systems/WarFog.js';
 import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
@@ -46,6 +47,8 @@ export class MainGameScene extends Phaser.Scene {
     this.uiManager = new UIManager(this);
     this.levelSystem = new LevelSystem(this);
     this.registry.set('levelSystem', this.levelSystem);
+    this.equipmentSystem = new EquipmentSystem(this);
+    this.registry.set('equipmentSystem', this.equipmentSystem);
 
     const gs = this.registry.get('gameState');
     this.currentLevel = gs.currentLevel || 0;
