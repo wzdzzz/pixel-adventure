@@ -6,6 +6,12 @@ const _genId = () => `eq_${Date.now()}_${(_instanceSeq++).toString(36)}`;
 
 const RARITY_ORDER = ['common','uncommon','rare','epic','legendary','mythic'];
 
+/** 品质 → 镶嵌孔数量（Phase 2：宝石系统） */
+const SOCKET_COUNTS = {
+  common: 0, uncommon: 0, rare: 1,
+  epic: 2, legendary: 3, mythic: 4
+};
+
 /**
  * 装备实例化器：模板 + 品质 + 等级 → 完整实例
  */
@@ -25,6 +31,13 @@ export class EquipmentGenerator {
     const count = AFFIX_COUNTS[rarity] || 0;
     const affixes = rollAffixes(pools, rarity, count);
 
+    // 镶嵌孔（Phase 2：宝石系统占位，由 GemSystem 后续填充 gemId / gemLevel）
+    const socketCount = SOCKET_COUNTS[rarity] || 0;
+    const sockets = [];
+    for (let i = 0; i < socketCount; i++) {
+      sockets.push({ gemId: null, gemLevel: 0 });
+    }
+
     return {
       instanceId: _genId(),
       templateId,
@@ -37,6 +50,7 @@ export class EquipmentGenerator {
       level,
       enhanceLevel: 0,
       affixes,
+      sockets,
       // 静态字段（来自模板，方便 UI 直接读）
       baseStats: tpl.baseStats || {},
       statBonuses: tpl.statBonuses || {},

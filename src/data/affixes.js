@@ -66,7 +66,35 @@ export const AFFIXES = {
   // ── mage 专属 ─────────────────────────
   spell_dmg_t2:  { id:'spell_dmg_t2', name:'法术伤害', pool:'mage', tier:2, stat:'spellDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false }, // TODO Phase 2: 战斗代码消费 stats.bonusPct.spellDmg
   mana_regen_t2: { id:'mana_regen_t2', name:'法力恢复', pool:'mage', tier:2, stat:'manaRegen', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false }, // TODO Phase 2: 战斗代码消费 stats.bonusPct.manaRegen
-  int_pct_t2:    { id:'int_pct_t2', name:'智力',    pool:'mage', tier:2, stat:'_base_int', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true }
+  int_pct_t2:    { id:'int_pct_t2', name:'智力',    pool:'mage', tier:2, stat:'_base_int', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true },
+
+  // ── 触发型词条（Phase 2）──────────────────
+  // stat 统一标记为 '_trigger'，rollAffixes 按 stat dedupe → 一件装备至多一条触发词条
+  // EquipmentSystem.getStatBonuses 应跳过 _trigger（不进任何属性通道），由 TriggerSystem 单独读取
+  fire_on_hit_t2: {
+    id:'fire_on_hit_t2', name:'火焰附魔',
+    pool:'weapon_common', tier:2, stat:'_trigger',
+    isFlat:false, valueRange:[1,1], minRarity:'rare', weight:5,
+    trigger: { event:'onHit', chance:0.20, effect:'spawn_fireball', power:0.5 }
+  },
+  heal_on_kill_t2: {
+    id:'heal_on_kill_t2', name:'吸魂',
+    pool:'armor_common', tier:2, stat:'_trigger',
+    isFlat:false, valueRange:[1,1], minRarity:'rare', weight:5,
+    trigger: { event:'onKill', chance:1.0, effect:'heal_pct', power:0.05 }
+  },
+  cdr_on_skill_t2: {
+    id:'cdr_on_skill_t2', name:'技能加速',
+    pool:'accessory', tier:2, stat:'_trigger',
+    isFlat:false, valueRange:[1,1], minRarity:'rare', weight:5,
+    trigger: { event:'onSkillCast', chance:1.0, effect:'reduce_cd', power:500 }
+  },
+  lifesteal_on_crit_t2: {
+    id:'lifesteal_on_crit_t2', name:'血怒',
+    pool:'weapon_common', tier:2, stat:'_trigger',
+    isFlat:false, valueRange:[1,1], minRarity:'rare', weight:4,
+    trigger: { event:'onCrit', chance:1.0, effect:'lifesteal_pct', power:0.30 }
+  }
 };
 
 /** 品质 → 词条数量 */
