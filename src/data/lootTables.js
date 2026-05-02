@@ -66,6 +66,18 @@ export const LOOT_TABLES = {
           { id: 'worn_boots',   weight: 40 },
           { id: 'rusty_dagger', weight: 20 }
         ]
+      },
+      {
+        name: 'materials',
+        weight: 25,
+        items: [
+          { id: 'iron_shard',     weight: 60 },
+          { id: 'refining_stone', weight: 5 },
+          { id: 'red_gem',        weight: 1 },
+          { id: 'blue_gem',       weight: 1 },
+          { id: 'green_gem',      weight: 1 },
+          { id: 'yellow_gem',     weight: 1 }
+        ]
       }
     ]
   },
@@ -83,6 +95,15 @@ export const LOOT_TABLES = {
         name: 'consumable',
         weight: 20,
         items: [{ id: 'potion', weight: 100 }]
+      },
+      {
+        name: 'materials',
+        weight: 18,
+        items: [
+          { id: 'iron_shard',     weight: 50 },
+          { id: 'chaos_essence',  weight: 3 },
+          { id: 'refining_stone', weight: 5 }
+        ]
       }
     ]
   },
@@ -107,6 +128,20 @@ export const LOOT_TABLES = {
         items: [
           { id: 'copper_ring', weight: 50 },
           { id: 'worn_boots',  weight: 50 }
+        ]
+      },
+      {
+        name: 'materials',
+        weight: 22,
+        items: [
+          { id: 'iron_shard',     weight: 40 },
+          { id: 'refining_stone', weight: 8 },
+          { id: 'chaos_essence',  weight: 4 },
+          { id: 'star_fragment',  weight: 2 },
+          { id: 'red_gem',        weight: 1 },
+          { id: 'blue_gem',       weight: 1 },
+          { id: 'green_gem',      weight: 1 },
+          { id: 'yellow_gem',     weight: 1 }
         ]
       }
     ]
@@ -140,6 +175,19 @@ export const LOOT_TABLES = {
           { id: 'cloth_robe',    weight: 25 },
           { id: 'wooden_shield', weight: 15 }
         ]
+      },
+      {
+        name: 'materials',
+        weight: 25,
+        items: [
+          { id: 'iron_shard',     weight: 50 },
+          { id: 'refining_stone', weight: 8 },
+          { id: 'chaos_essence',  weight: 3 },
+          { id: 'red_gem',        weight: 1 },
+          { id: 'blue_gem',       weight: 1 },
+          { id: 'green_gem',      weight: 1 },
+          { id: 'yellow_gem',     weight: 1 }
+        ]
       }
     ]
   },
@@ -166,6 +214,18 @@ export const LOOT_TABLES = {
           { id: 'worn_boots',    weight: 30 },
           { id: 'copper_ring',   weight: 25 },
           { id: 'bone_necklace', weight: 10 }
+        ]
+      },
+      {
+        name: 'materials',
+        weight: 25,
+        items: [
+          { id: 'iron_shard',     weight: 55 },
+          { id: 'refining_stone', weight: 6 },
+          { id: 'red_gem',        weight: 1 },
+          { id: 'blue_gem',       weight: 1 },
+          { id: 'green_gem',      weight: 1 },
+          { id: 'yellow_gem',     weight: 1 }
         ]
       }
     ]
@@ -201,6 +261,21 @@ export const LOOT_TABLES = {
           { id: 'wooden_shield', weight: 20 },
           { id: 'bone_necklace', weight: 15 }
         ]
+      },
+      {
+        name: 'materials',
+        weight: 35,
+        items: [
+          { id: 'iron_shard',     weight: 30 },
+          { id: 'enhance_stone',  weight: 15 },
+          { id: 'refining_stone', weight: 10 },
+          { id: 'chaos_essence',  weight: 4 },
+          { id: 'star_fragment',  weight: 2 },
+          { id: 'red_gem',        weight: 2 },
+          { id: 'blue_gem',       weight: 2 },
+          { id: 'green_gem',      weight: 2 },
+          { id: 'yellow_gem',     weight: 2 }
+        ]
       }
     ]
   },
@@ -231,6 +306,21 @@ export const LOOT_TABLES = {
           { id: 'cloth_robe',       weight: 20 },
           { id: 'bone_necklace',    weight: 20 },
           { id: 'copper_ring',      weight: 30 }
+        ]
+      },
+      {
+        name: 'materials',
+        weight: 35,
+        items: [
+          { id: 'iron_shard',     weight: 25 },
+          { id: 'enhance_stone',  weight: 15 },
+          { id: 'refining_stone', weight: 10 },
+          { id: 'chaos_essence',  weight: 4 },
+          { id: 'star_fragment',  weight: 2 },
+          { id: 'red_gem',        weight: 2 },
+          { id: 'blue_gem',       weight: 2 },
+          { id: 'green_gem',      weight: 2 },
+          { id: 'yellow_gem',     weight: 2 }
         ]
       }
     ]
@@ -268,6 +358,21 @@ export const LOOT_TABLES = {
           { id: 'skull_king_crown', weight: 5 },
           { id: 'bone_necklace',    weight: 7 }
         ]
+      },
+      {
+        name: 'materials',
+        weight: 45,
+        items: [
+          { id: 'enhance_stone',  weight: 20 },
+          { id: 'refining_stone', weight: 12 },
+          { id: 'chaos_essence',  weight: 4 },
+          { id: 'star_fragment',  weight: 2 },
+          { id: 'ancient_core',   weight: 2 },
+          { id: 'red_gem',        weight: 3 },
+          { id: 'blue_gem',       weight: 3 },
+          { id: 'green_gem',      weight: 3 },
+          { id: 'yellow_gem',     weight: 3 }
+        ]
       }
     ]
   },
@@ -297,6 +402,21 @@ export const LOOT_TABLES = {
           { id: 'swift_boots',      weight: 15 },
           { id: 'lava_blade',       weight: 5 },
           { id: 'steel_blade',      weight: 15 }
+        ]
+      },
+      {
+        name: 'materials',
+        weight: 80,
+        items: [
+          { id: 'enhance_stone',  weight: 15 },
+          { id: 'ancient_core',   weight: 8 },
+          { id: 'chaos_essence',  weight: 6 },
+          { id: 'soul_crystal',   weight: 6 },
+          { id: 'star_fragment',  weight: 4 },
+          { id: 'red_gem',        weight: 5 },
+          { id: 'blue_gem',       weight: 5 },
+          { id: 'green_gem',      weight: 5 },
+          { id: 'yellow_gem',     weight: 5 }
         ]
       }
     ]
