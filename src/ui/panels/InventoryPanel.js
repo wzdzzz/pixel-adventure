@@ -1,5 +1,6 @@
 import { AFFIXES } from '../../data/affixes.js';
 import { RARITY_MULTIPLIERS } from '../../data/lootTables.js';
+import { GEMS } from '../../data/gems.js';
 
 const RARITY_LABEL = {
   common:'普通', uncommon:'优秀', rare:'稀有',
@@ -32,9 +33,25 @@ function formatEquipTooltip(item) {
     for (const a of item.affixes) {
       const def = AFFIXES[a.id];
       if (!def) continue;
-      const v = def.isFlat ? a.value.toFixed(1) : `${(a.value * 100).toFixed(1)}%`;
-      lines.push(`  T${def.tier} ${def.name}: ${v}`);
+      if (def.stat === '_trigger' && def.trigger) {
+        lines.push(`  ✨ ${def.name}: ${(def.trigger.chance*100).toFixed(0)}% 触发`);
+      } else {
+        const v = def.isFlat ? a.value.toFixed(1) : `${(a.value * 100).toFixed(1)}%`;
+        lines.push(`  T${def.tier} ${def.name}: ${v}`);
+      }
     }
+  }
+  // 孔位
+  if (item.sockets && item.sockets.length) {
+    lines.push('— 孔位 —');
+    item.sockets.forEach((s, i) => {
+      if (s.gemId) {
+        const gem = GEMS[s.gemId];
+        lines.push(`  孔${i+1}: ${gem?.icon || '◆'} ${gem?.name || s.gemId} Lv.${s.gemLevel}`);
+      } else {
+        lines.push(`  孔${i+1}: ⬜ 空`);
+      }
+    });
   }
   if (item.description) lines.push(`\n${item.description}`);
   return lines.join('\n');
@@ -136,6 +153,26 @@ export const InventoryPanel = {
     bulkBtn.on('pointerover', () => bulkBtn.setColor('#aaddff'));
     bulkBtn.on('pointerout', () => bulkBtn.setColor('#66ccff'));
     container.add(bulkBtn);
+
+    // 制作按钮（bulkBtn 左侧，因 bulkBtn 是右锚定，需向左偏移）
+    const craftBtn = this.add.text(bulkBtn.x - bulkBtn.width - 10, filterY, '[🛠 制作]', {
+      fontSize: '11px', fill: '#88ddaa', fontFamily: 'Courier New',
+      backgroundColor: '#1a3a2a', padding: { x: 6, y: 3 }
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    craftBtn.on('pointerdown', () => this.openCraftModal?.());
+    craftBtn.on('pointerover', () => craftBtn.setColor('#bbeecc'));
+    craftBtn.on('pointerout', () => craftBtn.setColor('#88ddaa'));
+    container.add(craftBtn);
+
+    // 合成按钮（craftBtn 左侧）
+    const fuseBtn = this.add.text(craftBtn.x - craftBtn.width - 10, filterY, '[💎 合成]', {
+      fontSize: '11px', fill: '#ffdd66', fontFamily: 'Courier New',
+      backgroundColor: '#3a2a1a', padding: { x: 6, y: 3 }
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    fuseBtn.on('pointerdown', () => this.openGemFusionModal?.());
+    fuseBtn.on('pointerover', () => fuseBtn.setColor('#ffeeaa'));
+    fuseBtn.on('pointerout', () => fuseBtn.setColor('#ffdd66'));
+    container.add(fuseBtn);
 
     // --- 8x4 Grid ---
     const cellSize = 48;
@@ -490,7 +527,7 @@ export const InventoryPanel = {
     const menuX = pointer.x;
     const menuY = pointer.y;
 
-    const bg = this.add.rectangle(0, 0, 100, 0, 0x2a2a3e, 0.95)
+    const bg = this.add.rectangle(0, 0, 120, 0, 0x2a2a3e, 0.95)
       .setStrokeStyle(1, 0x5a5a7a).setOrigin(0, 0);
     this.contextMenu.add(bg);
 
@@ -510,7 +547,7 @@ export const InventoryPanel = {
     };
 
     if (item.type === 'consumable') addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
-    // 装备：加装备/强化/分解
+    // 装备：加装备/强化/洗练/镶嵌/分解
     if (item.type === 'equipment') {
       addOption('⚔ 装备', '#88ccff', () => {
         const equip = this.gameScene?.equipmentSystem;
@@ -521,16 +558,20 @@ export const InventoryPanel = {
           this.refreshCharacterTab?.();
         }
       });
-      addOption('🔨 强化', '#ffdd66', () => {
-        this.openEnhanceModal?.(actualSlot);
-      });
-      addOption('🪓 分解', '#ff8866', () => {
-        this.openDecomposeModal?.(actualSlot);
-      });
+      addOption('🔨 强化', '#ffdd66', () => this.openEnhanceModal?.(actualSlot));
+      addOption('♻ 洗练', '#66ccff', () => this.openReforgeModal?.(item));
+      if (item.sockets && item.sockets.length > 0) {
+        addOption('💎 镶嵌', '#aa88ff', () => this.openSocketModal?.(item));
+      }
+      addOption('🪓 分解', '#ff8866', () => this.openDecomposeModal?.(actualSlot));
+    }
+    // 宝石：合成入口
+    if (item.type === 'gem') {
+      addOption('✨ 合成', '#ffdd66', () => this.openGemFusionModal?.());
     }
     if (item.type !== 'quest') addOption('丢弃', '#cc4444', () => { inv.removeItem(actualSlot, 1); this.refreshInventoryTab(); });
 
-    bg.setSize(100, optionY + 4);
+    bg.setSize(120, optionY + 4);
 
     this.contextMenu.setPosition(menuX, menuY);
     this.contextMenu.setVisible(true);
