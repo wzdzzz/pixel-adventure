@@ -1,3 +1,45 @@
+import { AFFIXES } from '../../data/affixes.js';
+import { RARITY_MULTIPLIERS } from '../../data/lootTables.js';
+
+const RARITY_LABEL_LOCAL = {
+  common:'普通', uncommon:'优秀', rare:'稀有',
+  epic:'史诗', legendary:'传说', mythic:'神话'
+};
+
+function formatEquipTooltip(item) {
+  const lines = [];
+  const enh = item.enhanceLevel ? ` +${item.enhanceLevel}` : '';
+  lines.push(`${item.name}${enh}`);
+  lines.push(`[${RARITY_LABEL_LOCAL[item.rarity] || '普通'}] Lv.${item.level || 1}`);
+  if (item.weaponType) {
+    const wt = { heavy:'战士', light:'弓箭手', magic:'法师' }[item.weaponType] || '';
+    if (wt) lines.push(`职业: ${wt}`);
+  }
+  // 基础属性（含 rarity × level × enhance 缩放）
+  if (item.baseStats && Object.keys(item.baseStats).length) {
+    const rarityMult = RARITY_MULTIPLIERS[item.rarity] || 1.0;
+    const lvlMult = 1 + 0.1 * (item.level || 1);
+    const enhMult = 1 + 0.05 * (item.enhanceLevel || 0);
+    const total = rarityMult * lvlMult * enhMult;
+    lines.push('— 基础属性 —');
+    for (const [k, v] of Object.entries(item.baseStats)) {
+      lines.push(`  ${k} +${(v * total).toFixed(1)}`);
+    }
+  }
+  // 词条
+  if (item.affixes && item.affixes.length) {
+    lines.push('— 词条 —');
+    for (const a of item.affixes) {
+      const def = AFFIXES[a.id];
+      if (!def) continue;
+      const v = def.isFlat ? a.value.toFixed(1) : `${(a.value * 100).toFixed(1)}%`;
+      lines.push(`  T${def.tier} ${def.name}: ${v}`);
+    }
+  }
+  if (item.description) lines.push(`\n${item.description}`);
+  return lines.join('\n');
+}
+
 export const InventoryPanel = {
   createInventoryTab() {
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
@@ -279,10 +321,16 @@ export const InventoryPanel = {
       };
       const rarityColor = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
 
-      this.invDetailName.setText(item.name);
+      const enhSuffix = item.type === 'equipment' && item.enhanceLevel ? ` +${item.enhanceLevel}` : '';
+      this.invDetailName.setText(item.name + enhSuffix);
       this.invDetailName.setColor('#' + rarityColor.border.toString(16).padStart(6, '0'));
       this.invDetailRarity.setText(`[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}  数量: ${item.quantity}`);
-      this.invDetailDesc.setText(item.description || '');
+      // 装备：详细多行（覆盖 invDetailDesc）
+      if (item.type === 'equipment') {
+        this.invDetailDesc.setText(formatEquipTooltip(item));
+      } else {
+        this.invDetailDesc.setText(item.description || '');
+      }
 
       // Equipment stat comparison
       if (item.type === 'equipment' && this.invCompareText) {
@@ -411,9 +459,13 @@ export const InventoryPanel = {
       common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说'
     };
 
-    this.tooltipText.setText(
-      `${item.name}\n[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? '\n售价: ' + item.sellPrice : ''}`
-    );
+    if (item.type === 'equipment') {
+      this.tooltipText.setText(formatEquipTooltip(item));
+    } else {
+      this.tooltipText.setText(
+        `${item.name}\n[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? '\n售价: ' + item.sellPrice : ''}`
+      );
+    }
     this.tooltipContainer.setPosition(x + 30, y - 40);
     this.tooltipContainer.setVisible(true);
   },
