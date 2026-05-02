@@ -57,15 +57,21 @@ export const CharacterPanel = {
         fontSize: '8px', fill: '#555566', fontFamily: 'Courier New'
       }).setOrigin(0.5);
 
-      cell.on('pointerdown', () => {
+      cell.on('pointerdown', (pointer) => {
         const equip = this.gameScene?.equipmentSystem;
         if (!equip) return;
         const equipped = equip.getSlot(def.slot);
-        if (equipped) {
-          equip.unequipToInventory(def.slot);
-          this.refreshCharacterTab();
-          this.refreshInventoryTab();
+        if (!equipped) return;
+
+        // 右键 → 弹出菜单
+        if (pointer.rightButtonDown && pointer.rightButtonDown()) {
+          this._showCharContextMenu(def.slot, equipped, pointer);
+          return;
         }
+        // 左键 → 卸下
+        equip.unequipToInventory(def.slot);
+        this.refreshCharacterTab();
+        this.refreshInventoryTab();
       });
 
       cell.on('pointerover', () => {
@@ -331,6 +337,50 @@ export const CharacterPanel = {
     this.tooltipText.setText(tooltips[stat] || '');
     this.tooltipContainer.setPosition(x + 120, y - 10);
     this.tooltipContainer.setVisible(true);
+  },
+
+  _showCharContextMenu(slotName, equipped, pointer) {
+    if (!this.charContextMenu) {
+      this.charContextMenu = this.add.container(0, 0).setDepth(30);
+    }
+    this.charContextMenu.removeAll(true);
+    this.charContextMenu.setVisible(true);
+
+    const bg = this.add.rectangle(0, 0, 100, 0, 0x2a2a3e, 0.95)
+      .setStrokeStyle(1, 0x5a5a7a).setOrigin(0, 0);
+    this.charContextMenu.add(bg);
+
+    let optY = 4;
+    const addOpt = (label, color, cb) => {
+      const t = this.add.text(8, optY, label, {
+        fontSize:'11px', fill:color, fontFamily:'Courier New'
+      }).setInteractive({ useHandCursor: true });
+      t.on('pointerdown', () => { cb(); this.charContextMenu.setVisible(false); });
+      t.on('pointerover', () => t.setColor('#ffffff'));
+      t.on('pointerout', () => t.setColor(color));
+      this.charContextMenu.add(t);
+      optY += 20;
+    };
+
+    // 强化（直接传 instance）
+    addOpt('🔨 强化', '#ffdd66', () => {
+      this.openEnhanceModal?.(equipped);
+    });
+
+    // 卸下
+    addOpt('📥 卸下', '#aaccff', () => {
+      const equip = this.gameScene.equipmentSystem;
+      equip.unequipToInventory(slotName);
+      this.refreshCharacterTab();
+      this.refreshInventoryTab();
+    });
+
+    bg.setSize(100, optY + 4);
+    this.charContextMenu.setPosition(pointer.x, pointer.y);
+
+    this.input.once('pointerdown', () => {
+      if (this.charContextMenu) this.charContextMenu.setVisible(false);
+    });
   },
 
   showEquipTooltip(item, x, y) {

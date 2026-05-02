@@ -125,6 +125,18 @@ export const InventoryPanel = {
     }).setOrigin(1, 0);
     container.add(this.invGoldText);
 
+    // 批量拆解按钮（位于金币左侧）
+    const bulkBtn = this.add.text(this.panelLeft + contentW - 90, filterY, '[🪓 批量拆解]', {
+      fontSize: '11px', fill: '#66ccff', fontFamily: 'Courier New',
+      backgroundColor: '#1a2a3a', padding: { x: 6, y: 3 }
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    bulkBtn.on('pointerdown', () => {
+      this.openBulkDecomposeModal?.();
+    });
+    bulkBtn.on('pointerover', () => bulkBtn.setColor('#aaddff'));
+    bulkBtn.on('pointerout', () => bulkBtn.setColor('#66ccff'));
+    container.add(bulkBtn);
+
     // --- 8x4 Grid ---
     const cellSize = 48;
     const gap = 4;
@@ -498,8 +510,17 @@ export const InventoryPanel = {
     };
 
     if (item.type === 'consumable') addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
-    // 装备：加强化/分解
+    // 装备：加装备/强化/分解
     if (item.type === 'equipment') {
+      addOption('⚔ 装备', '#88ccff', () => {
+        const equip = this.gameScene?.equipmentSystem;
+        if (!equip) return;
+        const success = equip.equipFromInventory(actualSlot);
+        if (success) {
+          this.refreshInventoryTab();
+          this.refreshCharacterTab?.();
+        }
+      });
       addOption('🔨 强化', '#ffdd66', () => {
         this.openEnhanceModal?.(actualSlot);
       });

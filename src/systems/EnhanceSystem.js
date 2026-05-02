@@ -42,9 +42,14 @@ export class EnhanceSystem {
    * 强化指定背包格的装备（直接修改 inventory.slots[idx]）
    * @returns {{result: 'success'|'fail_stay'|'fail_downgrade'|'invalid', newLevel?: number, reason?: string}}
    */
-  enhance(slotIndex) {
+  enhance(target) {
     const inv = this.scene.inventory;
-    const eq = inv.slots[slotIndex];
+    let eq;
+    if (typeof target === 'number') {
+      eq = inv.slots[target];
+    } else {
+      eq = target;  // 直接是 instance（来自装备槽）
+    }
     const check = this.canEnhance(eq);
     if (!check.ok) return { result: 'invalid', reason: check.reason };
 
