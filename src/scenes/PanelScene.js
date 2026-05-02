@@ -3,6 +3,7 @@ import { CharacterPanel } from '../ui/panels/CharacterPanel.js';
 import { InventoryPanel } from '../ui/panels/InventoryPanel.js';
 import { SkillTreePanel } from '../ui/panels/SkillTreePanel.js';
 import { QuestLogPanel } from '../ui/panels/QuestLogPanel.js';
+import { SmithyPanel } from '../ui/panels/SmithyPanel.js';
 import { Tooltip } from '../ui/Tooltip.js';
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog'];
@@ -247,3 +248,4 @@ Object.assign(PanelScene.prototype, CharacterPanel);
 Object.assign(PanelScene.prototype, InventoryPanel);
 Object.assign(PanelScene.prototype, SkillTreePanel);
 Object.assign(PanelScene.prototype, QuestLogPanel);
+Object.assign(PanelScene.prototype, SmithyPanel);

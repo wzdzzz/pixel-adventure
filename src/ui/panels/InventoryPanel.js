@@ -452,7 +452,7 @@ export const InventoryPanel = {
     const menuX = pointer.x;
     const menuY = pointer.y;
 
-    const bg = this.add.rectangle(0, 0, 80, 0, 0x2a2a3e, 0.95)
+    const bg = this.add.rectangle(0, 0, 100, 0, 0x2a2a3e, 0.95)
       .setStrokeStyle(1, 0x5a5a7a).setOrigin(0, 0);
     this.contextMenu.add(bg);
 
@@ -472,9 +472,18 @@ export const InventoryPanel = {
     };
 
     if (item.type === 'consumable') addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
+    // 装备：加强化/分解
+    if (item.type === 'equipment') {
+      addOption('🔨 强化', '#ffdd66', () => {
+        this.openEnhanceModal?.(actualSlot);
+      });
+      addOption('🪓 分解', '#ff8866', () => {
+        this.openDecomposeModal?.(actualSlot);
+      });
+    }
     if (item.type !== 'quest') addOption('丢弃', '#cc4444', () => { inv.removeItem(actualSlot, 1); this.refreshInventoryTab(); });
 
-    bg.setSize(80, optionY + 4);
+    bg.setSize(100, optionY + 4);
 
     this.contextMenu.setPosition(menuX, menuY);
     this.contextMenu.setVisible(true);
