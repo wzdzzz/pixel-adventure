@@ -1,4 +1,6 @@
 import { MATERIALS, getEnhanceCost, getEnhanceSuccessRate } from '../../data/materials.js';
+import { AFFIXES } from '../../data/affixes.js';
+import { RECIPES } from '../../data/recipes.js';
 
 /**
  * 强化/分解小窗口（modal in PanelScene）
@@ -273,5 +275,405 @@ export const SmithyPanel = {
       maxed: '已达最高强化等级',
       not_equipment: '不是装备'
     })[reason] || '强化失败';
+  },
+
+  openReforgeModal(eq) {
+    if (!eq || eq.type !== 'equipment') return;
+    if (!eq.affixes || eq.affixes.length === 0) {
+      this._showPanelToast?.('该装备没有词条，无法洗练', '#ff8866');
+      return;
+    }
+    this._closeSmithyModal();
+
+    const reforgeSys = this.gameScene?.reforgeSystem;
+    if (!reforgeSys) return;
+
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    const cx = w / 2, cy = h / 2;
+
+    const lockedIds = new Set();
+    const locks = []; // 控件引用，用于刷新
+
+    const c = this.add.container(0, 0).setDepth(50);
+    const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
+    const panel = this.add.rectangle(cx, cy, 460, 380, 0x1a1a2e, 0.98).setStrokeStyle(2, 0x66ccff);
+    const title = this.add.text(cx, cy - 165, `洗练 ${eq.name}`, {
+      fontSize:'15px', color:'#66ccff', fontFamily:'Courier New', fontStyle:'bold'
+    }).setOrigin(0.5);
+    c.add([dim, panel, title]);
+
+    const hint = this.add.text(cx, cy - 140, '勾选最多 2 条词条锁定，其余重 roll', {
+      fontSize:'10px', color:'#888899', fontFamily:'Courier New'
+    }).setOrigin(0.5);
+    c.add(hint);
+
+    // 列出每条词条
+    const startY = cy - 110;
+    eq.affixes.forEach((a, i) => {
+      const y = startY + i * 26;
+      const def = AFFIXES[a.id];
+      if (!def) return;
+      const isTrigger = def.stat === '_trigger';
+      const valText = isTrigger
+        ? `${(def.trigger?.chance*100 || 0).toFixed(0)}% 触发`
+        : (def.isFlat ? a.value.toFixed(1) : `${(a.value*100).toFixed(1)}%`);
+      const box = this.add.text(cx - 180, y, '☐', {
+        fontSize:'14px', color:'#aaaacc', fontFamily:'Courier New'
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const lbl = this.add.text(cx - 165, y, `T${def.tier} ${def.name}: ${valText}`, {
+        fontSize:'11px', color:'#cccccc', fontFamily:'Courier New'
+      }).setOrigin(0, 0.5);
+      box.on('pointerdown', () => {
+        if (lockedIds.has(a.id)) {
+          lockedIds.delete(a.id);
+          box.setText('☐');
+        } else {
+          if (lockedIds.size >= 2) {
+            this._showPanelToast?.('最多锁定 2 条词条', '#ffaa44');
+            return;
+          }
+          lockedIds.add(a.id);
+          box.setText('☑');
+        }
+        refreshCost();
+      });
+      locks.push({ a, box, lbl });
+      c.add([box, lbl]);
+    });
+
+    // 成本预览
+    const costText = this.add.text(cx, cy + 90, '', {
+      fontSize:'11px', color:'#cccccc', fontFamily:'Courier New', align:'center', lineSpacing:3
+    }).setOrigin(0.5);
+    c.add(costText);
+
+    const refreshCost = () => {
+      const cost = reforgeSys.getCost(lockedIds.size);
+      const lines = [
+        `锁定: ${lockedIds.size} 条`,
+        `材料: ${cost.matId} ×${cost.count} (持有 ${this._countMatInInv(cost.matId)})`,
+        `金币: ${cost.gold} (持有 ${this.gameScene.inventory.gold || 0})`
+      ];
+      cost.lockedExtras.forEach(e => {
+        lines.push(`+ ${e.matId} ×${e.count} (持有 ${this._countMatInInv(e.matId)})`);
+      });
+      costText.setText(lines.join('\n'));
+    };
+    refreshCost();
+
+    // 按钮
+    const okBg = this.add.rectangle(cx - 80, cy + 155, 130, 32, 0x224422)
+      .setStrokeStyle(1, 0x66ff88).setInteractive({ useHandCursor: true });
+    const okTxt = this.add.text(cx - 80, cy + 155, '洗练', {
+      fontSize:'13px', color:'#66ff88', fontFamily:'Courier New'
+    }).setOrigin(0.5);
+    okBg.on('pointerdown', () => {
+      const r = reforgeSys.reforge(eq, [...lockedIds]);
+      if (r.result === 'invalid') {
+        this._showPanelToast?.(`洗练失败: ${r.reason}`, '#ff6666');
+        return;
+      }
+      this._closeSmithyModal();
+    });
+    const cancelBg = this.add.rectangle(cx + 80, cy + 155, 130, 32, 0x442222)
+      .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
+    const cancelTxt = this.add.text(cx + 80, cy + 155, '取消', {
+      fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
+    }).setOrigin(0.5);
+    cancelBg.on('pointerdown', () => this._closeSmithyModal());
+    c.add([okBg, okTxt, cancelBg, cancelTxt]);
+
+    this._smithyModal = c;
+  },
+
+  openSocketModal(eq) {
+    if (!eq || eq.type !== 'equipment' || !eq.sockets || eq.sockets.length === 0) {
+      this._showPanelToast?.('该装备无孔位', '#ff8866');
+      return;
+    }
+    this._closeSmithyModal();
+
+    const gemSys = this.gameScene?.gemSystem;
+    const inv = this.gameScene?.inventory;
+    if (!gemSys || !inv) return;
+
+    const renderModal = () => {
+      if (this._smithyModal) this._smithyModal.destroy();
+      const w = this.cameras.main.width;
+      const h = this.cameras.main.height;
+      const cx = w / 2, cy = h / 2;
+
+      const c = this.add.container(0, 0).setDepth(50);
+      const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
+      const panel = this.add.rectangle(cx, cy, 440, 320, 0x1a1a2e, 0.98).setStrokeStyle(2, 0xaa88ff);
+      const title = this.add.text(cx, cy - 135, `孔位 ${eq.name}`, {
+        fontSize:'15px', color:'#aa88ff', fontFamily:'Courier New', fontStyle:'bold'
+      }).setOrigin(0.5);
+      c.add([dim, panel, title]);
+
+      eq.sockets.forEach((s, i) => {
+        const y = cy - 90 + i * 36;
+        const slotLabel = this.add.text(cx - 180, y, `孔 ${i+1}:`, {
+          fontSize:'12px', color:'#aaaacc', fontFamily:'Courier New'
+        }).setOrigin(0, 0.5);
+        c.add(slotLabel);
+
+        if (s.gemId) {
+          // 已镶嵌
+          const gemName = `${s.gemId} Lv.${s.gemLevel}`;
+          const lbl = this.add.text(cx - 100, y, gemName, {
+            fontSize:'11px', color:'#66ccff', fontFamily:'Courier New'
+          }).setOrigin(0, 0.5);
+          const unsocketBg = this.add.rectangle(cx + 130, y, 80, 24, 0x442222)
+            .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
+          const unsocketTxt = this.add.text(cx + 130, y, '拆卸', {
+            fontSize:'11px', color:'#ff8866', fontFamily:'Courier New'
+          }).setOrigin(0.5);
+          unsocketBg.on('pointerdown', () => {
+            const r = gemSys.unsocket(eq, i);
+            if (!r.ok) this._showPanelToast?.(`拆卸失败: ${r.reason}`, '#ff6666');
+            renderModal();
+          });
+          c.add([lbl, unsocketBg, unsocketTxt]);
+        } else {
+          // 空孔
+          const lbl = this.add.text(cx - 100, y, '空', {
+            fontSize:'11px', color:'#777788', fontFamily:'Courier New'
+          }).setOrigin(0, 0.5);
+          const socketBg = this.add.rectangle(cx + 130, y, 80, 24, 0x222244)
+            .setStrokeStyle(1, 0x66ccff).setInteractive({ useHandCursor: true });
+          const socketTxt = this.add.text(cx + 130, y, '镶嵌', {
+            fontSize:'11px', color:'#66ccff', fontFamily:'Courier New'
+          }).setOrigin(0.5);
+          socketBg.on('pointerdown', () => {
+            openGemPicker(i);
+          });
+          c.add([lbl, socketBg, socketTxt]);
+        }
+      });
+
+      const cancelBg = this.add.rectangle(cx, cy + 130, 130, 32, 0x442222)
+        .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
+      const cancelTxt = this.add.text(cx, cy + 130, '关闭', {
+        fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      cancelBg.on('pointerdown', () => this._closeSmithyModal());
+      c.add([cancelBg, cancelTxt]);
+
+      this._smithyModal = c;
+    };
+
+    const openGemPicker = (socketIdx) => {
+      if (this._smithyModal) this._smithyModal.destroy();
+      const w = this.cameras.main.width;
+      const h = this.cameras.main.height;
+      const cx = w / 2, cy = h / 2;
+
+      const c = this.add.container(0, 0).setDepth(50);
+      const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
+      const panel = this.add.rectangle(cx, cy, 440, 360, 0x1a1a2e, 0.98).setStrokeStyle(2, 0xaa88ff);
+      const title = this.add.text(cx, cy - 155, '选择宝石镶嵌', {
+        fontSize:'14px', color:'#aa88ff', fontFamily:'Courier New', fontStyle:'bold'
+      }).setOrigin(0.5);
+      c.add([dim, panel, title]);
+
+      // 列出背包所有宝石
+      const gemEntries = inv.slots
+        .map((s, idx) => ({ s, idx }))
+        .filter(({ s }) => s && s.type === 'gem');
+
+      if (gemEntries.length === 0) {
+        const empty = this.add.text(cx, cy - 50, '背包没有宝石', {
+          fontSize:'12px', color:'#888899', fontFamily:'Courier New'
+        }).setOrigin(0.5);
+        c.add(empty);
+      } else {
+        gemEntries.forEach(({ s, idx }, i) => {
+          const y = cy - 110 + i * 26;
+          const txt = this.add.text(cx - 180, y, `${s.icon || '◆'} ${s.name} ×${s.quantity}`, {
+            fontSize:'12px', color:'#cccccc', fontFamily:'Courier New',
+            backgroundColor:'#2a2a3e', padding:{ x:6, y:3 }
+          }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+          txt.on('pointerdown', () => {
+            const r = gemSys.socket(eq, socketIdx, idx);
+            if (!r.ok) this._showPanelToast?.(`镶嵌失败: ${r.reason}`, '#ff6666');
+            renderModal();
+          });
+          c.add(txt);
+        });
+      }
+
+      const backBg = this.add.rectangle(cx, cy + 150, 130, 32, 0x222244)
+        .setStrokeStyle(1, 0x66aaff).setInteractive({ useHandCursor: true });
+      const backTxt = this.add.text(cx, cy + 150, '返回', {
+        fontSize:'13px', color:'#aaccff', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      backBg.on('pointerdown', () => renderModal());
+      c.add([backBg, backTxt]);
+
+      this._smithyModal = c;
+    };
+
+    renderModal();
+  },
+
+  openGemFusionModal() {
+    this._closeSmithyModal();
+    const gemSys = this.gameScene?.gemSystem;
+    const inv = this.gameScene?.inventory;
+    if (!gemSys || !inv) return;
+
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    const cx = w / 2, cy = h / 2;
+    const selected = [];  // slotIndex 数组
+
+    const render = () => {
+      if (this._smithyModal) this._smithyModal.destroy();
+      const c = this.add.container(0, 0).setDepth(50);
+      const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
+      const panel = this.add.rectangle(cx, cy, 460, 380, 0x1a1a2e, 0.98).setStrokeStyle(2, 0xffdd66);
+      const title = this.add.text(cx, cy - 165, '宝石合成', {
+        fontSize:'15px', color:'#ffdd66', fontFamily:'Courier New', fontStyle:'bold'
+      }).setOrigin(0.5);
+      const hint = this.add.text(cx, cy - 140, '选 3 颗同色同级宝石合成更高 1 级', {
+        fontSize:'10px', color:'#888899', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      c.add([dim, panel, title, hint]);
+
+      const gemEntries = inv.slots
+        .map((s, idx) => ({ s, idx }))
+        .filter(({ s }) => s && s.type === 'gem' && s.level < 10);
+
+      if (gemEntries.length === 0) {
+        const empty = this.add.text(cx, cy - 50, '没有可合成的宝石', {
+          fontSize:'12px', color:'#888899', fontFamily:'Courier New'
+        }).setOrigin(0.5);
+        c.add(empty);
+      } else {
+        gemEntries.forEach(({ s, idx }, i) => {
+          const y = cy - 110 + i * 24;
+          const isSel = selected.includes(idx);
+          const bg = this.add.rectangle(cx - 100, y, 280, 22,
+            isSel ? 0x3a4a3a : 0x2a2a3e)
+            .setStrokeStyle(1, isSel ? 0x66ff88 : 0x5a5a7a)
+            .setInteractive({ useHandCursor: true }).setOrigin(0, 0.5);
+          const txt = this.add.text(cx - 90, y, `${s.icon || '◆'} ${s.name} ×${s.quantity}`, {
+            fontSize:'11px', color:'#cccccc', fontFamily:'Courier New'
+          }).setOrigin(0, 0.5);
+          bg.on('pointerdown', () => {
+            const i2 = selected.indexOf(idx);
+            if (i2 >= 0) selected.splice(i2, 1);
+            else if (selected.length < 3) selected.push(idx);
+            render();
+          });
+          c.add([bg, txt]);
+        });
+      }
+
+      const counterText = this.add.text(cx, cy + 110, `已选: ${selected.length}/3`, {
+        fontSize:'12px', color:'#ffdd66', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      c.add(counterText);
+
+      const enabled = selected.length === 3;
+      const okBg = this.add.rectangle(cx - 80, cy + 155, 130, 32,
+        enabled ? 0x224422 : 0x2a2a2a)
+        .setStrokeStyle(1, enabled ? 0x66ff88 : 0x555555);
+      if (enabled) okBg.setInteractive({ useHandCursor: true });
+      const okTxt = this.add.text(cx - 80, cy + 155, '合成', {
+        fontSize:'13px', color: enabled ? '#66ff88' : '#777777', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      if (enabled) {
+        okBg.on('pointerdown', () => {
+          const r = gemSys.fuse(selected);
+          if (!r.ok) {
+            this._showPanelToast?.(`合成失败: ${r.reason}`, '#ff6666');
+          }
+          this._closeSmithyModal();
+        });
+      }
+
+      const cancelBg = this.add.rectangle(cx + 80, cy + 155, 130, 32, 0x442222)
+        .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
+      const cancelTxt = this.add.text(cx + 80, cy + 155, '取消', {
+        fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      cancelBg.on('pointerdown', () => this._closeSmithyModal());
+      c.add([okBg, okTxt, cancelBg, cancelTxt]);
+
+      this._smithyModal = c;
+    };
+    render();
+  },
+
+  openCraftModal() {
+    this._closeSmithyModal();
+    const craftSys = this.gameScene?.craftingSystem;
+    const inv = this.gameScene?.inventory;
+    if (!craftSys || !inv) return;
+
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    const cx = w / 2, cy = h / 2;
+
+    const render = () => {
+      if (this._smithyModal) this._smithyModal.destroy();
+      const c = this.add.container(0, 0).setDepth(50);
+      const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
+      const panel = this.add.rectangle(cx, cy, 480, 420, 0x1a1a2e, 0.98).setStrokeStyle(2, 0x88ddaa);
+      const title = this.add.text(cx, cy - 185, '装备制作', {
+        fontSize:'15px', color:'#88ddaa', fontFamily:'Courier New', fontStyle:'bold'
+      }).setOrigin(0.5);
+      c.add([dim, panel, title]);
+
+      const recipes = craftSys.listRecipes();
+      recipes.forEach((rcp, i) => {
+        const y = cy - 145 + i * 50;
+        const check = craftSys.canCraft(rcp.id);
+        const enabled = check.ok;
+        const matsText = rcp.materials.map(m =>
+          `${m.matId} ×${m.count}`).join(', ');
+        const lvlText = rcp.requiredLevel ? ` (需 Lv.${rcp.requiredLevel})` : '';
+        const lbl = this.add.text(cx - 220, y - 8, `${rcp.name}${lvlText}`, {
+          fontSize:'12px', color: enabled ? '#cccccc' : '#777777',
+          fontFamily:'Courier New', fontStyle:'bold'
+        }).setOrigin(0, 0.5);
+        const detail = this.add.text(cx - 220, y + 8, `${matsText} | ${rcp.gold}金币`, {
+          fontSize:'10px', color:'#888899', fontFamily:'Courier New'
+        }).setOrigin(0, 0.5);
+
+        const btnBg = this.add.rectangle(cx + 180, y, 80, 28,
+          enabled ? 0x224422 : 0x2a2a2a)
+          .setStrokeStyle(1, enabled ? 0x66ff88 : 0x555555);
+        if (enabled) btnBg.setInteractive({ useHandCursor: true });
+        const btnTxt = this.add.text(cx + 180, y, '制作', {
+          fontSize:'11px', color: enabled ? '#66ff88' : '#777777',
+          fontFamily:'Courier New'
+        }).setOrigin(0.5);
+        if (enabled) {
+          btnBg.on('pointerdown', () => {
+            const r = craftSys.craft(rcp.id);
+            if (r.result !== 'success') {
+              this._showPanelToast?.(`制作失败: ${r.reason}`, '#ff6666');
+            }
+            render();
+          });
+        }
+        c.add([lbl, detail, btnBg, btnTxt]);
+      });
+
+      const cancelBg = this.add.rectangle(cx, cy + 175, 130, 32, 0x442222)
+        .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
+      const cancelTxt = this.add.text(cx, cy + 175, '关闭', {
+        fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      cancelBg.on('pointerdown', () => this._closeSmithyModal());
+      c.add([cancelBg, cancelTxt]);
+
+      this._smithyModal = c;
+    };
+    render();
   }
 };
