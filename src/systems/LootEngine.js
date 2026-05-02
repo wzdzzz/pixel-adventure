@@ -9,6 +9,7 @@
 
 import { LOOT_TABLES, RARITY_MULTIPLIERS } from '../data/lootTables.js';
 import itemData from '../data/items.json';
+import { EquipmentGenerator } from './EquipmentGenerator.js';
 
 export class LootEngine {
 
@@ -27,6 +28,9 @@ export class LootEngine {
 
     const numDrops = Phaser.Math.Between(table.minDrops, table.maxDrops);
     const drops = [];
+
+    // 注入 dropBonus 到装备 pool，便于 _rollItem 内取用做品质 roll
+    table.pools.forEach(p => { if (p.name === 'equipment') p._dropBonus = dropBonus; });
 
     for (let i = 0; i < numDrops; i++) {
       const result = LootEngine._rollPool(table.pools, dropBonus);
@@ -121,6 +125,17 @@ export class LootEngine {
 
     const baseData = itemData.items[selected.id];
     if (!baseData) return null;
+
+    // 装备类型：实例化生成（含品质 roll + 词条）
+    if (baseData.type === 'equipment') {
+      const dropBonus = pool._dropBonus || 0;
+      const isBoss = pool._isBoss || false;
+      const enemyLevel = baseData.level || 1;
+      const rarity = EquipmentGenerator.rollRarity({ isBoss, dropBonus });
+      const instance = EquipmentGenerator.generate(selected.id, rarity, enemyLevel);
+      if (!instance) return null;
+      return { itemData: instance, quantity: 1 };
+    }
 
     return { itemData: { ...baseData }, quantity: 1 };
   }
