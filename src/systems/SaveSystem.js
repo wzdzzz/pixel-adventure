@@ -161,6 +161,8 @@ export class SaveSystem {
           if (!it.instanceId) it.instanceId = `eq_legacy_${k}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
           if (!Array.isArray(it.affixes)) it.affixes = [];
           if (typeof it.enhanceLevel !== 'number') it.enhanceLevel = 0;
+          // 兼容老存档：装备 instance 缺 sockets 时默认空数组（0 孔）
+          if (!Array.isArray(it.sockets)) it.sockets = [];
         }
         // 重算装备贡献以反映补全字段（虽然空 affixes/0 enhance 不改变结果，但保险）
         if (typeof scene.equipmentSystem._applyBonuses === 'function') {
@@ -176,6 +178,8 @@ export class SaveSystem {
           }
           if (!Array.isArray(it.affixes)) it.affixes = [];
           if (typeof it.enhanceLevel !== 'number') it.enhanceLevel = 0;
+          // 兼容老存档：装备 instance 缺 sockets 时默认空数组（0 孔）
+          if (!Array.isArray(it.sockets)) it.sockets = [];
         }
       }
 
