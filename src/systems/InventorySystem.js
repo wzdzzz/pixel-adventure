@@ -8,6 +8,19 @@ export class InventorySystem {
   }
 
   addItem(itemData, quantity = 1) {
+    // 装备实例：每件独立，不堆叠；保留完整 instance 字段
+    if (itemData.type === 'equipment') {
+      const emptyIdx = this.slots.findIndex(s => s === null);
+      if (emptyIdx === -1) {
+        console.log('[Inventory] 背包已满');
+        return false;
+      }
+      // 装备 instance 直接整体存入（已含 instanceId / affixes / enhanceLevel 等）
+      this.slots[emptyIdx] = { ...itemData, quantity: 1 };
+      this.scene.events.emit('inventoryUpdated', this.slots);
+      return true;
+    }
+
     // If currency (gold/coin), add to gold counter
     if (itemData.type === 'currency') {
       this.gold += (itemData.value || 0) * quantity;
