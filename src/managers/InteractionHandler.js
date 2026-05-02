@@ -199,6 +199,10 @@ export const InteractionHandler = {
     if (this.player.attackHitRegistered) return;
     if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
     enemy.takeDamage(this.player.getAttack(), this.player.sprite.x, this.player.sprite.y);
+    if (this.triggerSystem) {
+      this.triggerSystem.fire('onHit', { enemy, damage: this.player.getAttack() });
+      if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
+    }
     this.player.onAttackHit();
     // Disable hitbox immediately after hit to prevent same-frame duplicates
     this.player.attackHitbox.body.enable = false;
@@ -242,6 +246,11 @@ export const InteractionHandler = {
       // 仅技能 effect.stagger > 0 时造成僵直（普攻无僵直）
       const skillStagger = skill.effect.stagger || 0;
       enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y, skillStagger);
+
+      if (this.triggerSystem) {
+        this.triggerSystem.fire('onHit', { enemy, damage });
+        if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
+      }
 
       // Apply status effects from skill (bleed, armorBreak, slow, etc.)
       if (skill.effect.applyEffects) {
@@ -288,6 +297,11 @@ export const InteractionHandler = {
       // spin 类多段连击不打僵直，避免持续锁死
       enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y, 0);
       enemy.iFramesDuration = originalIFrames;
+
+      if (this.triggerSystem) {
+        this.triggerSystem.fire('onHit', { enemy, damage });
+        if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
+      }
 
       this.events.emit('screenShake', 2, 50);
       this.player.addRage(4);

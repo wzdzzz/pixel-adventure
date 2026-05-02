@@ -712,6 +712,7 @@ export class Player extends Actor {
         this.startTauntSkill(skill);
         break;
     }
+    this.scene.triggerSystem?.fire('onSkillCast', { skillId: skill.id });
   }
 
   onSkillTick(skill) {
