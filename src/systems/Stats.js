@@ -166,7 +166,12 @@ export class Stats {
 
   /** 序列化 */
   toJSON() {
-    return { base: { ...this.base }, bonuses: { ...this.bonuses }, flatBonuses: { ...this.flatBonuses } };
+    return {
+      base: { ...this.base },
+      bonuses: { ...this.bonuses },
+      flatBonuses: { ...this.flatBonuses },
+      bonusPct: { ...this.bonusPct }
+    };
   }
 
   /** 反序列化 */
@@ -174,6 +179,7 @@ export class Stats {
     const stats = new Stats(data.base);
     if (data.bonuses) stats.bonuses = { ...stats.bonuses, ...data.bonuses };
     if (data.flatBonuses) stats.flatBonuses = { ...stats.flatBonuses, ...data.flatBonuses };
+    if (data.bonusPct) stats.bonusPct = { ...stats.bonusPct, ...data.bonusPct };
     return stats;
   }
 }

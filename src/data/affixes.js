@@ -55,17 +55,17 @@ export const AFFIXES = {
   move_speed_t3: { id:'move_speed_t3', name:'移动速度', pool:'accessory', tier:3, stat:'moveSpeed', valueRange:[0.03, 0.07], minRarity:'uncommon', weight:10, isFlat:false },
 
   // ── warrior 专属 ──────────────────────
-  rage_gain_t2:  { id:'rage_gain_t2', name:'怒气获取', pool:'warrior', tier:2, stat:'rageGain', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false },
+  rage_gain_t2:  { id:'rage_gain_t2', name:'怒气获取', pool:'warrior', tier:2, stat:'rageGain', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false }, // TODO Phase 2: 战斗代码消费 stats.bonusPct.rageGain
   lifesteal_t2:  { id:'lifesteal_t2', name:'吸血',   pool:'warrior', tier:2, stat:'lifesteal', valueRange:[0.04, 0.08], minRarity:'rare', weight:6, isFlat:true },
   lifesteal_t3:  { id:'lifesteal_t3', name:'吸血',   pool:'warrior', tier:3, stat:'lifesteal', valueRange:[0.01, 0.04], minRarity:'uncommon', weight:10, isFlat:true },
 
   // ── archer 专属 ───────────────────────
-  ranged_dmg_t2: { id:'ranged_dmg_t2', name:'远程伤害', pool:'archer', tier:2, stat:'rangedDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false },
+  ranged_dmg_t2: { id:'ranged_dmg_t2', name:'远程伤害', pool:'archer', tier:2, stat:'rangedDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false }, // TODO Phase 2: 战斗代码消费 stats.bonusPct.rangedDmg
   agi_pct_t2:    { id:'agi_pct_t2', name:'敏捷',     pool:'archer', tier:2, stat:'_base_agi', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true },
 
   // ── mage 专属 ─────────────────────────
-  spell_dmg_t2:  { id:'spell_dmg_t2', name:'法术伤害', pool:'mage', tier:2, stat:'spellDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false },
-  mana_regen_t2: { id:'mana_regen_t2', name:'法力恢复', pool:'mage', tier:2, stat:'manaRegen', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false },
+  spell_dmg_t2:  { id:'spell_dmg_t2', name:'法术伤害', pool:'mage', tier:2, stat:'spellDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false }, // TODO Phase 2: 战斗代码消费 stats.bonusPct.spellDmg
+  mana_regen_t2: { id:'mana_regen_t2', name:'法力恢复', pool:'mage', tier:2, stat:'manaRegen', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false }, // TODO Phase 2: 战斗代码消费 stats.bonusPct.manaRegen
   int_pct_t2:    { id:'int_pct_t2', name:'智力',    pool:'mage', tier:2, stat:'_base_int', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true }
 };
 

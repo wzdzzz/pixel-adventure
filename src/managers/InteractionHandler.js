@@ -230,10 +230,13 @@ export const InteractionHandler = {
       const chargeRatio = (skill.effect.chargeable && this.player._chargeRatio) ? this.player._chargeRatio : 1.0;
       const damage = Math.floor(this.player.getAttack() * damageMultiplier * chargeRatio);
 
-      // Apply lifesteal from status effects
+      // Apply lifesteal from status effects + equipment flatBonuses
       const mods = this.player.statusEffects.getModifiers();
-      if (mods.lifesteal) {
-        this.player.heal(Math.floor(damage * mods.lifesteal));
+      const buffLs = mods.lifesteal || 0;
+      const eqLs = this.player.stats.flatBonuses?.lifesteal || 0;
+      const totalLs = buffLs + eqLs;
+      if (totalLs > 0) {
+        this.player.heal(Math.floor(damage * totalLs));
       }
 
       // 仅技能 effect.stagger > 0 时造成僵直（普攻无僵直）
