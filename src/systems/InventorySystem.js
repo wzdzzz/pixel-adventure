@@ -10,13 +10,21 @@ export class InventorySystem {
   addItem(itemData, quantity = 1) {
     // 装备实例：每件独立，不堆叠；保留完整 instance 字段
     if (itemData.type === 'equipment') {
+      if (quantity > 1) {
+        console.warn('[Inventory] 装备类型不支持批量 addItem，只会添加 1 件');
+      }
       const emptyIdx = this.slots.findIndex(s => s === null);
       if (emptyIdx === -1) {
         console.log('[Inventory] 背包已满');
         return false;
       }
       // 装备 instance 直接整体存入（已含 instanceId / affixes / enhanceLevel 等）
-      this.slots[emptyIdx] = { ...itemData, quantity: 1 };
+      // affixes 深拷贝，避免与 EquipmentSystem 装备槽共享引用导致互相污染
+      this.slots[emptyIdx] = {
+        ...itemData,
+        affixes: Array.isArray(itemData.affixes) ? itemData.affixes.map(a => ({ ...a })) : [],
+        quantity: 1
+      };
       this.scene.events.emit('inventoryUpdated', this.slots);
       return true;
     }
