@@ -337,7 +337,8 @@ export const levelData = [
       { type: 'skeleton', count: 4 },
       { type: 'bat', count: 3 },
       { type: 'orc_warrior', count: 2 },
-      { type: 'slime', count: 3 }
+      { type: 'slime', count: 3 },
+      { type: 'skeleton_king', count: 1 }
     ],
     items: { coins: 15, keys: 2, potions: 6, hasArtifact: true },
     npcs: [

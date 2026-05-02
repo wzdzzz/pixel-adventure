@@ -14,6 +14,7 @@ export const PlayerState = {
   ATTACK_STARTUP: 'ATTACK_STARTUP',
   ATTACK_ACTIVE: 'ATTACK_ACTIVE',
   ATTACK_RECOVERY: 'ATTACK_RECOVERY',
+  CHARGING: 'CHARGING',
   SKILL_CASTING: 'SKILL_CASTING',
   DODGE: 'DODGE',
   HURT: 'HURT',
@@ -107,10 +108,14 @@ export class Player extends Actor {
     ];
 
     this._onSkillKeyDown = [];
+    this._onSkillKeyUp = [];
     this.skillKeys.forEach((key, index) => {
-      const handler = () => this.trySkill(index);
-      this._onSkillKeyDown.push(handler);
-      key.on('down', handler);
+      const dh = () => this.trySkill(index);
+      const uh = () => this.releaseChargeIfMatching(index);
+      this._onSkillKeyDown.push(dh);
+      this._onSkillKeyUp.push(uh);
+      key.on('down', dh);
+      key.on('up', uh);
     });
 
     // Skill state
@@ -120,6 +125,17 @@ export class Player extends Actor {
     this._whirlwindSuperArmor = false;
     this._whirlwindMoveSpeedMod = 0;
     this._whirlwindTween = null;
+
+    // 蓄力技能状态
+    this._chargingSkillId = null;
+    this._chargingSlotIdx = -1;
+    this._chargingTimer = 0;
+    this._chargingMaxTime = 0;
+    this._chargingMinTime = 0;
+    this._chargingMovementMode = 'interrupt';
+    this._chargeRatio = 1.0;  // 释放时计算出的蓄力比例（影响伤害）
+    this._chargeBarBg = null;
+    this._chargeBarFill = null;
   }
 
   setState(newState) {
@@ -146,6 +162,9 @@ export class Player extends Actor {
         break;
       case PlayerState.ATTACK_RECOVERY:
         this.handleAttackRecovery();
+        break;
+      case PlayerState.CHARGING:
+        this.handleCharging(delta);
         break;
       case PlayerState.SKILL_CASTING:
         this.handleSkillCasting(delta);
@@ -230,31 +249,62 @@ export class Player extends Actor {
     this.sprite.setVelocity(0, 0);
     if (this.stateTimer >= 100) {
       this.setState(PlayerState.ATTACK_ACTIVE);
-      this.activateHitbox();
 
-      // Ranged classes: spawn basic-attack projectile
       if (this.isRangedClass()) {
+        // 锁定瞄准方向；该方向在 ACTIVE 期间用于弹道扫掠
+        const dir = this.getAimDirection();
+        this._rangedAim = dir;
+        // 角色按 X 翻面
+        if (Math.abs(dir.x) > 0.05) {
+          this.facing = dir.x >= 0 ? 1 : -1;
+          this.sprite.setFlipX(this.facing < 0);
+        }
+        // 弹道 visual 沿瞄准方向飞 220px
+        const range = 220;
         const color = this.classType === 'archer' ? 0xccff44 : 0x88aaff;
-        this.spawnProjectile(this.facing * 60, 0, color, 4, 2);
+        this.spawnProjectile(dir.x * range, dir.y * range, color, 4, 2);
+        // hitbox：小方框 24×24，由 handleAttackActive 沿 dir 扫掠
+        this.attackHitbox.setSize(24, 24);
+        this.attackHitbox.setPosition(this.sprite.x + dir.x * 30, this.sprite.y + dir.y * 30);
+        this.attackHitbox.body.enable = true;
+        this._rangedRange = range;
+      } else {
+        this.activateHitbox();
       }
     }
   }
 
   activateHitbox() {
-    const offset = this.isRangedClass() ? 50 : 22;
+    // 近战：固定矩形 hitbox
+    const offset = 22;
     const hx = this.sprite.x + this.facing * offset;
     const hy = this.sprite.y;
-    const hw = this.isRangedClass() ? 20 : 40;
-    const hh = this.isRangedClass() ? 16 : 36;
-    this.attackHitbox.setSize(hw, hh);
+    this.attackHitbox.setSize(40, 36);
     this.attackHitbox.setPosition(hx, hy);
     this.attackHitbox.body.enable = true;
   }
 
   handleAttackActive() {
-    const offset = this.isRangedClass() ? 50 : 22;
+    if (this.isRangedClass() && this._rangedAim) {
+      // 沿瞄准方向 0..100ms 内从 30 → range 扫掠
+      const t = Math.min(1, this.stateTimer / 100);
+      const dist = 30 + (this._rangedRange - 30) * t;
+      const dir = this._rangedAim;
+      this.attackHitbox.setPosition(
+        this.sprite.x + dir.x * dist,
+        this.sprite.y + dir.y * dist
+      );
+      if (this.stateTimer >= 100) {
+        this.attackHitbox.body.enable = false;
+        this._rangedAim = null;
+        this.setState(PlayerState.ATTACK_RECOVERY);
+      }
+      return;
+    }
+
+    // 近战：原地不动
     this.attackHitbox.setPosition(
-      this.sprite.x + this.facing * offset,
+      this.sprite.x + this.facing * 22,
       this.sprite.y
     );
     if (this.stateTimer >= 100) {
@@ -270,9 +320,41 @@ export class Player extends Actor {
     }
   }
 
+  /** 攻击力按职业主属性缩放（warrior=str, archer=agi, mage=int） */
+  getAttack() {
+    const primaryStat = this.classConfig?.primaryAttackStat || 'str';
+    const primary = this.stats.getEffective(primaryStat);
+    const flatAttack = this.stats.flatBonuses?.attack || 0;
+    const baseAttack = primary * 2 + flatAttack;
+    const mod = this.statusEffects?.getModifiers().attack ?? 1;
+    return baseAttack * mod;
+  }
+
   /** Returns true for archer/mage */
   isRangedClass() {
     return this.classConfig?.attackType === 'ranged' || this.classConfig?.attackType === 'magic';
+  }
+
+  /**
+   * 取瞄准方向（单位向量）。远程职业读鼠标世界坐标算角度，
+   * 近战职业回退到 facing 水平方向。返回 { x, y, angle }。
+   */
+  getAimDirection() {
+    if (this.isRangedClass()) {
+      const pointer = this.scene.input.activePointer;
+      // 鼠标在世界坐标系的位置（受相机滚动影响）
+      const wp = pointer.positionToCamera(this.scene.cameras.main);
+      let dx = wp.x - this.sprite.x;
+      let dy = wp.y - this.sprite.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 1) {
+        // 鼠标几乎在角色身上：回退 facing 方向
+        return { x: this.facing, y: 0, angle: this.facing > 0 ? 0 : Math.PI };
+      }
+      return { x: dx / len, y: dy / len, angle: Math.atan2(dy, dx) };
+    }
+    // 近战：用 facing
+    return { x: this.facing, y: 0, angle: this.facing > 0 ? 0 : Math.PI };
   }
 
   isAttacking() {
@@ -297,6 +379,11 @@ export class Player extends Actor {
     const mods = this.statusEffects.getModifiers();
     if (mods.damageReduction) {
       damage = Math.floor(damage * (1 - mods.damageReduction));
+    }
+
+    // 蓄力中被打 → 取消蓄力 + 销毁进度条
+    if (this.state === PlayerState.CHARGING) {
+      this._cancelCharge();
     }
 
     if (this.state === PlayerState.SKILL_CASTING) {
@@ -355,13 +442,164 @@ export class Player extends Actor {
   // Skill System
   // ═══════════════════════════════════════════════
 
+  /**
+   * 把技能装备到 1-4 号槽位。
+   * - 同一技能已在其他槽位 → 先从原槽移除，避免重复
+   * - 仅允许已学习（level ≥ 1）的技能装备
+   * - 装备后 emit 'skillSlotsChanged'，UI 监听刷新
+   */
+  setSkillSlot(slotIndex, skillId) {
+    if (slotIndex < 0 || slotIndex >= this.skillSlots.length) return false;
+    if (skillId && !this.skillEngine.skillDefs[skillId]) return false;
+    if (skillId && this.skillEngine.getSkillLevel(skillId) < 1) return false;
+
+    // 去重：移除其他槽位的同一技能
+    if (skillId) {
+      for (let i = 0; i < this.skillSlots.length; i++) {
+        if (i !== slotIndex && this.skillSlots[i] === skillId) {
+          this.skillSlots[i] = null;
+        }
+      }
+    }
+    this.skillSlots[slotIndex] = skillId || null;
+    this.scene.events.emit('skillSlotsChanged', this.skillSlots.slice());
+    return true;
+  }
+
+  // ─── Charge skill (蓄力技能) ───────────────────────────────────
+
+  handleCharging(delta) {
+    this._chargingTimer += delta;
+    this._updateChargeBar();
+
+    // 移动中断
+    if (this._chargingMovementMode === 'interrupt') {
+      const input = this.getInputDirection();
+      if (input.x !== 0 || input.y !== 0) {
+        this._cancelCharge();
+        return;
+      }
+    }
+    this.sprite.setVelocity(0, 0);
+
+    // 超过 maxTime 自动释放
+    if (this._chargingTimer >= this._chargingMaxTime) {
+      this._releaseCharge();
+    }
+  }
+
+  releaseChargeIfMatching(slotIndex) {
+    if (this.state !== PlayerState.CHARGING) return;
+    if (slotIndex !== this._chargingSlotIdx) return;
+    if (this._chargingTimer < this._chargingMinTime) {
+      // 不足最低蓄力 → 取消
+      this._cancelCharge();
+      return;
+    }
+    this._releaseCharge();
+  }
+
+  _releaseCharge() {
+    const skillId = this._chargingSkillId;
+    if (!skillId) return;
+
+    // 计算蓄力比例：[minTime, maxTime] → [0.4, 1.0]
+    const t = Phaser.Math.Clamp(
+      (this._chargingTimer - this._chargingMinTime) /
+        Math.max(1, this._chargingMaxTime - this._chargingMinTime),
+      0, 1
+    );
+    this._chargeRatio = 0.4 + 0.6 * t;
+
+    this._hideChargeBar();
+    this._chargingSkillId = null;
+    this._chargingSlotIdx = -1;
+    this._chargingTimer = 0;
+
+    // 执行技能（消耗资源、进冷却）
+    const skill = this.skillEngine.execute(skillId);
+    if (!skill) {
+      this._chargeRatio = 1.0;
+      this.setState(PlayerState.IDLE);
+      return;
+    }
+    this.attackHitbox.body.enable = false;
+    this.setState(PlayerState.SKILL_CASTING);
+    if (this.isRangedClass()) {
+      this.playAnim('idle');
+    } else {
+      this.playAnim('attack', false);
+    }
+  }
+
+  _cancelCharge() {
+    this._hideChargeBar();
+    this._chargingSkillId = null;
+    this._chargingSlotIdx = -1;
+    this._chargingTimer = 0;
+    this._chargeRatio = 1.0;
+    this.setState(PlayerState.IDLE);
+  }
+
+  _showChargeBar() {
+    if (this._chargeBarBg) return;
+    const w = 36, h = 4;
+    const yOff = -this.sprite.displayHeight / 2 - 12;
+    this._chargeBarBg = this.scene.add.rectangle(
+      this.sprite.x, this.sprite.y + yOff, w, h, 0x222222, 0.85
+    ).setStrokeStyle(1, 0x000000, 0.7).setDepth(900);
+    this._chargeBarFill = this.scene.add.rectangle(
+      this.sprite.x - w / 2, this.sprite.y + yOff, 0, h - 1, 0xffdd44, 1
+    ).setOrigin(0, 0.5).setDepth(901);
+  }
+
+  _updateChargeBar() {
+    if (!this._chargeBarBg) return;
+    const w = 36;
+    const yOff = -this.sprite.displayHeight / 2 - 12;
+    this._chargeBarBg.setPosition(this.sprite.x, this.sprite.y + yOff);
+    this._chargeBarFill.setPosition(this.sprite.x - w / 2, this.sprite.y + yOff);
+    const t = Phaser.Math.Clamp(this._chargingTimer / this._chargingMaxTime, 0, 1);
+    this._chargeBarFill.width = (w - 2) * t;
+    // 颜色按蓄力程度：黄→橙→红
+    const color = t < 0.4 ? 0xffdd44 : t < 0.8 ? 0xff8833 : 0xff3333;
+    this._chargeBarFill.setFillStyle(color);
+  }
+
+  _hideChargeBar() {
+    if (this._chargeBarBg) { this._chargeBarBg.destroy(); this._chargeBarBg = null; }
+    if (this._chargeBarFill) { this._chargeBarFill.destroy(); this._chargeBarFill = null; }
+  }
+
   trySkill(slotIndex) {
     if (this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
-    if (this.state === PlayerState.SKILL_CASTING) return;
+    if (this.state === PlayerState.SKILL_CASTING || this.state === PlayerState.CHARGING) return;
     if (this.scene.gamePaused) return;
 
     const skillId = this.skillSlots[slotIndex];
     if (!skillId) return;
+
+    // 蓄力技能：先进 CHARGING（不消耗资源、不进冷却），松开按键时再执行
+    const scaled = this.skillEngine.getScaledSkill(skillId);
+    if (scaled && scaled.effect && scaled.effect.chargeable) {
+      // 资源不足直接 abort
+      const check = this.skillEngine.canUse(skillId);
+      if (!check.canUse) return;
+
+      this._chargingSkillId = skillId;
+      this._chargingSlotIdx = slotIndex;
+      this._chargingTimer = 0;
+      this._chargingMaxTime = scaled.effect.chargeTime || 1500;
+      this._chargingMinTime = scaled.effect.minChargeTime || 200;
+      this._chargingMovementMode = scaled.effect.chargeMovement || 'interrupt';
+
+      this.sprite.setVelocity(0, 0);
+      this.attackHitbox.body.enable = false;
+      this.setState(PlayerState.CHARGING);
+      this._showChargeBar();
+      this.playAnim('idle');
+      return;
+    }
 
     const skill = this.skillEngine.execute(skillId);
     if (!skill) return;
@@ -415,10 +653,24 @@ export class Player extends Actor {
       } else if (activeSkill.effect.type === 'spin') {
         this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
       } else if (activeSkill.effect.type === 'melee') {
-        this.skillHitbox.setPosition(
-          this.sprite.x + this.facing * 22,
-          this.sprite.y
-        );
+        if (this.isRangedClass() && this._skillIsCone) {
+          // 扇形技能：hitbox 静止覆盖扇形区域（startConeSkill 已设置）
+        } else if (this.isRangedClass() && this._skillAim) {
+          // 远程单弹道：沿瞄准方向扫掠
+          const phaseDur = activeSkill.phases?.active || 100;
+          const t = Math.min(1, this.skillEngine.phaseTimer / phaseDur);
+          const dist = this._skillStartDist + (this._skillRange - this._skillStartDist) * t;
+          const dir = this._skillAim;
+          this.skillHitbox.setPosition(
+            this.sprite.x + dir.x * dist,
+            this.sprite.y + dir.y * dist
+          );
+        } else {
+          this.skillHitbox.setPosition(
+            this.sprite.x + this.facing * 22,
+            this.sprite.y
+          );
+        }
       }
       // buff/taunt: no hitbox positioning
     }
@@ -488,6 +740,7 @@ export class Player extends Actor {
     }
     this._chargeDashVelocity = null;
     this._chargeDashDir = null;
+    this._chargeRatio = 1.0;  // 重置蓄力比例
     this._cleanupSkillVisuals();
     this.setState(PlayerState.IDLE);
   }
@@ -497,9 +750,27 @@ export class Player extends Actor {
       this._whirlwindTween.stop();
       this._whirlwindTween = null;
     }
+    if (this._auraInnerTween) {
+      this._auraInnerTween.stop();
+      this._auraInnerTween = null;
+    }
     if (this._auraRing) {
       this._auraRing.destroy();
       this._auraRing = null;
+    }
+    if (this._auraInner) {
+      this._auraInner.destroy();
+      this._auraInner = null;
+    }
+    this._aoeAnchor = null;
+    this._skillAim = null;
+    this._skillRange = 0;
+    this._skillStartDist = 0;
+    this._skillIsCone = false;
+    if (this._fanIndicator) {
+      this.scene.tweens.killTweensOf(this._fanIndicator);
+      this._fanIndicator.destroy();
+      this._fanIndicator = null;
     }
     this.sprite.setAngle(0);
   }
@@ -508,23 +779,55 @@ export class Player extends Actor {
 
   startChargeDash(skill) {
     const effect = skill.effect;
-    const input = this.getInputDirection();
-    let dirX, dirY;
-    if (input.x !== 0 || input.y !== 0) {
-      const len = Math.sqrt(input.x * input.x + input.y * input.y);
-      dirX = input.x / len;
-      dirY = input.y / len;
-    } else {
-      dirX = this.facing;
-      dirY = 0;
+
+    // 方向：优先鼠标瞄准，鼠标在身上时回退到 facing
+    const aim = this.getAimDirection();
+    let dirX = aim.x, dirY = aim.y;
+
+    // 反向位移（如翻滚射击 — 向后退）
+    if (effect.reverse) {
+      dirX = -dirX;
+      dirY = -dirY;
     }
 
-    if (dirX !== 0) {
-      this.facing = dirX > 0 ? 1 : -1;
-      this.sprite.setFlipX(this.facing < 0);
+    if (Math.abs(dirX) > 0.05) {
+      // 反向技能保持原 facing（视觉朝鼠标方向射箭）
+      if (!effect.reverse) {
+        this.facing = dirX > 0 ? 1 : -1;
+        this.sprite.setFlipX(this.facing < 0);
+      }
     }
 
     this._chargeDashDir = { x: dirX, y: dirY };
+
+    // 闪现：瞬移到终点（不走 velocity）
+    if (effect.blink) {
+      const distance = effect.distance || 200;
+      const endX = this.sprite.x + dirX * distance;
+      const endY = this.sprite.y + dirY * distance;
+
+      // 终点 hitbox（短暂 AOE）
+      this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
+      this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
+      this.skillHitbox.setPosition(endX, endY);
+      this.skillHitbox.body.enable = true;
+
+      // 残影
+      this.spawnGhostAfterimage();
+      this.sprite.setAlpha(0.4);
+      this.scene.time.delayedCall(skill.phases.active, () => {
+        if (this.sprite) this.sprite.setAlpha(1);
+      });
+
+      // 瞬移
+      this.sprite.setPosition(endX, endY);
+      this.sprite.setVelocity(0, 0);
+      this._chargeDashVelocity = null;
+      this._chargeHitRegistered = false;
+      return;
+    }
+
+    // 常规 dash：用速度推进
     const hx = this.sprite.x + dirX * 22;
     const hy = this.sprite.y + dirY * 22;
     this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
@@ -538,15 +841,7 @@ export class Player extends Actor {
     };
     this._chargeHitRegistered = false;
 
-    // Mage blink: leave ghost afterimage then teleport at high speed
-    if (this.classType === 'mage') {
-      this.spawnGhostAfterimage();
-      this.sprite.setAlpha(0.4);
-      this.scene.time.delayedCall(skill.phases.active, () => {
-        if (this.sprite) this.sprite.setAlpha(1);
-      });
-    }
-    // Archer roll: briefly lower alpha
+    // Archer 翻滚：半透明
     if (this.classType === 'archer') {
       this.sprite.setAlpha(0.5);
       this.scene.time.delayedCall(skill.phases.active, () => {
@@ -564,7 +859,34 @@ export class Player extends Actor {
     const size = effect.radius * 2;
     this.skillHitbox.setSize(size, size);
     this.skillHitbox.body.setSize(size, size);
-    this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+
+    // 决定 AOE 锚点：远程职业 → 鼠标位置（限最大施法距离）；近战 → 玩家身上
+    let anchorX = this.sprite.x;
+    let anchorY = this.sprite.y;
+    const MAX_AOE_RANGE = 200;
+
+    if (this.isRangedClass()) {
+      const pointer = this.scene.input.activePointer;
+      const wp = pointer.positionToCamera(this.scene.cameras.main);
+      const dx = wp.x - this.sprite.x;
+      const dy = wp.y - this.sprite.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= MAX_AOE_RANGE || dist < 1) {
+        anchorX = wp.x;
+        anchorY = wp.y;
+      } else {
+        anchorX = this.sprite.x + (dx / dist) * MAX_AOE_RANGE;
+        anchorY = this.sprite.y + (dy / dist) * MAX_AOE_RANGE;
+      }
+      // 角色按 X 翻面朝 AOE
+      if (Math.abs(dx) > 0.05) {
+        this.facing = dx >= 0 ? 1 : -1;
+        this.sprite.setFlipX(this.facing < 0);
+      }
+    }
+
+    this._aoeAnchor = { x: anchorX, y: anchorY };
+    this.skillHitbox.setPosition(anchorX, anchorY);
     this.skillHitbox.body.enable = true;
 
     if (effect.superArmor) {
@@ -576,20 +898,33 @@ export class Player extends Actor {
     const spinDuration = skill.phases.active;
 
     if (this.isRangedClass()) {
-      // Ranged: show aura ring instead of rotating sprite
-      const color = this.classType === 'archer' ? 0x88cc44 : 0x6688ff;
-      this._auraRing = this.scene.add.circle(
-        this.sprite.x, this.sprite.y, effect.radius, color, 0.15
-      ).setStrokeStyle(2, color, 0.6).setDepth(this.sprite.depth - 1);
+      // 远程 AOE 视觉：外圈描边脉冲 + 内圈实心反向脉冲
+      const color = this.getSkillProjectileColor(skill);
 
-      // Pulse the aura
+      // 外圈
+      this._auraRing = this.scene.add.circle(
+        anchorX, anchorY, effect.radius, color, 0.18
+      ).setStrokeStyle(2, color, 0.75).setDepth(this.sprite.depth - 1);
+
+      // 内圈（更小更亮）
+      this._auraInner = this.scene.add.circle(
+        anchorX, anchorY, effect.radius * 0.55, color, 0.32
+      ).setDepth(this.sprite.depth - 1);
+
+      // 外圈：膨胀+渐淡
       this._whirlwindTween = this.scene.tweens.add({
         targets: this._auraRing,
-        scaleX: 1.15, scaleY: 1.15, alpha: 0.08,
-        duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        scaleX: 1.12, scaleY: 1.12, alpha: 0.06,
+        duration: 320, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      });
+      // 内圈：反向收缩+变亮
+      this._auraInnerTween = this.scene.tweens.add({
+        targets: this._auraInner,
+        scaleX: 0.75, scaleY: 0.75, alpha: 0.5,
+        duration: 220, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
       });
     } else {
-      // Warrior: physical spin
+      // 战士：玩家身上旋转
       this._whirlwindTween = this.scene.tweens.add({
         targets: this.sprite,
         angle: 360 * 4,
@@ -601,10 +936,15 @@ export class Player extends Actor {
   }
 
   whirlwindTick(skill) {
-    this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
-    // Keep aura ring following player
-    if (this._auraRing) {
-      this._auraRing.setPosition(this.sprite.x, this.sprite.y);
+    if (this.isRangedClass() && this._aoeAnchor) {
+      // 远程：hitbox/视觉锚定在鼠标点（不跟随玩家）
+      this.skillHitbox.setPosition(this._aoeAnchor.x, this._aoeAnchor.y);
+      if (this._auraRing) this._auraRing.setPosition(this._aoeAnchor.x, this._aoeAnchor.y);
+      if (this._auraInner) this._auraInner.setPosition(this._aoeAnchor.x, this._aoeAnchor.y);
+    } else {
+      // 战士：跟随玩家
+      this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
+      if (this._auraRing) this._auraRing.setPosition(this.sprite.x, this.sprite.y);
     }
   }
 
@@ -612,19 +952,144 @@ export class Player extends Actor {
 
   startMeleeSkill(skill) {
     const effect = skill.effect;
-    const offset = this.isRangedClass() ? 40 : 22;
-    const hx = this.sprite.x + this.facing * offset;
-    const hy = this.sprite.y;
-    this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
-    this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
-    this.skillHitbox.setPosition(hx, hy);
-    this.skillHitbox.body.enable = true;
 
-    // Ranged classes: spawn a visible projectile flying to hitbox
     if (this.isRangedClass()) {
+      const dir = this.getAimDirection();
+      this._skillAim = dir;
+
+      // 射程 = clamp(180 + (dmgMul-1)×50, 140, 240)
+      const dmgMul = effect.damageMultiplier ?? 1.0;
+      const range = Phaser.Math.Clamp(180 + (dmgMul - 1.0) * 50, 140, 240);
+      this._skillRange = range;
+      this._skillStartDist = 30;
+
+      // 角色按 X 翻面
+      if (Math.abs(dir.x) > 0.05) {
+        this.facing = dir.x >= 0 ? 1 : -1;
+        this.sprite.setFlipX(this.facing < 0);
+      }
+
+      // 扇形多弹道（multiShot 等：effect.arrows > 1）
+      if (effect.arrows && effect.arrows > 1) {
+        this.startConeSkill(skill, dir, range);
+        return;
+      }
+
+      // 蓄力技：用一个覆盖完整 path 的长 hitbox（不扫掠，避免高速扫错过敌人）
+      if (effect.chargeable) {
+        const longW = range;                          // 矩形长度 = 射程
+        const longH = Math.max(effect.hitbox.h, 32);  // 给敌人体宽留余量
+        this.skillHitbox.setSize(longW, longH);
+        this.skillHitbox.body.setSize(longW, longH);
+        // 中点放置 hitbox（沿 dir 中点）
+        const cx = this.sprite.x + dir.x * (range / 2);
+        const cy = this.sprite.y + dir.y * (range / 2);
+        this.skillHitbox.setPosition(cx, cy);
+        this.skillHitbox.body.enable = true;
+        this._skillIsCone = true;  // 让 handleSkillCasting 不要 sweep
+
+        const color = this.getSkillProjectileColor(skill);
+        const size = Math.max(4, Math.min(effect.hitbox.w, effect.hitbox.h) / 6);
+        this.spawnProjectile(dir.x * range, dir.y * range, color, size, size * 0.5, skill);
+        return;
+      }
+
+      // 普通单弹道：hitbox 沿 dir 扫掠
+      this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
+      this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
+      this.skillHitbox.setPosition(
+        this.sprite.x + dir.x * this._skillStartDist,
+        this.sprite.y + dir.y * this._skillStartDist
+      );
+      this.skillHitbox.body.enable = true;
+
       const color = this.getSkillProjectileColor(skill);
       const size = Math.max(4, Math.min(effect.hitbox.w, effect.hitbox.h) / 6);
-      this.spawnProjectile(this.facing * (offset + effect.hitbox.w / 2), 0, color, size, size * 0.5, skill);
+      this.spawnProjectile(dir.x * range, dir.y * range, color, size, size * 0.5, skill);
+    } else {
+      // 近战职业：保持 facing
+      const offset = 22;
+      this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
+      this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
+      this.skillHitbox.setPosition(
+        this.sprite.x + this.facing * offset,
+        this.sprite.y
+      );
+      this.skillHitbox.body.enable = true;
+    }
+  }
+
+  /**
+   * 扇形多弹道技能（如多重射击）。
+   * - arrows: 弹道数量
+   * - spreadAngle: 总扩散角度（度）
+   * hitbox: 用扇形 4 角点的 AABB 覆盖整个扇形区域，active 期间静止（不扫掠）
+   */
+  startConeSkill(skill, dir, range) {
+    const effect = skill.effect;
+    const arrows = effect.arrows;
+    const spread = (effect.spreadAngle || 60) * Math.PI / 180;
+    const baseAngle = dir.angle;
+    const halfSpread = spread / 2;
+
+    // 标记本次为 cone：handleSkillCasting 不要 sweep
+    this._skillIsCone = true;
+
+    // 4 个特征点：原点 + 弧两端 + 弧中点
+    const corners = [
+      { x: 0, y: 0 },
+      { x: Math.cos(baseAngle - halfSpread) * range, y: Math.sin(baseAngle - halfSpread) * range },
+      { x: Math.cos(baseAngle) * range, y: Math.sin(baseAngle) * range },
+      { x: Math.cos(baseAngle + halfSpread) * range, y: Math.sin(baseAngle + halfSpread) * range }
+    ];
+    const minX = Math.min(...corners.map(p => p.x));
+    const maxX = Math.max(...corners.map(p => p.x));
+    const minY = Math.min(...corners.map(p => p.y));
+    const maxY = Math.max(...corners.map(p => p.y));
+    const bw = Math.max(20, maxX - minX);
+    const bh = Math.max(20, maxY - minY);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+
+    this.skillHitbox.setSize(bw, bh);
+    this.skillHitbox.body.setSize(bw, bh);
+    this.skillHitbox.setPosition(this.sprite.x + cx, this.sprite.y + cy);
+    this.skillHitbox.body.enable = true;
+
+    // 扇形指示视觉（轻量描边 + 半透明填充三角扇）
+    const color = this.getSkillProjectileColor(skill);
+    const fanGfx = this.scene.add.graphics();
+    fanGfx.setDepth(this.sprite.depth - 1);
+    fanGfx.fillStyle(color, 0.18);
+    fanGfx.lineStyle(1, color, 0.55);
+    fanGfx.beginPath();
+    fanGfx.moveTo(this.sprite.x, this.sprite.y);
+    const segments = 16;
+    for (let i = 0; i <= segments; i++) {
+      const a = baseAngle - halfSpread + (spread * i / segments);
+      fanGfx.lineTo(this.sprite.x + Math.cos(a) * range, this.sprite.y + Math.sin(a) * range);
+    }
+    fanGfx.closePath();
+    fanGfx.fillPath();
+    fanGfx.strokePath();
+    this._fanIndicator = fanGfx;
+
+    // 渐淡消失
+    this.scene.tweens.add({
+      targets: fanGfx,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => fanGfx.destroy()
+    });
+
+    // 多发弹道按角度散开
+    const size = 5;
+    for (let i = 0; i < arrows; i++) {
+      const t = arrows === 1 ? 0.5 : i / (arrows - 1);
+      const a = baseAngle - halfSpread + spread * t;
+      const dx = Math.cos(a) * range;
+      const dy = Math.sin(a) * range;
+      this.spawnProjectile(dx, dy, color, size, size * 0.5, skill);
     }
   }
 
@@ -633,12 +1098,17 @@ export class Player extends Actor {
   startBuffSkill(skill) {
     const effect = skill.effect;
     if (effect.target === 'self') {
+      const level = this.skillEngine.getSkillLevel(skill.id);
+      const desc = this._skillModule?.getSkillDescription?.(skill.id, level) || skill.description || '';
       this.statusEffects.apply(effect.buffId, {
         id: effect.buffId,
         type: 'buff',
         duration: effect.duration,
         modifiers: effect.modifiers,
-        source: this
+        source: this,
+        icon: skill.icon,
+        name: skill.name,
+        description: desc
       });
     }
     // Class-colored visual feedback
@@ -769,12 +1239,11 @@ export class Player extends Actor {
 
   updateInteractHint() {
     if (this.canInteract && this.interactTarget) {
-      const tx = this.interactTarget.x || this.interactTarget.sprite?.x;
-      const ty = this.interactTarget.y || this.interactTarget.sprite?.y;
-      if (tx !== undefined && ty !== undefined) {
-        this.interactText.setPosition(tx, ty - 35);
-        this.interactText.setVisible(true);
-      }
+      // 挂在玩家头顶（紧跟人物移动），不再贴在交互目标上
+      const px = this.sprite.x;
+      const py = this.sprite.y - this.sprite.displayHeight / 2 - 14;
+      this.interactText.setPosition(px, py);
+      this.interactText.setVisible(true);
     } else {
       this.interactText.setVisible(false);
     }
@@ -813,12 +1282,15 @@ export class Player extends Actor {
     if (this.skillHitbox) this.skillHitbox.destroy();
     if (this.interactText) this.interactText.destroy();
     if (this._auraRing) { this._auraRing.destroy(); this._auraRing = null; }
+    if (this._auraInner) { this._auraInner.destroy(); this._auraInner = null; }
 
     if (this.skillKeys && this._onSkillKeyDown) {
       this.skillKeys.forEach((key, i) => {
         if (this._onSkillKeyDown[i]) key.off('down', this._onSkillKeyDown[i]);
+        if (this._onSkillKeyUp && this._onSkillKeyUp[i]) key.off('up', this._onSkillKeyUp[i]);
       });
     }
+    this._hideChargeBar();
 
     this.statusEffects.clearAll();
     this.destroyActor();

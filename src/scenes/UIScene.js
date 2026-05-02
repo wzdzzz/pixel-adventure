@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/AssetManager.js';
+import { Tooltip } from '../ui/Tooltip.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -9,6 +10,10 @@ export class UIScene extends Phaser.Scene {
   create() {
     this.gameScene = this.scene.get('MainGameScene');
 
+    // 固定画布尺寸，不再做 UI 缩放
+    this._uiW = this.scale.gameSize.width;
+    this._uiH = this.scale.gameSize.height;
+
     this.createHUD();
     this.createHealthBar();
     this.createScoreDisplay();
@@ -17,6 +22,10 @@ export class UIScene extends Phaser.Scene {
     this.createLevelDisplay();
     this.createControlsHint();
     this.createSkillBar();
+    this.createBuffBar();
+    this.tooltip = new Tooltip(this, { delay: 500 });
+    this.attachSkillSlotTooltips();
+    this.attachBuffSlotTooltips();
     this.setupEvents();
     this.createQuestTracker();
 
@@ -39,13 +48,14 @@ export class UIScene extends Phaser.Scene {
         this.gameScene.events.off('questActivated');
         this.gameScene.events.off('questProgressUpdated');
         this.gameScene.events.off('questCompleted');
+        this.gameScene.events.off('skillSlotsChanged');
       }
     });
   }
 
   createHUD() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const width = this._uiW;
+    const height = this._uiH;
 
     this.hudBg = this.add.rectangle(0, 0, width, 70, 0x000000, 0.7).setOrigin(0, 0);
     this.bottomBar = this.add.rectangle(0, height - 30, width, 30, 0x000000, 0.5).setOrigin(0, 0);
@@ -102,7 +112,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   createScoreDisplay() {
-    const width = this.cameras.main.width;
+    const width = this._uiW;
 
     this.scoreLabelText = this.add.text(width / 2, 15, '分数', {
       fontSize: '12px',
@@ -118,7 +128,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   createKeyDisplay() {
-    const width = this.cameras.main.width;
+    const width = this._uiW;
 
     this.keyIcon = this.add.image(width - 200, 25, TEXTURES.KEY).setScale(0.8).setDepth(2);
     this.keyText = this.add.text(width - 180, 25, 'x0', {
@@ -129,14 +139,14 @@ export class UIScene extends Phaser.Scene {
   }
 
   createGoldDisplay() {
-    const width = this.cameras.main.width;
+    const width = this._uiW;
     this.goldText = this.add.text(width - 200, 40, '💰 0', {
       fontSize: '11px', fill: '#ffd700', fontFamily: 'Courier New'
     }).setDepth(2);
   }
 
   createLevelDisplay() {
-    const width = this.cameras.main.width;
+    const width = this._uiW;
 
     this.levelText = this.add.text(width - 80, 25, '第一关', {
       fontSize: '12px',
@@ -146,10 +156,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   createControlsHint() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const width = this._uiW;
+    const height = this._uiH;
 
-    this.controlsText = this.add.text(width / 2, height - 15, 'WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板', {
+    this.controlsText = this.add.text(width / 2, height - 15, 'WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板 | F:全屏', {
       fontSize: '12px',
       fill: '#888888',
       fontFamily: 'Courier New'
@@ -157,8 +167,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   createSkillBar() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const width = this._uiW;
+    const height = this._uiH;
     const slotSize = 36;
     const gap = 6;
     const totalW = 4 * slotSize + 3 * gap;
@@ -209,12 +219,153 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  onResize(gameSize) {
-    const width = gameSize.width;
-    const height = gameSize.height;
+  /** 给技能栏 4 槽位绑 tooltip：内容动态读 player.skillEngine */
+  attachSkillSlotTooltips() {
+    if (!this.skillSlots || !this.tooltip) return;
+    this.skillSlots.forEach((slot, i) => {
+      slot.bg.setInteractive({ useHandCursor: false });
+      this.tooltip.attach(slot.bg, () => {
+        const player = this.gameScene?.player;
+        const id = slot.skillId;
+        if (!player || !id) return null;
+        const engine = player.skillEngine;
+        const skill = engine.getScaledSkill(id);
+        if (!skill) return null;
+        const level = engine.getSkillLevel(id);
+        const desc = player._skillModule?.getSkillDescription?.(id, level) || skill.description || '';
+        const cdSec = (skill.cooldown / 1000).toFixed(1);
+        const resourceLabels = { stamina: '体力', rage: '怒气', mana: '魔力', none: '' };
+        const r = resourceLabels[skill.resource] || '';
+        const costLine = skill.resource === 'none'
+          ? `冷却: ${cdSec}s`
+          : `冷却: ${cdSec}s   ${r}: ${skill.cost}`;
+        return {
+          title: `${skill.icon || ''} ${skill.name}  Lv.${level}/${skill.maxLevel}`,
+          body: `${desc}\n${costLine}`
+        };
+      });
+    });
+  }
 
-    // Update camera size
-    this.cameras.main.setSize(width, height);
+  /** 给 buff 栏 8 槽位绑 tooltip：内容动态读 player.statusEffects */
+  attachBuffSlotTooltips() {
+    if (!this.buffSlots || !this.tooltip) return;
+    this.buffSlots.forEach((slot, i) => {
+      slot.bg.setInteractive({ useHandCursor: false });
+      this.tooltip.attach(slot.bg, () => {
+        const player = this.gameScene?.player;
+        if (!player || !slot.bg.visible) return null;
+        const list = player.statusEffects?.getActiveSummary() || [];
+        const b = list[i];
+        if (!b) return null;
+        const sec = (b.remaining / 1000).toFixed(1);
+        const stacksLine = b.stacks > 1 ? `  ×${b.stacks}` : '';
+        return {
+          title: `${b.icon || ''} ${b.name}${stacksLine}`,
+          body: `${b.description || ''}\n剩余: ${sec}s`
+        };
+      });
+    });
+  }
+
+  /** 槽位变更时刷新图标和 skillId（不重建容器） */
+  refreshSkillSlots() {
+    if (!this.skillSlots) return;
+    const player = this.gameScene?.player;
+    const playerSlots = player?.skillSlots || [null, null, null, null];
+    const skillDefs = player?.skillEngine?.getSkillDefs() || {};
+    this.skillSlots.forEach((slot, i) => {
+      const id = playerSlots[i] || null;
+      const base = id ? skillDefs[id] : null;
+      slot.skillId = id;
+      slot.icon.setText(base ? base.icon : '');
+      slot.bg.setStrokeStyle(1, base ? 0x5a5a8a : 0x333344);
+      // 清除冷却显示（旧技能的冷却状态不再适用）
+      slot.cdOverlay.setSize(slot.size - 2, 0);
+      slot.cdText.setVisible(false);
+      slot.lvText.setText('');
+    });
+  }
+
+  createBuffBar() {
+    // 池：最多 8 个 buff 同时显示
+    this.buffSlots = [];
+    this.buffSlotMax = 8;
+    this.buffIconSize = 28;
+    for (let i = 0; i < this.buffSlotMax; i++) {
+      const bg = this.add.rectangle(0, 0, this.buffIconSize, this.buffIconSize, 0x1a1a2e, 0.85)
+        .setStrokeStyle(1, 0x66ff88).setDepth(4).setVisible(false);
+      const icon = this.add.text(0, 0, '', {
+        fontSize: '16px', fontFamily: 'Courier New'
+      }).setOrigin(0.5).setDepth(5).setVisible(false);
+      const time = this.add.text(0, 0, '', {
+        fontSize: '9px', color: '#ffffff', fontFamily: 'Courier New',
+        fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+      }).setOrigin(0.5, 0.5).setDepth(6).setVisible(false);
+      const stacks = this.add.text(0, 0, '', {
+        fontSize: '9px', color: '#ffdd44', fontFamily: 'Courier New',
+        fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+      }).setOrigin(1, 0).setDepth(6).setVisible(false);
+      this.buffSlots.push({ bg, icon, time, stacks });
+    }
+  }
+
+  updateBuffBar() {
+    if (!this.buffSlots) return;
+    const player = this.gameScene?.player;
+    const list = player?.statusEffects?.getActiveSummary() || [];
+    const visible = list.slice(0, this.buffSlotMax);
+
+    const width = this._uiW;
+    const height = this._uiH;
+    const size = this.buffIconSize;
+    const gap = 4;
+    const totalW = visible.length * size + Math.max(0, visible.length - 1) * gap;
+    const startX = width / 2 - totalW / 2 + size / 2;
+    const y = height - 92; // 在技能栏上方
+
+    this.buffSlots.forEach((slot, i) => {
+      if (i < visible.length) {
+        const b = visible[i];
+        const x = startX + i * (size + gap);
+        slot.bg.setPosition(x, y).setVisible(true);
+        // 按类型上色：buff 绿、debuff 红、其他黄
+        if (b.type === 'debuff' || b.type === 'dot') {
+          slot.bg.setStrokeStyle(1, 0xff6666);
+        } else if (b.type === 'buff') {
+          slot.bg.setStrokeStyle(1, 0x66ff88);
+        } else {
+          slot.bg.setStrokeStyle(1, 0xffdd44);
+        }
+        slot.icon.setPosition(x, y - 2).setText(b.icon || '✨').setVisible(true);
+        // 倒计时（秒）— 内嵌在图标底部
+        const sec = Math.max(0, b.remaining / 1000);
+        slot.time.setPosition(x, y + size / 2 - 5)
+          .setText(sec >= 10 ? `${Math.floor(sec)}` : sec.toFixed(1))
+          .setVisible(true);
+        // 叠加层数
+        if (b.stacks > 1) {
+          slot.stacks.setPosition(x + size / 2 - 2, y - size / 2 + 1)
+            .setText(`x${b.stacks}`).setVisible(true);
+        } else {
+          slot.stacks.setVisible(false);
+        }
+      } else {
+        slot.bg.setVisible(false);
+        slot.icon.setVisible(false);
+        slot.time.setVisible(false);
+        slot.stacks.setVisible(false);
+      }
+    });
+  }
+
+  onResize(gameSize) {
+    // Update camera size & 重算 UI 缩放
+    this.cameras.main.setSize(gameSize.width, gameSize.height);
+    this._uiW = gameSize.width;
+    this._uiH = gameSize.height;
+    const width = this._uiW;
+    const height = this._uiH;
 
     // Top bar: full width
     this.hudBg.setPosition(0, 0);
@@ -323,6 +474,9 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.on('questActivated', () => this.updateQuestTracker());
       this.gameScene.events.on('questProgressUpdated', () => this.updateQuestTracker());
       this.gameScene.events.on('questCompleted', () => this.updateQuestTracker());
+
+      // 技能槽位变化（来自技能面板装备按钮）
+      this.gameScene.events.on('skillSlotsChanged', () => this.refreshSkillSlots());
     }
   }
 
@@ -432,8 +586,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   createQuestTracker() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const width = this._uiW;
+    const height = this._uiH;
 
     this.questTrackerBg = this.add.rectangle(width - 10, height - 40, 200, 60, 0x000000, 0.5)
       .setOrigin(1, 1).setStrokeStyle(1, 0x333355).setDepth(1);
@@ -474,6 +628,7 @@ export class UIScene extends Phaser.Scene {
 
   update() {
     this.updateSkillBar();
+    this.updateBuffBar();
   }
 
   updateSkillBar() {

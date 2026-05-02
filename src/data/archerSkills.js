@@ -81,8 +81,8 @@ export const ARCHER_SKILLS = {
     phases: { startup: 50, active: 200, recovery: 150 },
     effect: {
       type: 'dash',
-      distance: 100,
-      speed: 500,
+      distance: 200,
+      speed: 700,
       hitbox: { w: 30, h: 30 },
       baseDamageMultiplier: 0.8,
       knockback: 30
@@ -93,7 +93,7 @@ export const ARCHER_SKILLS = {
   chargedShot: {
     id: 'chargedShot',
     name: '蓄力射击',
-    description: '蓄力后射出致命一箭，造成{dmg}%攻击力伤害',
+    description: '按住蓄力后释放，最长{chargeTime}秒，伤害随蓄力倍增（最高{dmg}%）',
     icon: '⚡',
     resource: 'stamina',
     baseCost: 20,
@@ -102,12 +102,17 @@ export const ARCHER_SKILLS = {
     upgradeCost: 1,
     requiredLevel: 3,
     category: 'active',
-    phases: { startup: 350, active: 100, recovery: 200 },
+    phases: { startup: 50, active: 100, recovery: 200 },
     effect: {
       type: 'melee',
       hitbox: { w: 64, h: 28 },
       baseDamageMultiplier: 2.8,
       knockback: 90,
+      // 蓄力机制
+      chargeable: true,
+      chargeTime: 1500,        // 满蓄时间
+      minChargeTime: 200,      // 最低蓄力
+      chargeMovement: 'interrupt',  // 'interrupt' = 移动中断；'scale' = 移动减伤（暂未实现）
       cameraShake: { intensity: 5, duration: 80 }
     }
   },
@@ -156,6 +161,10 @@ export const ARCHER_SKILLS = {
       hitbox: { w: 70, h: 60 },
       baseDamageMultiplier: 1.8,
       knockback: 80,
+      dedicatedKnockback: true,
+      // 扇形：5 发箭、总扩散 60°
+      arrows: 5,
+      spreadAngle: 60,
       cameraShake: { intensity: 4, duration: 80 }
     }
   },
@@ -247,8 +256,9 @@ export const ARCHER_SKILLS = {
     phases: { startup: 60, active: 250, recovery: 150 },
     effect: {
       type: 'dash',
-      distance: 90,
-      speed: 400,
+      distance: 160,
+      speed: 700,
+      reverse: true,            // 朝鼠标反方向位移（向后翻滚）
       hitbox: { w: 44, h: 36 },
       baseDamageMultiplier: 1.5,
       knockback: 50,
@@ -487,15 +497,23 @@ export function getSkillDescription(skillId, level) {
   }
   desc = desc.replace('{cost}', skill.cost);
   desc = desc.replace('{cd}', (skill.cooldown / 1000).toFixed(1));
+  if (eff.chargeTime) desc = desc.replace('{chargeTime}', (eff.chargeTime / 1000).toFixed(1));
 
   if (eff.stun) desc = desc.replace('{stun}', (eff.stun / 1000).toFixed(1));
   if (eff.type === 'spin') desc = desc.replace('{dur}', (skill.phases.active / 1000).toFixed(1));
   if (eff.duration) desc = desc.replace('{dur}', (eff.duration / 1000).toFixed(1));
-  if (eff.modifiers) {
-    if (eff.modifiers.critRate) desc = desc.replace('{critBonus}', Math.round(eff.modifiers.critRate * 100));
-    if (eff.modifiers.attack) desc = desc.replace('{atkBonus}', Math.round(eff.modifiers.attack * 100));
-    if (eff.modifiers.moveSpeed) desc = desc.replace('{spdBonus}', Math.round(eff.modifiers.moveSpeed * 100));
-    if (eff.modifiers.damageTaken) desc = desc.replace('{dmgAmp}', Math.round(eff.modifiers.damageTaken * 100));
+
+  // 兜底：从 applyEffects[0] 取 duration / modifiers（如猎人印记）
+  const apply0 = Array.isArray(eff.applyEffects) && eff.applyEffects[0];
+  if (apply0 && apply0.duration) {
+    desc = desc.replace('{dur}', (apply0.duration / 1000).toFixed(1));
+  }
+  const mods = (eff.modifiers) || (apply0 && apply0.modifiers) || null;
+  if (mods) {
+    if (mods.critRate) desc = desc.replace('{critBonus}', Math.round(mods.critRate * 100));
+    if (mods.attack) desc = desc.replace('{atkBonus}', Math.round(mods.attack * 100));
+    if (mods.moveSpeed) desc = desc.replace('{spdBonus}', Math.round(mods.moveSpeed * 100));
+    if (mods.damageTaken) desc = desc.replace('{dmgAmp}', Math.round(mods.damageTaken * 100));
   }
 
   return desc;

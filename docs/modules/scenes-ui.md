@@ -1,116 +1,193 @@
 # 场景与 UI 系统
 
-> 文件：`src/scenes/*.js`, `src/systems/UIManager.js`
+> 文件：`src/scenes/*.js`、`src/systems/UIManager.js`、`src/ui/Tooltip.js`、`src/ui/panels/*.js`
 
 ## 场景生命周期
 
 ```
-BootScene (preload资源、注册动画)
+BootScene (preload + 动画注册)
   ↓
-MainGameScene (主游戏逻辑)
-  ├── UIScene (HUD 叠加层, parallel)
-  └── PanelScene (面板叠加层, parallel, 默认休眠)
-  ↓ (死亡)
-GameOverScene
-  ↓ (胜利)
-VictoryScene
+MainMenuScene (主菜单 + 角色选择)
+  ↓ ──→ SaveSelectScene (mode='load') ──→ 选槽 → MainGameScene
+  └── 新建游戏 ──→ 角色选择 → MainGameScene
+
+MainGameScene (主游戏)
+  ├── UIScene (HUD 叠加层, 平行运行)
+  ├── PanelScene (面板叠加层, 按 Tab/I 唤醒)
+  └── SaveSelectScene (mode='save', ESC 菜单)
+  │
+  │ (死亡) → GameOverScene → MainMenuScene
+  │ (胜利) → VictoryScene → MainMenuScene
 ```
 
-### 场景并行运行
-- MainGameScene、UIScene、PanelScene 同时活跃
-- UIScene 和 PanelScene 通过 `scene.launch()` 启动
-- PanelScene 默认 `scene.sleep()`，Tab 键唤醒
+### 画布与缩放
+- 固定 1920×1080 (`Phaser.Scale.NONE`)
+- `autoCenter: CENTER_BOTH` 浏览器中居中
+- 不响应窗口 resize（HUD 大小固定）
+- F 键切换浏览器真·全屏
 
-## BootScene (105行)
+## BootScene
 
-**职责**：资源预加载、纹理生成、动画注册
+资源预加载、纹理生成（`AssetManager.generateAllTextures`）、动画注册。完成后跳 `MainMenuScene`。
 
-- 调用 `AssetManager.generateAllTextures()` 生成所有像素纹理
-- 注册角色动画帧（idle, walk, walk_up, attack, hurt, die）
-- 完成后启动 MainGameScene
+## MainMenuScene
 
-## MainGameScene (1400+行)
+### 阶段 1：主菜单
+- 标题 + 星空背景
+- 按钮：**加载存档** / **新建游戏** / 退出游戏
+- 点"加载存档" → 启动 `SaveSelectScene` mode='load'
+- 点"新建游戏" → 进入阶段 2
 
-**职责**：核心游戏编排
+### 阶段 2：角色选择
+- 3 个职业卡片（warrior / archer / mage）
+- 性别切换（male/female）
+- 确认 → 写入 registry：`classType`、`gender`、`pendingNewGameSlot`（若来自空槽点击）
+- 启动 `MainGameScene` + `UIScene`
+
+## SaveSelectScene
+
+### 模式
+| mode | 用途 | 入口 |
+|------|------|------|
+| `load` | 选档加载 | MainMenu "加载存档" |
+| `save` | 选槽保存 | 游戏内 ESC "保存进度..." |
+
+### 卡片显示
+3 张并排卡片，每张：
+- 大职业图标（⚔️🏹🔮）
+- 职业名 + 性别（♂/♀）
+- 等级 + 关卡 + 分数
+- 时间（`toLocaleString`）
+- 当前活跃槽位金边 `(当前)`
+- 删除按钮 + 二次确认
+
+空槽显示"空 槽 位"，点击根据 mode：
+- load → 触发 `onEmpty(slotId)` 回主菜单进入新游戏（pendingNewGameSlot 标记）
+- save → 直接保存到该槽
+
+### 关闭
+ESC 键或底部"返回"按钮。
+
+## MainGameScene
 
 ### 主要功能
 | 功能 | 方法 |
 |------|------|
-| 关卡加载 | `loadLevel()` — 解析 levels.js 地图数据 |
-| 玩家生成 | `createPlayer()` — 初始化 Player + 所有系统 |
-| 敌人生成 | `spawnEnemies()` — 按关卡配置生成 |
-| 碰撞设置 | `setupCollisions()` — 注册所有 collider/overlap |
-| 伤害处理 | `handleEnemyContact/AttackHit/SkillHit()` |
-| 掉落处理 | `dropLoot()` — 敌人死亡时调用 LootEngine |
-| 道具拾取 | `handleItemPickup()` — 添加到背包 |
-| NPC 交互 | `handleNPCProximity()` — 触发对话 |
-| 关卡切换 | `switchLevel()` — 传送门/胜利区域 |
-| 存档恢复 | 在 create() 中恢复存档数据 |
+| 加载前读 save 元数据 | `create` 开头检查 `pendingLoadSlot` → 设 `classType/gender/currentLevel` |
+| 关卡加载 | `loadLevel(idx)` → LevelBuilder mixin |
+| 玩家创建 | `createPlayer(level)` |
+| 敌人/NPC/道具/木桶/传送门生成 | `LevelBuilder` 系列方法 |
+| 碰撞设置 | `setupCollisions` 注册各种 overlap/collider |
+| 战斗事件路由 | `setupEvents` 监听各类游戏事件 |
+| 敌人技能 hitbox/弹道 注册 | 监听 `enemyHitboxSpawned/enemyProjectileSpawned` 动态注册 overlap |
+| 自动存档 | 30 秒一次 + 槽位变化时立即保存 |
+| ESC 菜单 | `_showExitConfirm` 弹出 3 选项 |
 
 ### 系统实例
-MainGameScene 持有所有系统实例：
 ```js
-this.inventory      = new InventorySystem()
-this.levelSystem    = new LevelSystem()
+this.inventory       = new InventorySystem()
+this.uiManager       = new UIManager()
+this.floatingText    = new FloatingTextManager()
+this.levelSystem     = new LevelSystem()
 this.equipmentSystem = new EquipmentSystem()
 this.skillTreeSystem = new SkillTreeSystem()
-this.questSystem    = new QuestSystem()
-this.uiManager      = new UIManager()
-this.warFog         = new WarFog()
+this.questSystem     = new QuestSystem()
 ```
 
-## UIScene (500+行)
+### Mixin
+- `Object.assign(prototype, LevelBuilder)`：关卡构建方法
+- `Object.assign(prototype, InteractionHandler)`：碰撞/交互/技能命中处理
 
-**职责**：HUD 显示层
+### ESC 菜单
+3 按钮：
+1. **保存进度...** → 启动 `SaveSelectScene` mode='save'
+2. **返回主菜单** → 自动保存 + 切到 MainMenu
+3. **继续游戏** → 关闭弹窗
 
-### HUD 元素（从上到下）
+## UIScene
+
+### HUD 元素
+
 | 元素 | 位置 | 内容 |
 |------|------|------|
-| HP 条 | 左上 | 红色血条 + 数值 |
-| 体力条 | HP 下方 | 黄色条 |
-| 怒气条 | 体力下方 | 红色条（满时脉冲） |
-| 经验条 | 底部 | 蓝色条 + 等级 |
-| 分数 | 右上 | 金币数 |
-| 任务追踪 | 右侧 | 当前任务 + 进度 |
-| 技能栏 | 底部中央 | 4 个技能槽位 |
+| HP 条 | 左上 | 红血条 + ghost 滞后效果 + 等级 |
+| 体力条 | HP 下方 | 黄条 |
+| 怒气条 | 体力下方 | 红条（满时脉冲） |
+| 经验条 | 怒气下方 | 紫条 |
+| 分数 | 顶部居中 | 金币数 |
+| 钥匙/金币 | 右上 | 数量 |
+| 关卡名 | 右上 | 当前关卡 |
+| 任务追踪 | 右下 | 当前追踪任务 + 进度（最多 2 条目标） |
+| 技能栏 | 底部居中 | 4 槽位（图标 + 冷却倒计时 + 等级 + 按键标签） |
+| Buff 栏 | 技能栏正上方 | 最多 8 个 buff 图标 + 倒计时（buff 绿框 / debuff 红框） |
 | 操作提示 | 底部 | 按键说明 |
 
-### 技能栏
-- 4 个 40×40 槽位，间距 6px
-- 冷却遮罩：灰色半透明 + 倒计时数字
-- 等级标签：右下角显示 Lv
-- 自动读取 `player.skillEngine` 状态
+### Tooltip 集成
+- 共享 `Tooltip` 实例（500ms hover）
+- 技能栏 4 槽位 + buff 栏 8 槽位都挂 tooltip
+- 内容动态读 `player.skillEngine.getScaledSkill(id)` 和 `player.statusEffects.getActiveSummary()`
+
+### 事件监听
+- `playerHpChanged` / `playerResourceChanged` → 更新 HP/体力/怒气
+- `xpChanged` / `levelUp` → 更新经验/等级
+- `scoreChanged/keysChanged/goldChanged/levelChanged`
+- `questActivated/Progress/Completed` → 任务追踪
+- `skillSlotsChanged` → `refreshSkillSlots`（不重建容器，仅更新图标）
 
 ### 自适应
-- `resize` 事件重新布局
-- 分数和任务追踪跟随画布宽度
+- `resize` 事件 → 重新排版（虽然画布固定，备用）
+- shutdown 时清理所有 `gameScene.events.off`
 
-## PanelScene (1600+行)
+## PanelScene
 
-**职责**：全屏面板 UI
-
-### 标签页
+### 4 标签页
 | 标签 | 内容 |
 |------|------|
-| 背包 | 32 格网格、道具图标、使用/丢弃 |
-| 装备 | 8 槽位、当前装备、属性对比 |
-| 角色 | 6 基础属性 + 14 派生属性、属性点分配 |
-| 天赋 | 技能卡片、升级按钮、数值预览 |
+| 角色 | 6 基础属性 + 14 派生属性 + 属性点分配 |
+| 背包 | 32 格、堆叠、操作菜单 |
+| 技能 | 2 列网格卡片、装备槽按钮、升级按钮、滚动 |
+| 任务 | 已激活/已完成任务列表 |
 
-### 交互
-- Tab 键开关
-- 打开时暂停游戏（`this.scene.pause('MainGameScene')`）
-- 标签页切换
-- 背包格子点击 → 弹出操作菜单
-- 装备点击 → 脱下回背包
-- 属性 +/- 按钮分配属性点
-- 技能升级按钮
+### 触发
+- Tab / I 键打开
+- ESC / 再按 Tab 关闭
+- 打开时 `pauseGame()`（physics.pause）
 
-## UIManager (204行)
+### Tooltip
+- `hoverTooltip = new Tooltip(this, { delay: 500 })`
+- 技能卡片 emoji 图标挂 tooltip 显示完整描述
 
-**职责**：对话窗口管理
+### 共享 toast
+- 监听 `gameScene.events.on('showMessage')` → `_showPanelToast`（顶部，depth 9999）
+- 装备等级/职业不符提示在打开背包时仍可见
 
+### Mixin
+4 个 panel 模块（CharacterPanel / InventoryPanel / SkillTreePanel / QuestLogPanel）通过 `Object.assign` 混入 PanelScene 原型。
+
+## Tooltip 工具类
+
+```js
+const tip = new Tooltip(scene, { delay: 500 });
+tip.attach(target, () => ({ title, body }));
+```
+
+- 共享一个 panel（bg + title + body 文字）
+- pointerover → 启动定时器 → 显示
+- pointerout / pointerdown → 取消
+- 自动屏幕边缘 clamp，避免溢出
+
+## UIManager
+
+对话窗口管理。
 - 打字机效果（逐字显示）
-- 多页对话支持
-- NPC 头像和名称显示
-- 点击/按键翻页
+- 多页对话 + 翻页
+- NPC 名字标签
+- depth 9990（**避开装饰物覆盖**）
+
+## 操作总览（HUD 提示）
+
+```
+WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板 | F:全屏
+```
+
+ESC：游戏内菜单（保存/退主菜单/继续）

@@ -11,6 +11,7 @@ import { SkillTreeSystem } from '../systems/SkillTreeSystem.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
 import { LootEngine } from '../systems/LootEngine.js';
 import { WarFog } from '../systems/WarFog.js';
+import { FloatingTextManager } from '../systems/FloatingTextManager.js';
 import { levelData } from '../data/levels.js';
 import itemData from '../data/items.json';
 import { LevelBuilder } from '../managers/LevelBuilder.js';
@@ -45,6 +46,7 @@ export class MainGameScene extends Phaser.Scene {
   create() {
     this.inventory = new InventorySystem(this);
     this.uiManager = new UIManager(this);
+    this.floatingText = new FloatingTextManager(this);
     this.levelSystem = new LevelSystem(this);
     this.registry.set('levelSystem', this.levelSystem);
     this.equipmentSystem = new EquipmentSystem(this);
@@ -53,6 +55,21 @@ export class MainGameScene extends Phaser.Scene {
     this.registry.set('skillTreeSystem', this.skillTreeSystem);
     this.questSystem = new QuestSystem(this);
     this.registry.set('questSystem', this.questSystem);
+
+    // 若有待加载存档：先读 meta 决定职业/性别/当前关卡，确保 createPlayer 用正确的职业
+    const pendingSlot = this.registry.get('pendingLoadSlot');
+    if (pendingSlot) {
+      const info = SaveSystem.getSaveInfo(pendingSlot);
+      if (info) {
+        this.registry.set('classType', info.classType);
+        this.registry.set('gender', info.gender);
+        const gs0 = this.registry.get('gameState') || {};
+        gs0.currentLevel = info.currentLevel ?? 0;
+        this.registry.set('gameState', gs0);
+        // 清空过时的 savedPlayerData，避免 createPlayer 用旧位置/HP
+        this.registry.remove('savedPlayerData');
+      }
+    }
 
     const gs = this.registry.get('gameState');
     this.currentLevel = gs.currentLevel || 0;
@@ -64,7 +81,9 @@ export class MainGameScene extends Phaser.Scene {
     // Panel toggle keys
     this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.iKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
+    this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.gamePaused = false;
+    this._exitConfirm = null;
 
     const openPanel = () => {
       if (this.scene.isActive('PanelScene') || this.gamePaused) return;
@@ -78,6 +97,24 @@ export class MainGameScene extends Phaser.Scene {
       openPanel();
     });
     this.iKey.on('down', () => openPanel());
+
+    // ESC：显示返回主菜单确认
+    this.escKey.on('down', () => {
+      if (this.scene.isActive('PanelScene')) return; // 面板自己处理
+      if (this.dialoguing) return;
+      if (this._exitConfirm) {
+        this._closeExitConfirm();
+      } else {
+        this._showExitConfirm();
+      }
+    });
+
+    // F：浏览器真全屏切换（需用户按键触发，浏览器才允许）
+    this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.fKey.on('down', () => {
+      if (this.scale.isFullscreen) this.scale.stopFullscreen();
+      else this.scale.startFullscreen();
+    });
 
     this.time.addEvent({
       delay: 30000,
@@ -222,6 +259,8 @@ export class MainGameScene extends Phaser.Scene {
     this.breakables.forEach(b => {
       this.physics.add.collider(this.player.sprite, b);
       this.physics.add.overlap(this.player.attackHitbox, b, () => this.handleBreakableHit(b), null, this);
+      // 技能 hitbox 也能破坏
+      this.physics.add.overlap(this.player.skillHitbox, b, () => this.handleBreakableHit(b, true), null, this);
     });
 
     this.triggerZones.forEach(zone => {
@@ -290,8 +329,40 @@ export class MainGameScene extends Phaser.Scene {
       }
     });
 
-    this.events.on('enemyAttack', (enemy, damage) => {
-      if (this.player) this.player.takeDamage(damage, enemy.sprite.x, enemy.sprite.y);
+    // 敌人技能 hitbox 生成 → 与 player 注册 overlap
+    this.events.off('enemyHitboxSpawned');
+    this.events.on('enemyHitboxSpawned', (hitbox, lifetime) => {
+      if (!hitbox || !this.player) return;
+      this.enemyHitboxes = this.enemyHitboxes || [];
+      this.enemyHitboxes.push(hitbox);
+      const overlap = this.physics.add.overlap(this.player.sprite, hitbox, () => {
+        const dmg = hitbox._enemySkillDamage || 0;
+        const owner = hitbox._enemyOwner;
+        if (this.player && dmg > 0 && !this.player.isInvulnerable) {
+          this.player.takeDamage(dmg, owner?.sprite?.x, owner?.sprite?.y);
+        }
+        hitbox.body.enable = false;
+      });
+      // 到期清理
+      this.time.delayedCall(lifetime || 200, () => {
+        if (overlap) this.physics.world.removeCollider(overlap);
+        const idx = this.enemyHitboxes?.indexOf(hitbox);
+        if (idx >= 0) this.enemyHitboxes.splice(idx, 1);
+        if (hitbox.active) hitbox.destroy();
+      });
+    });
+
+    // 敌人弹道生成 → 与 player 注册 overlap + 加入 update 列表
+    this.events.off('enemyProjectileSpawned');
+    this.enemyProjectiles = this.enemyProjectiles || [];
+    this.events.on('enemyProjectileSpawned', (proj) => {
+      if (!proj || !this.player) return;
+      this.enemyProjectiles.push(proj);
+      this.physics.add.overlap(this.player.sprite, proj.sprite, () => {
+        if (this.player && !this.player.isInvulnerable) {
+          proj.onHit(this.player);
+        }
+      });
     });
 
     this.events.on('enemyDeath', (enemy) => {
@@ -400,7 +471,42 @@ export class MainGameScene extends Phaser.Scene {
 
     this.events.on('playerDeath', () => this.handleGameOver());
     this.events.on('hitStop', (d) => this.startHitStop(d));
+
+    // 飘字伤害/治疗（先清旧监听避免场景重启重复）
+    this.events.off('actorDamaged');
+    this.events.off('actorHealed');
+    this.events.on('actorDamaged', (actor, dmg) => {
+      if (!actor || !actor.sprite || !this.floatingText) return;
+      const isPlayer = actor === this.player;
+      const x = actor.sprite.x;
+      const y = actor.sprite.y - actor.sprite.displayHeight / 2;
+      this.floatingText.spawn(x, y, Math.floor(dmg), {
+        color: isPlayer ? '#ff4444' : '#ffeb3b',
+        fontSize: isPlayer ? 13 : 12,
+        bold: isPlayer
+      });
+    });
+
+    this.events.on('actorHealed', (actor, amount) => {
+      if (!actor || !actor.sprite || !this.floatingText) return;
+      const x = actor.sprite.x;
+      const y = actor.sprite.y - actor.sprite.displayHeight / 2;
+      this.floatingText.spawn(x, y, Math.floor(amount), {
+        color: '#66ff66',
+        fontSize: 12,
+        prefix: '+'
+      });
+    });
     this.events.on('screenShake', (i, d) => this.startScreenShake(i, d));
+
+    // 装备/系统提示消息（来自 EquipmentSystem 等）
+    this.events.off('showMessage');
+    this.events.on('showMessage', (text, color) => this.showQuickMessage(text, color));
+
+    // 技能槽位变更：立即保存到 localStorage（避免刷新丢失）
+    this.events.on('skillSlotsChanged', () => {
+      SaveSystem.save(this);
+    });
 
     this.events.on('levelUp', (level, statPoints, skillPoints) => {
       // Apply level bonus to maxHp: Level*5
@@ -490,8 +596,19 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   tryLoadSave() {
-    if (SaveSystem.hasSave()) {
-      SaveSystem.load(this);
+    // 优先读取 SaveSelectScene 设置的待加载槽位
+    const pending = this.registry.get('pendingLoadSlot');
+    if (pending) {
+      this.registry.set('pendingLoadSlot', null);
+      if (SaveSystem.hasSave(pending)) {
+        SaveSystem.load(this, pending);
+      }
+      return;
+    }
+    // 否则按当前活跃槽（兜底：找第一个有数据的槽）
+    const active = this.registry.get('activeSaveSlot') || 1;
+    if (SaveSystem.hasSave(active)) {
+      SaveSystem.load(this, active);
     }
   }
 
@@ -591,6 +708,18 @@ export class MainGameScene extends Phaser.Scene {
       });
     }
 
+    // 敌人弹道每帧更新（视觉跟物理）
+    if (this.enemyProjectiles) {
+      for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+        const p = this.enemyProjectiles[i];
+        if (!p.alive) {
+          this.enemyProjectiles.splice(i, 1);
+          continue;
+        }
+        p.update();
+      }
+    }
+
     // Update chest label visibility based on distance
     this.chests.forEach(chest => {
       if (chest.opened) { chest.label.setVisible(false); return; }
@@ -616,6 +745,74 @@ export class MainGameScene extends Phaser.Scene {
       const gs = this.registry.get('gameState');
       gs.playerPosition = this.player.getPosition();
       this.registry.set('gameState', gs);
+    }
+  }
+
+  // ─── ESC 退出确认弹窗 ─────────────────────────────────────────
+
+  _showExitConfirm() {
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    const container = this.add.container(0, 0).setDepth(2000).setScrollFactor(0);
+
+    // 背景遮罩
+    const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.55)
+      .setScrollFactor(0).setInteractive();
+    container.add(overlay);
+
+    // 主面板
+    const pw = 360, ph = 220;
+    const panel = this.add.rectangle(w / 2, h / 2, pw, ph, 0x1a1a2e, 0.98)
+      .setScrollFactor(0).setStrokeStyle(2, 0x6666aa);
+    container.add(panel);
+
+    const title = this.add.text(w / 2, h / 2 - 80, '游戏菜单', {
+      fontSize: '18px', fill: '#ffdd66', fontFamily: 'Courier New', fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0);
+    container.add(title);
+
+    // 按钮工厂
+    const mkBtn = (y, label, color, onClick) => {
+      const bg = this.add.rectangle(w / 2, y, 240, 36, 0x2a2a3a)
+        .setScrollFactor(0).setStrokeStyle(1, color)
+        .setInteractive({ useHandCursor: true });
+      const txt = this.add.text(w / 2, y, label, {
+        fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+      }).setOrigin(0.5).setScrollFactor(0);
+      container.add([bg, txt]);
+      bg.on('pointerover', () => bg.setFillStyle(0x3a3a5a));
+      bg.on('pointerout', () => bg.setFillStyle(0x2a2a3a));
+      bg.on('pointerdown', onClick);
+    };
+
+    mkBtn(h / 2 - 35, '保存进度...', 0x44ff88, () => {
+      this._closeExitConfirm();
+      // 暂停游戏，打开存档选择
+      this.pauseGame();
+      this.scene.launch('SaveSelectScene', {
+        mode: 'save',
+        returnTo: 'MainGameScene'
+      });
+      this.scene.bringToTop('SaveSelectScene');
+    });
+
+    mkBtn(h / 2 + 5, '返回主菜单', 0x66aaff, () => {
+      try { SaveSystem.save(this); } catch (e) {}
+      this._closeExitConfirm();
+      this.scene.stop('UIScene');
+      this.scene.stop('PanelScene');
+      this.scene.start('MainMenuScene');
+    });
+
+    mkBtn(h / 2 + 45, '继续游戏', 0xaaaaaa, () => this._closeExitConfirm());
+
+    this._exitConfirm = container;
+  }
+
+  _closeExitConfirm() {
+    if (this._exitConfirm) {
+      this._exitConfirm.destroy();
+      this._exitConfirm = null;
     }
   }
 }

@@ -3,6 +3,7 @@ import { CharacterPanel } from '../ui/panels/CharacterPanel.js';
 import { InventoryPanel } from '../ui/panels/InventoryPanel.js';
 import { SkillTreePanel } from '../ui/panels/SkillTreePanel.js';
 import { QuestLogPanel } from '../ui/panels/QuestLogPanel.js';
+import { Tooltip } from '../ui/Tooltip.js';
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog'];
 const TAB_LABELS = ['角色', '背包', '技能', '日志'];
@@ -28,6 +29,8 @@ export class PanelScene extends Phaser.Scene {
     this.gameScene = this.scene.get('MainGameScene');
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
+    this._uiW = w;
+    this._uiH = h;
 
     // Shared constants
     this.RARITY_COLORS = RARITY_COLORS;
@@ -58,6 +61,9 @@ export class PanelScene extends Phaser.Scene {
     });
     this.tooltipContainer.add([this.tooltipBg, this.tooltipText]);
 
+    // 通用 hover tooltip（技能卡用）
+    this.hoverTooltip = new Tooltip(this, { delay: 500 });
+
     // Tab bar + content
     this.createTabBar();
     this.createCharacterTab();
@@ -86,10 +92,22 @@ export class PanelScene extends Phaser.Scene {
       key.on('down', () => this.switchTab(TABS[i]));
     });
 
+    // 监听 showMessage（来自 EquipmentSystem 等）→ 在 PanelScene 自己的层级显示 toast
+    this._onShowMessage = (text, color) => this._showPanelToast(text, color);
+    if (this.gameScene) this.gameScene.events.on('showMessage', this._onShowMessage);
+
     // Resize
     this.scale.on('resize', this.handleResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.handleResize, this);
+      if (this.gameScene && this._onShowMessage) {
+        this.gameScene.events.off('showMessage', this._onShowMessage);
+      }
+      // 解绑技能面板的滚轮监听
+      if (this._skillWheelHandler) {
+        this.input.off('wheel', this._skillWheelHandler);
+        this._skillWheelHandler = null;
+      }
     });
 
     this.playOpenAnimation();
@@ -179,6 +197,21 @@ export class PanelScene extends Phaser.Scene {
     });
   }
 
+  _showPanelToast(text, color) {
+    const w = this._uiW || this.cameras.main.width;
+    const msg = this.add.text(w / 2, 60, text, {
+      fontSize: '14px', color: color || '#ffaa44', fontFamily: 'Courier New',
+      fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+      backgroundColor: '#1a1a2e', padding: { x: 10, y: 6 }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);
+
+    this.tweens.add({
+      targets: msg, alpha: 0, y: msg.y - 20,
+      duration: 1200, delay: 700,
+      onComplete: () => msg.destroy()
+    });
+  }
+
   closePanel() {
     this.tweens.add({
       targets: this.overlay,
@@ -202,6 +235,8 @@ export class PanelScene extends Phaser.Scene {
   handleResize(gameSize) {
     const w = gameSize.width;
     const h = gameSize.height;
+    this._uiW = w;
+    this._uiH = h;
     this.overlay.setPosition(w / 2, h / 2);
     this.overlay.setSize(w, h);
   }

@@ -67,6 +67,21 @@ export class EquipmentSystem {
       return false;
     }
 
+    // 职业类型检查（武器：weaponType heavy=warrior / light=archer / magic=mage）
+    if (item.weaponType) {
+      const playerClass = this.scene.player?.classType;
+      const wt = item.weaponType;
+      const allowed =
+        (wt === 'heavy' && playerClass === 'warrior') ||
+        (wt === 'light' && playerClass === 'archer') ||
+        (wt === 'magic' && playerClass === 'mage');
+      if (!allowed) {
+        const classLabel = wt === 'heavy' ? '战士' : wt === 'light' ? '弓箭手' : '法师';
+        this.scene.events.emit('showMessage', `职业不符 (限 ${classLabel})`);
+        return false;
+      }
+    }
+
     // Remove from inventory first
     inv.removeItem(invSlotIndex);
 

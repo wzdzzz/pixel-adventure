@@ -81,9 +81,9 @@ export const MAGE_SKILLS = {
     phases: { startup: 30, active: 150, recovery: 100 },
     effect: {
       type: 'dash',
-      distance: 130,
-      speed: 600,
-      hitbox: { w: 28, h: 28 },
+      blink: true,
+      distance: 260,
+      hitbox: { w: 50, h: 50 },
       baseDamageMultiplier: 0.6,
       knockback: 20
     }
@@ -253,6 +253,8 @@ export const MAGE_SKILLS = {
       hitbox: { w: 70, h: 70 },
       baseDamageMultiplier: 3.2,
       knockback: 100,
+      dedicatedKnockback: true,
+      stagger: 800,
       cameraShake: { intensity: 10, duration: 200 },
       applyEffects: [
         { effectId: 'burn', chance: 0.80, duration: 5000 }
@@ -490,9 +492,17 @@ export function getSkillDescription(skillId, level) {
   if (eff.stun) desc = desc.replace('{stun}', (eff.stun / 1000).toFixed(1));
   if (eff.type === 'spin') desc = desc.replace('{dur}', (skill.phases.active / 1000).toFixed(1));
   if (eff.duration) desc = desc.replace('{dur}', (eff.duration / 1000).toFixed(1));
-  if (eff.modifiers) {
-    if (eff.modifiers.attack) desc = desc.replace('{atkBonus}', Math.round(eff.modifiers.attack * 100));
-    if (eff.modifiers.damageReduction) desc = desc.replace('{dr}', Math.round(eff.modifiers.damageReduction * 100));
+
+  const apply0 = Array.isArray(eff.applyEffects) && eff.applyEffects[0];
+  if (apply0 && apply0.duration) {
+    desc = desc.replace('{dur}', (apply0.duration / 1000).toFixed(1));
+  }
+  const mods = (eff.modifiers) || (apply0 && apply0.modifiers) || null;
+  if (mods) {
+    if (mods.attack) desc = desc.replace('{atkBonus}', Math.round(mods.attack * 100));
+    if (mods.damageReduction) desc = desc.replace('{dr}', Math.round(mods.damageReduction * 100));
+    if (mods.moveSpeed) desc = desc.replace('{spdBonus}', Math.round(mods.moveSpeed * 100));
+    if (mods.damageTaken) desc = desc.replace('{dmgAmp}', Math.round(mods.damageTaken * 100));
   }
 
   return desc;

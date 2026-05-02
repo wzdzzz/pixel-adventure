@@ -224,7 +224,8 @@ export const CharacterPanel = {
     const derived = player.stats.getDerived();
     this.charDerivedTexts.hp.setText(`${player.hp}/${player.maxHp}`);
     this.charDerivedTexts.stamina.setText(`${Math.floor(player.stamina)}/${player.maxStamina}`);
-    this.charDerivedTexts.attack.setText(`${derived.attack}`);
+    // 攻击力按职业主属性显示（与实战 player.getAttack 一致）
+    this.charDerivedTexts.attack.setText(`${Math.floor(player.getAttack ? player.getAttack() : derived.attack)}`);
     this.charDerivedTexts.spellPower.setText(`${derived.spellPower}`);
     this.charDerivedTexts.critRate.setText(`${derived.critRate.toFixed(1)}%`);
     this.charDerivedTexts.tenacity.setText(`${derived.tenacity.toFixed(1)}`);

@@ -17,6 +17,7 @@ export const CLASS_CONFIG = {
     resource: 'rage',
     texturePrefix: 'hero',
     attackType: 'melee',
+    primaryAttackStat: 'str',
     // 每级额外属性加成（在 Stats.levelUp +1 all 之上）
     levelUpBonus: { con: 1, str: 1, int: 0, agi: 0, per: 0, lck: 0 }
   },
@@ -29,6 +30,7 @@ export const CLASS_CONFIG = {
     resource: 'stamina',
     texturePrefix: 'hero',  // TODO: archer sprites
     attackType: 'ranged',
+    primaryAttackStat: 'agi',
     levelUpBonus: { con: 0, str: 0, int: 0, agi: 1, per: 1, lck: 0 }
   },
 
@@ -40,6 +42,7 @@ export const CLASS_CONFIG = {
     resource: 'mana',
     texturePrefix: 'hero',  // TODO: mage sprites
     attackType: 'magic',
+    primaryAttackStat: 'int',
     levelUpBonus: { con: 0, str: 0, int: 2, agi: 0, per: 0, lck: 0 }
   }
 };

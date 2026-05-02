@@ -4,6 +4,7 @@ import { EnemyState } from '../entities/Enemy.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { levelData } from '../data/levels.js';
 import itemData from '../data/items.json';
+import { getEffectTemplate } from '../data/statusEffects.js';
 
 export const InteractionHandler = {
   handleChestProximity(chest) {
@@ -79,7 +80,19 @@ export const InteractionHandler = {
       }
     });
 
-    this.showQuickMessage(`获得 ${chest.reward.score} 分！${chest.reward.healAmount > 0 ? ` 恢复 ${chest.reward.healAmount} HP！` : ''}`);
+    // 飘字显示奖励，在箱子上方而非屏幕中央
+    if (this.floatingText) {
+      const cx = chest.sprite.x;
+      const cy = chest.sprite.y - 16;
+      this.floatingText.spawn(cx, cy, `+${chest.reward.score} 分`, {
+        color: '#ffdd44', fontSize: 14, bold: true
+      });
+      if (chest.reward.healAmount > 0) {
+        this.floatingText.spawn(cx, cy - 16, `+${chest.reward.healAmount} HP`, {
+          color: '#66ff66', fontSize: 12, prefix: ''
+        });
+      }
+    }
   },
 
   handlePortalProximity() {
@@ -178,9 +191,7 @@ export const InteractionHandler = {
   },
 
   handleEnemyContact(enemy) {
-    if (this.player.isInvulnerable || this.player.state === PlayerState.DEAD) return;
-    if (enemy.state === EnemyState.DEAD) return;
-    this.player.takeDamage(enemy.getAttack(), enemy.sprite.x, enemy.sprite.y);
+    // 接触不再造成伤害（敌人改用技能造伤），仅保留物理碰撞推开
   },
 
   handleAttackHit(enemy) {
@@ -215,7 +226,9 @@ export const InteractionHandler = {
         damageMultiplier *= skill.effect.executeMultiplier;
       }
 
-      const damage = Math.floor(this.player.getAttack() * damageMultiplier);
+      // 蓄力技能：按蓄力比例缩放伤害
+      const chargeRatio = (skill.effect.chargeable && this.player._chargeRatio) ? this.player._chargeRatio : 1.0;
+      const damage = Math.floor(this.player.getAttack() * damageMultiplier * chargeRatio);
 
       // Apply lifesteal from status effects
       const mods = this.player.statusEffects.getModifiers();
@@ -223,24 +236,13 @@ export const InteractionHandler = {
         this.player.heal(Math.floor(damage * mods.lifesteal));
       }
 
-      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
+      // 仅技能 effect.stagger > 0 时造成僵直（普攻无僵直）
+      const skillStagger = skill.effect.stagger || 0;
+      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y, skillStagger);
 
       // Apply status effects from skill (bleed, armorBreak, slow, etc.)
       if (skill.effect.applyEffects) {
-        for (const effectDef of skill.effect.applyEffects) {
-          if (Math.random() < effectDef.chance) {
-            const config = {
-              id: effectDef.effectId,
-              type: 'debuff',
-              duration: effectDef.duration,
-              maxStacks: effectDef.maxStacks || 1,
-              refreshable: true,
-              source: this.player
-            };
-            if (effectDef.modifiers) config.modifiers = effectDef.modifiers;
-            enemy.statusEffects.apply(effectDef.effectId, config);
-          }
-        }
+        this.applySkillEffects(enemy, skill.effect.applyEffects);
       }
 
       // Stun
@@ -255,8 +257,8 @@ export const InteractionHandler = {
         });
       }
 
-      // Knockback
-      if (skill.effect.knockback) {
+      // 击退仅在技能显式声明 dedicatedKnockback 时生效（避免每次攻击都击退）
+      if (skill.effect.dedicatedKnockback && skill.effect.knockback) {
         enemy.applyKnockback(this.player.sprite.x, this.player.sprite.y, skill.effect.knockback);
       }
 
@@ -280,7 +282,8 @@ export const InteractionHandler = {
 
       const originalIFrames = enemy.iFramesDuration;
       enemy.iFramesDuration = 180;
-      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y);
+      // spin 类多段连击不打僵直，避免持续锁死
+      enemy.takeDamage(damage, this.player.sprite.x, this.player.sprite.y, 0);
       enemy.iFramesDuration = originalIFrames;
 
       this.events.emit('screenShake', 2, 50);
@@ -289,10 +292,55 @@ export const InteractionHandler = {
     // buff/taunt: no hitbox, shouldn't reach here
   },
 
-  handleBreakableHit(b) {
-    if (!this.player.attackHitbox.body.enable || b.isBroken || this.player.attackHitRegistered) return;
+  /**
+   * 把技能的 applyEffects 数组转化为 StatusEffectSystem 的 apply 调用。
+   * 自动从 STATUS_EFFECTS 模板拼出 type/tickInterval/maxStacks，
+   * 对 DoT 类型自动绑 onTick 通过 source.getAttack() × damagePerTick × stacks 造成伤害。
+   */
+  applySkillEffects(target, applyEffects) {
+    const source = this.player;
+    for (const effectDef of applyEffects) {
+      if (Math.random() >= (effectDef.chance ?? 1.0)) continue;
+
+      const tpl = getEffectTemplate(effectDef.effectId) || {};
+      const config = {
+        id: effectDef.effectId,
+        type: tpl.type || 'debuff',
+        duration: effectDef.duration ?? tpl.duration ?? 3000,
+        tickInterval: tpl.tickInterval || 0,
+        maxStacks: effectDef.maxStacks ?? tpl.maxStacks ?? 1,
+        refreshable: tpl.refreshable !== false,
+        modifiers: effectDef.modifiers || tpl.modifiers || null,
+        source,
+        icon: tpl.icon || '✨',
+        name: tpl.name || effectDef.effectId
+      };
+
+      // DoT：拼出 onTick 回调（按施加者攻击力 × 每跳系数 × 层数）
+      if (tpl.type === 'dot' && tpl.damagePerTick) {
+        const dpt = tpl.damagePerTick;
+        config.onTick = (actor, stacks) => {
+          if (!source) return;
+          const dmg = source.getAttack() * dpt * stacks;
+          actor.takeTickDamage(dmg);
+        };
+      }
+
+      target.statusEffects.apply(effectDef.effectId, config);
+    }
+  },
+
+  handleBreakableHit(b, fromSkill = false) {
+    if (b.isBroken) return;
+    if (!fromSkill) {
+      // 普攻：受 attackHitRegistered 单次保护
+      if (!this.player.attackHitbox.body.enable || this.player.attackHitRegistered) return;
+      this.player.onAttackHit();
+    } else {
+      // 技能：仅检查 hitbox 启用；不限制单次命中（让多帧 overlap 累计破坏 hp>1 的木桶）
+      if (!this.player.skillHitbox.body.enable) return;
+    }
     b.hp--;
-    this.player.onAttackHit();
     this.screenShakeIntensity = 3;
     this.screenShakeTimer = 60;
     this.tweens.add({

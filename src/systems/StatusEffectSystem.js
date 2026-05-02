@@ -64,7 +64,11 @@ export class StatusEffectSystem {
       onApply: config.onApply || null,
       onTick: config.onTick || null,
       onExpire: config.onExpire || null,
-      source: config.source || null
+      source: config.source || null,
+      // UI 显示用
+      icon: config.icon || '✨',
+      name: config.name || effectId,
+      description: config.description || ''
     };
 
     this.active.push(effect);
@@ -159,7 +163,10 @@ export class StatusEffectSystem {
       type: e.type,
       stacks: e.stacks,
       remaining: e.remaining,
-      duration: e.duration
+      duration: e.duration,
+      icon: e.icon,
+      name: e.name,
+      description: e.description
     }));
   }
 

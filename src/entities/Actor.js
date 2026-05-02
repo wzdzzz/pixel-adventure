@@ -94,14 +94,18 @@ export class Actor {
     if (this.mana > this.maxMana) this.mana = this.maxMana;
   }
 
-  /** 获取攻击力 */
+  /** 获取攻击力（已应用 buff 乘数） */
   getAttack() {
-    return this.stats.getDerived().attack;
+    const base = this.stats.getDerived().attack;
+    const mod = this.statusEffects?.getModifiers().attack ?? 1;
+    return base * mod;
   }
 
-  /** 获取移动速度 */
+  /** 获取移动速度（已应用 buff 乘数） */
   getMoveSpeed() {
-    return this.stats.getDerived().moveSpeed;
+    const base = this.stats.getDerived().moveSpeed;
+    const mod = this.statusEffects?.getModifiers().moveSpeed ?? 1;
+    return base * mod;
   }
 
   /** Max stamina based on CON */
@@ -168,9 +172,14 @@ export class Actor {
   takeDamage(damage, attackerX, attackerY) {
     if (this.isInvulnerable || this.hp <= 0) return;
 
-    // 防御减伤
-    const defense = this.stats.getDerived().defense;
-    const finalDamage = Math.max(1, damage - defense);
+    // 防御减伤（应用 buff 乘数）
+    const mods = this.statusEffects?.getModifiers() || {};
+    const baseDef = this.stats.getDerived().defense;
+    const defMod = mods.defense ?? 1;
+    const defense = baseDef * defMod;
+    // 受伤增幅（猎人印记/奥术虚弱等附加 debuff）
+    const dtMod = mods.damageTaken ?? 1;
+    const finalDamage = Math.max(1, Math.floor((damage - defense) * dtMod));
 
     this.hp = Math.max(0, this.hp - finalDamage);
 
@@ -178,14 +187,17 @@ export class Actor {
     this.isInvulnerable = true;
     this.iFramesTimer = this.iFramesDuration;
 
-    // 击退
-    this.applyKnockback(attackerX, attackerY);
+    // 击退已禁用（玩家和敌人都不再受击退）
+    // this.applyKnockback(attackerX, attackerY);
 
     // 受伤闪烁
     this.flashDamage();
 
     // 通知 HP 变更
     this.onHpChanged();
+
+    // 飘字事件（让 MainGameScene 监听并显示伤害数字）
+    this.scene.events.emit('actorDamaged', this, finalDamage);
 
     if (this.hp <= 0) {
       // 延迟到闪烁结束再死亡
@@ -226,20 +238,40 @@ export class Actor {
     this.scene.time.delayedCall(420, () => this.sprite.clearTint());
   }
 
+  /**
+   * Tick 伤害（DoT 专用）— 绕过 I-Frames/防御/击退/闪烁，
+   * 直接扣血、飘字、必要时进入死亡。
+   */
+  takeTickDamage(amount) {
+    if (this.hp <= 0) return;
+    const dmg = Math.max(1, Math.floor(amount));
+    this.hp = Math.max(0, this.hp - dmg);
+    this.onHpChanged();
+    this.scene.events.emit('actorDamaged', this, dmg);
+    if (this.hp <= 0) {
+      this.scene.time.delayedCall(50, () => this.die());
+    }
+  }
+
   /** 治疗 */
   heal(amount) {
     if (this.hp <= 0) return;
+    const before = this.hp;
     this.hp = Math.min(this.maxHp, this.hp + amount);
+    const realHeal = this.hp - before;
     this.onHpChanged();
+    if (realHeal > 0) {
+      this.scene.events.emit('actorHealed', this, realHeal);
+    }
   }
 
   /** HP/Stamina/Rage 回复 (每帧调用) */
   updateRegen(delta) {
     if (this.hp <= 0) return;
 
-    // HP regen
+    // HP regen — 战斗中不回血（仅 Enemy 在 inCombat=true 时禁用）
     const hpRegen = this.stats.getDerived().hpRegen;
-    if (hpRegen > 0) {
+    if (hpRegen > 0 && !this.inCombat) {
       this.regenTimer += delta;
       if (this.regenTimer >= 1000) {
         this.regenTimer -= 1000;

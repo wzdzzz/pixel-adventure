@@ -76,20 +76,9 @@ export class MainMenuScene extends Phaser.Scene {
     let btnY = cy - 20;
     const btnGap = 52;
 
-    // Continue (only if save exists)
-    const hasSave = SaveSystem.hasSave();
-    if (hasSave) {
-      const info = SaveSystem.getSaveInfo();
-      this.addMenuButton(cx, btnY, '继续游戏', '#44ff88', () => this.continueGame());
-      // Save info preview
-      if (info) {
-        const infoText = this.add.text(cx, btnY + 22, `存档: ${info.timestamp}  分数: ${info.score}`, {
-          fontSize: '10px', fill: '#556655', fontFamily: 'Courier New'
-        }).setOrigin(0.5);
-        this.menuContainer.add(infoText);
-      }
-      btnY += btnGap;
-    }
+    // 加载存档（始终显示，进入 SaveSelectScene）
+    this.addMenuButton(cx, btnY, '加载存档', '#44ff88', () => this.openSaveSelect());
+    btnY += btnGap;
 
     // New Game
     this.addMenuButton(cx, btnY, '新建游戏', '#66aaff', () => this.showSelectPhase());
@@ -131,10 +120,19 @@ export class MainMenuScene extends Phaser.Scene {
     return { bg, txt };
   }
 
-  continueGame() {
-    // Load save data into registry, then start game
-    SaveSystem.load(this);
-    this.startGame();
+  openSaveSelect() {
+    // 打开存档选择场景；空槽位点击 → 回主菜单进入新游戏选择
+    this.scene.launch('SaveSelectScene', {
+      mode: 'load',
+      returnTo: 'MainMenuScene',
+      onEmpty: (slotId) => {
+        // 用户选择空槽位 → 关闭选择场景，标记待新游戏写入此槽
+        this.scene.stop('SaveSelectScene');
+        this.registry.set('pendingNewGameSlot', slotId);
+        this.showSelectPhase();
+      }
+    });
+    this.scene.bringToTop('SaveSelectScene');
   }
 
   exitGame() {
@@ -346,8 +344,13 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   confirmSelection() {
-    // Delete old save for new game
-    SaveSystem.deleteSave();
+    // 决定写入槽位：优先来自 SaveSelectScene 的 pendingNewGameSlot；否则槽 1
+    const targetSlot = this.registry.get('pendingNewGameSlot') || 1;
+    this.registry.remove('pendingNewGameSlot');
+
+    // Delete old save in target slot for fresh start
+    SaveSystem.deleteSave(targetSlot);
+    SaveSystem.setActiveSlot(this, targetSlot);
 
     // Store choice in registry for LevelBuilder to read
     this.registry.set('classType', this.selectedClass);
@@ -360,6 +363,7 @@ export class MainMenuScene extends Phaser.Scene {
       playerPosition: { x: 150, y: 150 }, collectedItems: []
     });
     this.registry.remove('savedPlayerData');
+    this.registry.set('pendingLoadSlot', null);  // 新游戏，不加载
 
     this.startGame();
   }

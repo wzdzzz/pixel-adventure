@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 
 export const GAME_CONFIG = {
-  WIDTH: 800,
-  HEIGHT: 600,
+  WIDTH: 1920,
+  HEIGHT: 1080,
 
   MAP: {
     TILE_SIZE: 32,
@@ -38,11 +38,10 @@ export const GAME_CONFIG = {
 export function createPhaserConfig(scenes) {
   return {
     type: Phaser.AUTO,
-    width: GAME_CONFIG.WIDTH,
-    height: GAME_CONFIG.HEIGHT,
     parent: 'game-container',
     pixelArt: true,
     roundPixels: true,
+    backgroundColor: '#0e0e1a',
     physics: {
       default: 'arcade',
       arcade: {
@@ -52,7 +51,10 @@ export function createPhaserConfig(scenes) {
     },
     scene: scenes,
     scale: {
-      mode: Phaser.Scale.RESIZE,
+      // 固定 1280×720 不缩放；窗口比画布大时居中显示，周围留黑
+      mode: Phaser.Scale.NONE,
+      width: GAME_CONFIG.WIDTH,
+      height: GAME_CONFIG.HEIGHT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     }
   };

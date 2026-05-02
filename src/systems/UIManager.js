@@ -13,7 +13,7 @@ export class UIManager {
     const x = config.x || 400;
     const y = config.y || 480;
 
-    const container = this.scene.add.container(x, y).setDepth(100).setScrollFactor(0);
+    const container = this.scene.add.container(x, y).setDepth(9990).setScrollFactor(0);
 
     const bg = this.scene.add.rectangle(0, 0, width, height, 0x000000, 0.92);
     bg.setStrokeStyle(2, 0x00ff00);
