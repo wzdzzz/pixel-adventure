@@ -13,6 +13,8 @@ const STAT_DEF = {
   yellow: { stat: 'critRate',   isFlat: true, baseValue: 1.5 }
 };
 
+const STAT_LABEL = { attack: '攻击', spellPower: '法术强度', maxHp: '生命值', critRate: '暴击率' };
+
 export const GEMS = {};
 for (const color of COLORS) {
   const def = STAT_DEF[color];
@@ -39,6 +41,9 @@ export function makeGemInstance(gemId, level = 1) {
   const def = GEMS[gemId];
   if (!def) return null;
   const value = getGemValue(gemId, level);
+  const valueText = def.stat === 'critRate'
+    ? `${value.toFixed(1)}%`
+    : (def.isFlat ? value : `${(value * 100).toFixed(1)}%`);
   return {
     id: gemId,
     type: 'gem',
@@ -52,7 +57,7 @@ export function makeGemInstance(gemId, level = 1) {
     rarity: level >= 7 ? 'epic' : level >= 4 ? 'rare' : level >= 2 ? 'uncommon' : 'common',
     stackable: true,
     maxStack: 99,
-    description: `镶嵌到装备孔位 +${def.isFlat ? value : (value * 100).toFixed(1) + '%'} ${def.stat}`,
+    description: `镶嵌到装备孔位 +${valueText} ${STAT_LABEL[def.stat] || def.stat}`,
     sellPrice: level * level * 5
   };
 }
