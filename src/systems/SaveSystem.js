@@ -152,6 +152,33 @@ export class SaveSystem {
         scene.equipmentSystem._applyBonuses();
       }
 
+      // 兼容老存档：装备 instance 字段补全（Task 4 之前的存档没有 instanceId/affixes/enhanceLevel）
+      if (scene.equipmentSystem && scene.equipmentSystem.slots) {
+        const slots = scene.equipmentSystem.slots;
+        for (const k of Object.keys(slots)) {
+          const it = slots[k];
+          if (!it) continue;
+          if (!it.instanceId) it.instanceId = `eq_legacy_${k}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
+          if (!Array.isArray(it.affixes)) it.affixes = [];
+          if (typeof it.enhanceLevel !== 'number') it.enhanceLevel = 0;
+        }
+        // 重算装备贡献以反映补全字段（虽然空 affixes/0 enhance 不改变结果，但保险）
+        if (typeof scene.equipmentSystem._applyBonuses === 'function') {
+          scene.equipmentSystem._applyBonuses();
+        }
+      }
+
+      if (scene.inventory && Array.isArray(scene.inventory.slots)) {
+        for (const it of scene.inventory.slots) {
+          if (!it || it.type !== 'equipment') continue;
+          if (!it.instanceId) {
+            it.instanceId = `eq_legacy_inv_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`;
+          }
+          if (!Array.isArray(it.affixes)) it.affixes = [];
+          if (typeof it.enhanceLevel !== 'number') it.enhanceLevel = 0;
+        }
+      }
+
       if (scene.skillTreeSystem && saveData.skillTree) {
         scene.skillTreeSystem.fromJSON(saveData.skillTree);
       }
