@@ -103,7 +103,8 @@
       },
       "statBonuses": {
         "str": 1
-      }
+      },
+      "affixPools": ["weapon_common", "warrior"]
     },
     "rusty_dagger": {
       "id": "rusty_dagger",
@@ -124,7 +125,8 @@
       },
       "statBonuses": {
         "agi": 1
-      }
+      },
+      "affixPools": ["weapon_common", "archer"]
     },
     "apprentice_staff": {
       "id": "apprentice_staff",
@@ -145,7 +147,8 @@
       },
       "statBonuses": {
         "int": 1
-      }
+      },
+      "affixPools": ["weapon_common", "mage"]
     },
     "wooden_shield": {
       "id": "wooden_shield",
@@ -164,7 +167,8 @@
       },
       "statBonuses": {
         "con": 1
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "leather_cap": {
       "id": "leather_cap",
@@ -183,7 +187,8 @@
       },
       "statBonuses": {
         "per": 1
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "cloth_robe": {
       "id": "cloth_robe",
@@ -203,7 +208,8 @@
       },
       "statBonuses": {
         "con": 1
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "worn_boots": {
       "id": "worn_boots",
@@ -222,7 +228,8 @@
       },
       "statBonuses": {
         "agi": 1
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "copper_ring": {
       "id": "copper_ring",
@@ -239,7 +246,8 @@
       "baseStats": {
         "critRate": 0.5
       },
-      "statBonuses": {}
+      "statBonuses": {},
+      "affixPools": ["accessory"]
     },
     "bone_necklace": {
       "id": "bone_necklace",
@@ -260,7 +268,8 @@
       "statBonuses": {
         "str": 1,
         "con": 1
-      }
+      },
+      "affixPools": ["accessory"]
     },
     "steel_blade": {
       "id": "steel_blade",
@@ -280,7 +289,8 @@
       },
       "statBonuses": {
         "str": 2
-      }
+      },
+      "affixPools": ["weapon_common", "warrior"]
     },
     "chain_mail": {
       "id": "chain_mail",
@@ -300,7 +310,8 @@
       },
       "statBonuses": {
         "con": 2
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "iron_helm": {
       "id": "iron_helm",
@@ -320,7 +331,8 @@
       "statBonuses": {
         "con": 1,
         "per": 1
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "shadow_dagger": {
       "id": "shadow_dagger",
@@ -343,7 +355,8 @@
       "statBonuses": {
         "agi": 3,
         "per": 1
-      }
+      },
+      "affixPools": ["weapon_common", "archer"]
     },
     "flame_staff": {
       "id": "flame_staff",
@@ -364,7 +377,8 @@
       },
       "statBonuses": {
         "int": 3
-      }
+      },
+      "affixPools": ["weapon_common", "mage"]
     },
     "guardian_plate": {
       "id": "guardian_plate",
@@ -385,7 +399,8 @@
       "statBonuses": {
         "con": 3,
         "str": 1
-      }
+      },
+      "affixPools": ["armor_common", "warrior"]
     },
     "swift_boots": {
       "id": "swift_boots",
@@ -405,7 +420,8 @@
       },
       "statBonuses": {
         "agi": 3
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "skull_king_crown": {
       "id": "skull_king_crown",
@@ -428,7 +444,8 @@
         "str": 2,
         "con": 2,
         "per": 2
-      }
+      },
+      "affixPools": ["armor_common"]
     },
     "lava_blade": {
       "id": "lava_blade",
@@ -450,7 +467,47 @@
       "statBonuses": {
         "str": 4,
         "agi": 2
-      }
+      },
+      "affixPools": ["weapon_common", "warrior"]
+    },
+    "iron_shard": {
+      "id": "iron_shard",
+      "name": "铁矿碎片",
+      "type": "material",
+      "texture": "potion",
+      "rarity": "common",
+      "stackable": true,
+      "maxStack": 999,
+      "level": 1,
+      "sellPrice": 2,
+      "value": 0,
+      "description": "低级强化材料"
+    },
+    "enhance_stone": {
+      "id": "enhance_stone",
+      "name": "强化石",
+      "type": "material",
+      "texture": "potion",
+      "rarity": "uncommon",
+      "stackable": true,
+      "maxStack": 999,
+      "level": 1,
+      "sellPrice": 20,
+      "value": 0,
+      "description": "中级强化材料"
+    },
+    "ancient_core": {
+      "id": "ancient_core",
+      "name": "远古核心",
+      "type": "material",
+      "texture": "potion",
+      "rarity": "rare",
+      "stackable": true,
+      "maxStack": 999,
+      "level": 1,
+      "sellPrice": 100,
+      "value": 0,
+      "description": "高级强化材料"
     }
   },
   "enemies": {
