@@ -95,10 +95,17 @@ export class EnhanceSystem {
 
     inv.removeItem(slotIndex);
 
+    const failedDrops = [];
     drops.forEach(d => {
       const matTpl = itemData.items[d.matId];
-      if (matTpl) inv.addItem(matTpl, d.count);
+      if (!matTpl) return;
+      const ok = inv.addItem(matTpl, d.count);
+      if (!ok) failedDrops.push(d);
     });
+
+    if (failedDrops.length > 0) {
+      this.scene.events.emit('showMessage', '背包已满，部分材料丢失', '#ff6666');
+    }
 
     const summary = drops.map(d => `${MATERIALS[d.matId]?.name || d.matId} ×${d.count}`).join(', ');
     this.scene.events.emit('showMessage', `分解：${summary}`, '#aaccff');
