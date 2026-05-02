@@ -512,6 +512,8 @@ export class MainGameScene extends Phaser.Scene {
       // Apply level bonus to maxHp: Level*5
       if (this.player) {
         this.player.stats.setFlatBonus('maxHp', (level - 1) * 5);
+        // 重算装备加成（让装备 maxHp 重新合并到 flatBonuses，避免被上一行覆盖）
+        if (this.equipmentSystem) this.equipmentSystem._applyBonuses();
         this.player.stats.invalidate();
         this.player.refreshStats();
 
