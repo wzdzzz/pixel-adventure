@@ -7,6 +7,7 @@
 
 import { AFFIXES } from '../data/affixes.js';
 import { RARITY_MULTIPLIERS } from '../data/lootTables.js';
+import { GEMS } from '../data/gems.js';
 
 export const EQUIP_SLOTS = ['helmet', 'armor', 'weapon', 'offhand', 'necklace', 'ring1', 'ring2', 'boots'];
 
@@ -173,6 +174,8 @@ export class EquipmentSystem {
           const def = AFFIXES[a.id];
           if (!def) continue;
           const stat = def.stat;
+          // _trigger 词条是触发型（如吸血、反伤），不进任何属性通道
+          if (stat === '_trigger') continue;
           // _base_xxx 是基础属性词条
           if (stat.startsWith('_base_')) {
             const baseStat = stat.replace('_base_', '');
@@ -183,6 +186,21 @@ export class EquipmentSystem {
             flatBonuses[stat] = (flatBonuses[stat] || 0) + a.value;
           } else {
             bonusPct[stat] = (bonusPct[stat] || 0) + a.value;
+          }
+        }
+      }
+
+      // 宝石贡献：sockets 已镶嵌的宝石按 stat 累加
+      if (Array.isArray(item.sockets)) {
+        for (const s of item.sockets) {
+          if (!s.gemId) continue;
+          const gemDef = GEMS[s.gemId];
+          if (!gemDef) continue;
+          const value = gemDef.baseValue * (s.gemLevel || 1);
+          if (gemDef.isFlat) {
+            flatBonuses[gemDef.stat] = (flatBonuses[gemDef.stat] || 0) + value;
+          } else {
+            bonusPct[gemDef.stat] = (bonusPct[gemDef.stat] || 0) + value;
           }
         }
       }
