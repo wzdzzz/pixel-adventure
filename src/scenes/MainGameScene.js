@@ -10,6 +10,7 @@ import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import { EnhanceSystem } from '../systems/EnhanceSystem.js';
 import { GemSystem } from '../systems/GemSystem.js';
 import { ReforgeSystem } from '../systems/ReforgeSystem.js';
+import { CraftingSystem } from '../systems/CraftingSystem.js';
 import { SkillTreeSystem } from '../systems/SkillTreeSystem.js';
 import { QuestSystem } from '../systems/QuestSystem.js';
 import { LootEngine } from '../systems/LootEngine.js';
@@ -57,6 +58,7 @@ export class MainGameScene extends Phaser.Scene {
     this.enhanceSystem = new EnhanceSystem(this);
     this.gemSystem = new GemSystem(this);
     this.reforgeSystem = new ReforgeSystem(this);
+    this.craftingSystem = new CraftingSystem(this);
     this.skillTreeSystem = new SkillTreeSystem(this);
     this.registry.set('skillTreeSystem', this.skillTreeSystem);
     this.questSystem = new QuestSystem(this);
