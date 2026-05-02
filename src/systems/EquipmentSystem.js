@@ -5,7 +5,8 @@
  * 具体装备数据、掉落表、装备效果后续单独提供
  */
 
-import { LootEngine } from './LootEngine.js';
+import { AFFIXES } from '../data/affixes.js';
+import { RARITY_MULTIPLIERS } from '../data/lootTables.js';
 
 export const EQUIP_SLOTS = ['helmet', 'armor', 'weapon', 'offhand', 'necklace', 'ring1', 'ring2', 'boots'];
 
@@ -131,48 +132,85 @@ export class EquipmentSystem {
   }
 
   /**
-   * Sum all equipped items' stat contributions using LootEngine.getScaledStats().
+   * 汇总所有装备槽的属性贡献。
+   *
+   * 输出三类：
+   *  - bonuses     ：基础属性加成（con/str/int 等，来自模板 statBonuses + 词条 _base_xxx）
+   *  - flatBonuses ：派生属性的固定加成（attack/defense 等的固定值；含装备 baseStats 缩放后的值 + 词条 isFlat:true）
+   *  - bonusPct    ：派生属性的百分比加成（attack 等的 +X%；来自词条 isFlat:false）
+   *
+   * 装备 baseStats 缩放公式：rarityMult × (1 + 0.1×level) × (1 + 0.05×enhanceLevel)
    */
   getStatBonuses() {
     const bonuses = { con: 0, str: 0, int: 0, agi: 0, per: 0, lck: 0 };
     const flatBonuses = {};
+    const bonusPct = {};
 
     EQUIP_SLOTS.forEach(slotName => {
       const item = this.slots[slotName];
       if (!item) return;
 
-      const scaled = LootEngine.getScaledStats(item);
+      // 1) baseStats 按 rarity × (1+0.1×level) × (1+0.05×enhanceLevel) 缩放
+      const rarityMult = RARITY_MULTIPLIERS[item.rarity] || 1.0;
+      const lvlMult = 1 + 0.1 * (item.level || 1);
+      const enhMult = 1 + 0.05 * (item.enhanceLevel || 0);
+      const totalMult = rarityMult * lvlMult * enhMult;
 
-      // Sum base stat bonuses (con, str, etc.)
-      for (const [stat, val] of Object.entries(scaled.statBonuses)) {
-        if (bonuses[stat] !== undefined) bonuses[stat] += val;
+      if (item.baseStats) {
+        for (const [stat, val] of Object.entries(item.baseStats)) {
+          flatBonuses[stat] = (flatBonuses[stat] || 0) + val * totalMult;
+        }
+      }
+      if (item.statBonuses) {
+        for (const [stat, val] of Object.entries(item.statBonuses)) {
+          if (bonuses[stat] !== undefined) bonuses[stat] += val;
+        }
       }
 
-      // Sum flat derived stat bonuses (attack, defense, maxHp, etc.)
-      for (const [stat, val] of Object.entries(scaled.flatBonuses)) {
-        flatBonuses[stat] = (flatBonuses[stat] || 0) + val;
+      // 2) 词条贡献
+      if (Array.isArray(item.affixes)) {
+        for (const a of item.affixes) {
+          const def = AFFIXES[a.id];
+          if (!def) continue;
+          const stat = def.stat;
+          // _base_xxx 是基础属性词条
+          if (stat.startsWith('_base_')) {
+            const baseStat = stat.replace('_base_', '');
+            if (bonuses[baseStat] !== undefined) {
+              bonuses[baseStat] += a.value;
+            }
+          } else if (def.isFlat) {
+            flatBonuses[stat] = (flatBonuses[stat] || 0) + a.value;
+          } else {
+            bonusPct[stat] = (bonusPct[stat] || 0) + a.value;
+          }
+        }
       }
     });
 
-    return { bonuses, flatBonuses };
+    // 四舍五入 flatBonuses 到 0.1
+    for (const k in flatBonuses) flatBonuses[k] = Math.round(flatBonuses[k] * 10) / 10;
+
+    return { bonuses, flatBonuses, bonusPct };
   }
 
   /**
    * Apply equipment bonuses to the player's Stats engine.
-   * Merges with level-based flatBonuses (maxHp from leveling).
+   * 完整覆盖三类通道（bonuses / flatBonuses / bonusPct），避免脱装备残留。
+   * level-based maxHp 加成在这里合并进 flatBonuses.maxHp。
    */
   _applyBonuses() {
     const player = this.scene.player;
     if (!player) return;
 
-    const { bonuses, flatBonuses } = this.getStatBonuses();
+    const { bonuses, flatBonuses, bonusPct } = this.getStatBonuses();
 
-    // Set equipment base stat bonuses
-    for (const [stat, val] of Object.entries(bonuses)) {
-      player.stats.setBonus(stat, val);
+    // 1) 基础属性加成（con/str/...）— 完整覆盖
+    for (const [stat, val] of Object.entries(player.stats.bonuses)) {
+      player.stats.setBonus(stat, bonuses[stat] || 0);
     }
 
-    // Merge equipment flat bonuses with level flat bonuses
+    // 2) flatBonuses — 完整覆盖；maxHp 合并 level HP 加成
     const levelSystem = this.scene.registry.get('levelSystem');
     const levelHpBonus = levelSystem ? (levelSystem.level - 1) * 5 : 0;
 
@@ -184,6 +222,12 @@ export class EquipmentSystem {
         fb[key] = flatBonuses[key] || 0;
       }
     }
+
+    // 3) bonusPct — 完整覆盖（含 0 值），避免脱装备残留
+    const fullPct = { ...player.stats.bonusPct };
+    for (const k in fullPct) fullPct[k] = 0;
+    Object.assign(fullPct, bonusPct);
+    player.stats.setBonusPct(fullPct);
 
     player.stats.invalidate();
     player.refreshStats();

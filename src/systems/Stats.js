@@ -35,7 +35,8 @@ export class Stats {
       maxHp: 0, maxMp: 0, attack: 0, spellPower: 0,
       moveSpeed: 0, attackSpeed: 0, hpRegen: 0, critDmg: 0,
       tenacity: 0, defense: 0,
-      critRate: 0, armorPen: 0, dropBonus: 0, cdr: 0, encumbrance: 0
+      critRate: 0, armorPen: 0, dropBonus: 0, cdr: 0, encumbrance: 0,
+      lifesteal: 0      // 吸血百分比（0.05 = 5%），由战斗逻辑直接读取
     };
 
     // 百分比加成（来自装备词条、buff 等）— 应用于 derived 派生值
@@ -49,7 +50,12 @@ export class Stats {
       hpRegen: 0,
       critRate: 0,      // 注意：critRate 既可 flat 也可 pct，pct 在最后乘
       critDmg: 0,
-      cdr: 0
+      cdr: 0,
+      // 职业专属（暂不在 getDerived 内消费，由具体战斗逻辑读取）
+      rageGain: 0,      // 战士：怒气获取倍率
+      rangedDmg: 0,     // 弓手：远程伤害加成
+      spellDmg: 0,      // 法师：法术伤害加成
+      manaRegen: 0      // 法师：法力恢复倍率
     };
 
     // 缓存计算结果
