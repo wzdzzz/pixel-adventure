@@ -117,6 +117,8 @@ export const SmithyPanel = {
       this._smithyModal.destroy();
       this._smithyModal = null;
     }
+    // 修复：modal 期间网格 cell 的 pointerout 被吞，关闭后重绘恢复边框
+    if (this.refreshInventoryTab) this.refreshInventoryTab();
   },
 
   _enhanceErrText(reason) {

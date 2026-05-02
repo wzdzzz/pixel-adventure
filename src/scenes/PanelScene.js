@@ -109,6 +109,8 @@ export class PanelScene extends Phaser.Scene {
         this.input.off('wheel', this._skillWheelHandler);
         this._skillWheelHandler = null;
       }
+      // 关闭打开中的强化/分解 modal（避免引用残留）
+      this._closeSmithyModal?.();
     });
 
     this.playOpenAnimation();
