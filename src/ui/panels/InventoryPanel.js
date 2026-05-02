@@ -1,7 +1,7 @@
 import { AFFIXES } from '../../data/affixes.js';
 import { RARITY_MULTIPLIERS } from '../../data/lootTables.js';
 
-const RARITY_LABEL_LOCAL = {
+const RARITY_LABEL = {
   common:'普通', uncommon:'优秀', rare:'稀有',
   epic:'史诗', legendary:'传说', mythic:'神话'
 };
@@ -10,7 +10,7 @@ function formatEquipTooltip(item) {
   const lines = [];
   const enh = item.enhanceLevel ? ` +${item.enhanceLevel}` : '';
   lines.push(`${item.name}${enh}`);
-  lines.push(`[${RARITY_LABEL_LOCAL[item.rarity] || '普通'}] Lv.${item.level || 1}`);
+  lines.push(`[${RARITY_LABEL[item.rarity] || '普通'}] Lv.${item.level || 1}`);
   if (item.weaponType) {
     const wt = { heavy:'战士', light:'弓箭手', magic:'法师' }[item.weaponType] || '';
     if (wt) lines.push(`职业: ${wt}`);
@@ -316,15 +316,12 @@ export const InventoryPanel = {
 
     // Update detail panel
     if (item) {
-      const RARITY_NAMES = {
-        common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说'
-      };
       const rarityColor = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
 
       const enhSuffix = item.type === 'equipment' && item.enhanceLevel ? ` +${item.enhanceLevel}` : '';
       this.invDetailName.setText(item.name + enhSuffix);
       this.invDetailName.setColor('#' + rarityColor.border.toString(16).padStart(6, '0'));
-      this.invDetailRarity.setText(`[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}  数量: ${item.quantity}`);
+      this.invDetailRarity.setText(`[${RARITY_LABEL[item.rarity] || '普通'}] Lv.${item.level || 1}  数量: ${item.quantity}`);
       // 装备：详细多行（覆盖 invDetailDesc）
       if (item.type === 'equipment') {
         this.invDetailDesc.setText(formatEquipTooltip(item));
@@ -334,37 +331,8 @@ export const InventoryPanel = {
 
       // Equipment stat comparison
       if (item.type === 'equipment' && this.invCompareText) {
-        const equip = this.gameScene?.equipmentSystem;
-        // Determine which slot to compare against
-        let compareSlot = item.slot;
-        if (compareSlot === 'ring1' || compareSlot === 'ring2') {
-          compareSlot = equip?.getSlot('ring1') === null ? 'ring1' : 'ring2';
-        }
-        const currentEquip = equip ? equip.getSlot(compareSlot) : null;
-
-        const STAT_NAMES = {
-          attack: '攻击', defense: '防御', maxHp: '生命', maxStamina: '体力',
-          spellPower: '法强', moveSpeed: '移速', attackSpeed: '攻速',
-          critRate: '暴击率', critDmg: '暴击伤害', hpRegen: 'HP回复'
-        };
-
-        let compareText = '';
-        if (item.baseStats) {
-          for (const [stat, val] of Object.entries(item.baseStats)) {
-            const currentVal = currentEquip?.baseStats?.[stat] || 0;
-            const diff = val - currentVal;
-            const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
-            const color = diff > 0 ? '(+)' : diff < 0 ? '(-)' : '';
-            compareText += `${STAT_NAMES[stat] || stat}: ${val} ${arrow}${Math.abs(diff) > 0 ? Math.abs(diff) : ''} ${color}\n`;
-          }
-        }
-        if (currentEquip) {
-          compareText += `\n对比: ${currentEquip.name}`;
-        } else {
-          compareText += `\n当前: 空槽位`;
-        }
-        this.invCompareText.setText(compareText);
-        this.invCompareText.setVisible(true);
+        // 装备：长描述压住 compareText 区域，隐藏 compare 避免重叠
+        this.invCompareText.setVisible(false);
       } else if (this.invCompareText) {
         this.invCompareText.setVisible(false);
       }
@@ -455,16 +423,17 @@ export const InventoryPanel = {
 
     if (!this.tooltipContainer) return;
 
-    const RARITY_NAMES = {
-      common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说'
-    };
-
     if (item.type === 'equipment') {
       this.tooltipText.setText(formatEquipTooltip(item));
     } else {
       this.tooltipText.setText(
-        `${item.name}\n[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? '\n售价: ' + item.sellPrice : ''}`
+        `${item.name}\n[${RARITY_LABEL[item.rarity] || '普通'}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? '\n售价: ' + item.sellPrice : ''}`
       );
+    }
+    // tooltipBg 自适应文本大小
+    if (this.tooltipBg) {
+      const b = this.tooltipText.getBounds();
+      this.tooltipBg.setSize(b.width + 16, b.height + 12);
     }
     this.tooltipContainer.setPosition(x + 30, y - 40);
     this.tooltipContainer.setVisible(true);
