@@ -200,7 +200,54 @@ export const CharacterPanel = {
       derivedToggle.setText(this.derivedExpanded ? '▼ 衍生属性' : '▶ 衍生属性');
     });
 
+    // --- 已激活套装区 ---
+    const setsY = derivedY + 22 + derivedStats.length * 20 + 14;
+    this.charSetsTitle = this.add.text(rightX, setsY, '🛡 已激活套装', {
+      fontSize: '12px', fill: '#ffaa44', fontFamily: 'Courier New'
+    });
+    container.add(this.charSetsTitle);
+    this.charSetsContainer = this.add.container(0, 0);
+    container.add(this.charSetsContainer);
+
     this.refreshCharacterTab();
+  },
+
+  refreshActiveSets() {
+    if (!this.charSetsContainer) return;
+    this.charSetsContainer.removeAll(true);
+    const equip = this.gameScene?.equipmentSystem;
+    if (!equip || !equip.getActiveSets) return;
+    const activeSets = equip.getActiveSets();
+
+    const rightX = this.panelX + this.panelW * 0.02;
+    const baseY = this.charSetsTitle.y + 18;
+
+    if (!activeSets.length) {
+      const t = this.add.text(rightX + 10, baseY, '（未装备任何套装）', {
+        fontSize: '10px', fill: '#666677', fontFamily: 'Courier New'
+      });
+      this.charSetsContainer.add(t);
+      return;
+    }
+
+    let y = baseY;
+    for (const setInfo of activeSets) {
+      const head = this.add.text(rightX + 10, y, `${setInfo.name}  ${setInfo.count}/${setInfo.total}`, {
+        fontSize: '11px', fill: '#ffd566', fontFamily: 'Courier New', fontStyle: 'bold'
+      });
+      this.charSetsContainer.add(head);
+      y += 16;
+      for (const tier of setInfo.allTiers) {
+        const mark = tier.active ? '✓' : '✗';
+        const color = tier.active ? '#88ff88' : '#666677';
+        const t = this.add.text(rightX + 18, y, `${mark} ${tier.tier}件: ${tier.label}`, {
+          fontSize: '10px', fill: color, fontFamily: 'Courier New'
+        });
+        this.charSetsContainer.add(t);
+        y += 14;
+      }
+      y += 4;
+    }
   },
 
   refreshCharacterTab() {
@@ -265,6 +312,9 @@ export const CharacterPanel = {
 
     // Refresh derived stats if the method exists
     if (this.updateDerivedStats) this.updateDerivedStats();
+
+    // 已激活套装
+    this.refreshActiveSets();
   },
 
   handleStatAllocation(statName) {
@@ -393,7 +443,7 @@ export const CharacterPanel = {
     if (!this.tooltipContainer) return;
 
     const RARITY_NAMES = {
-      common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说'
+      common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说', mythic: '神话'
     };
     const STAT_NAMES = {
       attack: '攻击', defense: '防御', maxHp: '生命', maxStamina: '体力',

@@ -348,37 +348,58 @@ export const SmithyPanel = {
     }).setOrigin(0.5);
     c.add(costText);
 
+    let divineMode = false;
+
     const refreshCost = () => {
       const cost = reforgeSys.getCost(lockedIds.size);
       const lines = [
-        `锁定: ${lockedIds.size} 条`,
+        `锁定: ${lockedIds.size} 条${divineMode ? '  [神圣模式]' : ''}`,
         `材料: ${cost.matId} ×${cost.count} (持有 ${this._countMatInInv(cost.matId)})`,
         `金币: ${cost.gold} (持有 ${this.gameScene.inventory.gold || 0})`
       ];
       cost.lockedExtras.forEach(e => {
         lines.push(`+ ${e.matId} ×${e.count} (持有 ${this._countMatInInv(e.matId)})`);
       });
+      if (divineMode) {
+        lines.push(`+ divine_heart ×1 (持有 ${this._countMatInInv('divine_heart')})`);
+        lines.push('T1 词条权重 ×3');
+      }
+      const pity = reforgeSys.getPity(eq);
+      if (pity > 0) lines.push(`保底进度: ${pity}/5（5 次未出 T1 必触发保底）`);
       costText.setText(lines.join('\n'));
     };
     refreshCost();
 
+    // 神圣洗练切换
+    const divineBg = this.add.rectangle(cx, cy + 130, 280, 22, 0x332244)
+      .setStrokeStyle(1, 0x9966ff).setInteractive({ useHandCursor: true });
+    const divineTxt = this.add.text(cx, cy + 130, '☐ 神圣洗练（消耗神铸之心，T1 概率 ×3）', {
+      fontSize:'10px', color:'#cc99ff', fontFamily:'Courier New'
+    }).setOrigin(0.5);
+    divineBg.on('pointerdown', () => {
+      divineMode = !divineMode;
+      divineTxt.setText((divineMode ? '☑' : '☐') + ' 神圣洗练（消耗神铸之心，T1 概率 ×3）');
+      refreshCost();
+    });
+    c.add([divineBg, divineTxt]);
+
     // 按钮
-    const okBg = this.add.rectangle(cx - 80, cy + 155, 130, 32, 0x224422)
+    const okBg = this.add.rectangle(cx - 80, cy + 165, 130, 30, 0x224422)
       .setStrokeStyle(1, 0x66ff88).setInteractive({ useHandCursor: true });
-    const okTxt = this.add.text(cx - 80, cy + 155, '洗练', {
+    const okTxt = this.add.text(cx - 80, cy + 165, '洗练', {
       fontSize:'13px', color:'#66ff88', fontFamily:'Courier New'
     }).setOrigin(0.5);
     okBg.on('pointerdown', () => {
-      const r = reforgeSys.reforge(eq, [...lockedIds]);
+      const r = reforgeSys.reforge(eq, [...lockedIds], divineMode);
       if (r.result === 'invalid') {
         this._showPanelToast?.(`洗练失败: ${r.reason}`, '#ff6666');
         return;
       }
       this._closeSmithyModal();
     });
-    const cancelBg = this.add.rectangle(cx + 80, cy + 155, 130, 32, 0x442222)
+    const cancelBg = this.add.rectangle(cx + 80, cy + 165, 130, 30, 0x442222)
       .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
-    const cancelTxt = this.add.text(cx + 80, cy + 155, '取消', {
+    const cancelTxt = this.add.text(cx + 80, cy + 165, '取消', {
       fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
     }).setOrigin(0.5);
     cancelBg.on('pointerdown', () => this._closeSmithyModal());

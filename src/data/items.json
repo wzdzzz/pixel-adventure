@@ -98,6 +98,7 @@
       "level": 1,
       "sellPrice": 15,
       "description": "一把普通的铁剑，适合初学者使用",
+      "setId": "warrior_legacy",
       "baseStats": {
         "attack": 5
       },
@@ -119,6 +120,7 @@
       "level": 1,
       "sellPrice": 10,
       "description": "一把生锈的匕首，但仍然锋利",
+      "setId": "archer_legacy",
       "baseStats": {
         "attack": 3,
         "attackSpeed": 0.05
@@ -141,6 +143,7 @@
       "level": 1,
       "sellPrice": 12,
       "description": "魔法学徒使用的基础法杖",
+      "setId": "mage_legacy",
       "baseStats": {
         "spellPower": 4,
         "attack": 2
@@ -162,6 +165,7 @@
       "level": 1,
       "sellPrice": 10,
       "description": "简陋但实用的木制盾牌",
+      "setId": "guardian_set",
       "baseStats": {
         "defense": 3
       },
@@ -182,6 +186,7 @@
       "level": 1,
       "sellPrice": 8,
       "description": "柔软的皮革帽子，提供基本防护",
+      "setId": "archer_legacy",
       "baseStats": {
         "defense": 1
       },
@@ -202,6 +207,7 @@
       "level": 1,
       "sellPrice": 12,
       "description": "厚实的布制铠甲，聊胜于无",
+      "setId": "mage_legacy",
       "baseStats": {
         "defense": 2,
         "maxHp": 10
@@ -223,6 +229,7 @@
       "level": 1,
       "sellPrice": 6,
       "description": "磨损的旧靴子，但仍能加快脚步",
+      "setId": "warrior_legacy",
       "baseStats": {
         "moveSpeed": 5
       },
@@ -243,6 +250,7 @@
       "level": 1,
       "sellPrice": 5,
       "description": "简单的铜制戒指，微微泛光",
+      "setId": "warrior_legacy",
       "baseStats": {
         "critRate": 0.5
       },
@@ -261,6 +269,7 @@
       "level": 2,
       "sellPrice": 20,
       "description": "用野兽骨头串成的项链，蕴含原始力量",
+      "setId": "warrior_legacy",
       "baseStats": {
         "attack": 2,
         "maxHp": 5
@@ -304,6 +313,7 @@
       "level": 3,
       "sellPrice": 40,
       "description": "铁环交织而成的锁子甲，防御力出色",
+      "setId": "guardian_set",
       "baseStats": {
         "defense": 5,
         "maxHp": 15
@@ -325,6 +335,7 @@
       "level": 3,
       "sellPrice": 25,
       "description": "坚固的铁制头盔，保护头部要害",
+      "setId": "warrior_legacy",
       "baseStats": {
         "defense": 3
       },
@@ -347,6 +358,7 @@
       "level": 5,
       "sellPrice": 80,
       "description": "暗影之力铸就的匕首，攻击如鬼魅般迅捷",
+      "setId": "archer_legacy",
       "baseStats": {
         "attack": 6,
         "attackSpeed": 0.1,
@@ -371,6 +383,7 @@
       "level": 5,
       "sellPrice": 85,
       "description": "蕴含烈焰之力的法杖，灼烧一切敌人",
+      "setId": "mage_legacy",
       "baseStats": {
         "spellPower": 10,
         "attack": 4
@@ -392,6 +405,7 @@
       "level": 5,
       "sellPrice": 90,
       "description": "古代守护者遗留的板甲，坚不可摧",
+      "setId": "warrior_legacy",
       "baseStats": {
         "defense": 10,
         "maxHp": 30
@@ -414,6 +428,7 @@
       "level": 4,
       "sellPrice": 60,
       "description": "注入风之精华的靴子，穿上后健步如飞",
+      "setId": "archer_legacy",
       "baseStats": {
         "moveSpeed": 15,
         "attackSpeed": 0.03
@@ -560,6 +575,32 @@
       "sellPrice": 120,
       "value": 0,
       "description": "宝石升级所需的星辰之力"
+    },
+    "divine_heart": {
+      "id": "divine_heart",
+      "name": "神铸之心",
+      "type": "material",
+      "texture": "potion",
+      "rarity": "legendary",
+      "stackable": true,
+      "maxStack": 99,
+      "level": 1,
+      "sellPrice": 500,
+      "value": 0,
+      "description": "神祇遗留的核心 — 神圣洗练 / 神器制作所需"
+    },
+    "world_core": {
+      "id": "world_core",
+      "name": "世界核心",
+      "type": "material",
+      "texture": "potion",
+      "rarity": "mythic",
+      "stackable": true,
+      "maxStack": 99,
+      "level": 1,
+      "sellPrice": 1500,
+      "value": 0,
+      "description": "蕴含世界本源 — 神话级装备制作所需"
     },
     "red_gem": {
       "id": "red_gem",

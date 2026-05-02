@@ -163,6 +163,8 @@ export class SaveSystem {
           if (typeof it.enhanceLevel !== 'number') it.enhanceLevel = 0;
           // 兼容老存档：装备 instance 缺 sockets 时默认空数组（0 孔）
           if (!Array.isArray(it.sockets)) it.sockets = [];
+          // 兼容老存档：洗练保底计数缺省 0
+          if (typeof it.reforgePity !== 'number') it.reforgePity = 0;
         }
         // 重算装备贡献以反映补全字段（虽然空 affixes/0 enhance 不改变结果，但保险）
         if (typeof scene.equipmentSystem._applyBonuses === 'function') {
@@ -180,6 +182,8 @@ export class SaveSystem {
           if (typeof it.enhanceLevel !== 'number') it.enhanceLevel = 0;
           // 兼容老存档：装备 instance 缺 sockets 时默认空数组（0 孔）
           if (!Array.isArray(it.sockets)) it.sockets = [];
+          // 兼容老存档：洗练保底计数缺省 0
+          if (typeof it.reforgePity !== 'number') it.reforgePity = 0;
         }
       }
 

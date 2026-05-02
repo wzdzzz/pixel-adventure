@@ -8,6 +8,7 @@
 import { AFFIXES } from '../data/affixes.js';
 import { RARITY_MULTIPLIERS } from '../data/lootTables.js';
 import { GEMS } from '../data/gems.js';
+import { SetSystem } from './SetSystem.js';
 
 export const EQUIP_SLOTS = ['helmet', 'armor', 'weapon', 'offhand', 'necklace', 'ring1', 'ring2', 'boots'];
 
@@ -17,8 +18,15 @@ export class EquipmentSystem {
     this.slots = {};
     EQUIP_SLOTS.forEach(s => this.slots[s] = null);
 
+    this.setSystem = new SetSystem(scene);
+
     // Auto-recalculate stats when equipment changes
     this.scene.events.on('equipmentChanged', () => this._applyBonuses());
+  }
+
+  /** 暴露给 UI：当前所有激活套装的渲染信息 */
+  getActiveSets() {
+    return this.setSystem.getActiveSets(this.slots);
   }
 
   equip(slotName, item) {
@@ -205,6 +213,18 @@ export class EquipmentSystem {
         }
       }
     });
+
+    // 套装加成（合并三通道）
+    const setBonus = this.setSystem.computeActiveBonuses(this.slots);
+    for (const [s, v] of Object.entries(setBonus.flatBonuses)) {
+      flatBonuses[s] = (flatBonuses[s] || 0) + v;
+    }
+    for (const [s, v] of Object.entries(setBonus.bonusPct)) {
+      bonusPct[s] = (bonusPct[s] || 0) + v;
+    }
+    for (const [s, v] of Object.entries(setBonus.baseBonuses)) {
+      if (bonuses[s] !== undefined) bonuses[s] += v;
+    }
 
     // 四舍五入 flatBonuses 到 0.1
     for (const k in flatBonuses) flatBonuses[k] = Math.round(flatBonuses[k] * 10) / 10;

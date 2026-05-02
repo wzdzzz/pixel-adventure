@@ -33,7 +33,8 @@ export const RARITY_MULTIPLIERS = {
   uncommon:  1.1,
   rare:      1.25,
   epic:      1.5,
-  legendary: 2.0
+  legendary: 2.0,
+  mythic:    3.0
 };
 
 // ---------------------------------------------------------------------------
@@ -368,6 +369,7 @@ export const LOOT_TABLES = {
           { id: 'chaos_essence',  weight: 4 },
           { id: 'star_fragment',  weight: 2 },
           { id: 'ancient_core',   weight: 2 },
+          { id: 'divine_heart',   weight: 1 },
           { id: 'red_gem',        weight: 3 },
           { id: 'blue_gem',       weight: 3 },
           { id: 'green_gem',      weight: 3 },
@@ -413,6 +415,8 @@ export const LOOT_TABLES = {
           { id: 'chaos_essence',  weight: 6 },
           { id: 'soul_crystal',   weight: 6 },
           { id: 'star_fragment',  weight: 4 },
+          { id: 'divine_heart',   weight: 3 },
+          { id: 'world_core',     weight: 1 },
           { id: 'red_gem',        weight: 5 },
           { id: 'blue_gem',       weight: 5 },
           { id: 'green_gem',      weight: 5 },

@@ -1,6 +1,8 @@
 import { AFFIXES } from '../../data/affixes.js';
 import { RARITY_MULTIPLIERS } from '../../data/lootTables.js';
 import { GEMS } from '../../data/gems.js';
+import { SETS } from '../../data/sets.js';
+import itemData from '../../data/items.json';
 
 const RARITY_LABEL = {
   common:'普通', uncommon:'优秀', rare:'稀有',
@@ -52,6 +54,15 @@ function formatEquipTooltip(item) {
         lines.push(`  孔${i+1}: ⬜ 空`);
       }
     });
+  }
+  // 套装归属
+  const setId = item.setId || itemData.items[item.templateId]?.setId;
+  if (setId && SETS[setId]) {
+    lines.push(`🔗 套装: ${SETS[setId].name} (1/${SETS[setId].pieces.length})`);
+  }
+  // 保底进度
+  if (item.reforgePity && item.reforgePity > 0) {
+    lines.push(`♻ 洗练保底: ${item.reforgePity}/5`);
   }
   if (item.description) lines.push(`\n${item.description}`);
   return lines.join('\n');
