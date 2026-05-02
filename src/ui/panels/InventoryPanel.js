@@ -233,6 +233,28 @@ export const InventoryPanel = {
     this.invEquipBtn.on('pointerdown', () => this.equipSelectedItem());
     container.add(this.invEquipBtn);
 
+    // 强化按钮（仅装备显示）
+    this.invEnhanceBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 78, '[🔨 强化]', {
+      fontSize: '12px', fill: '#ffdd66', fontFamily: 'Courier New'
+    }).setInteractive({ useHandCursor: true }).setVisible(false);
+    this.invEnhanceBtn.on('pointerdown', () => {
+      if (this.invSelectedSlot < 0) return;
+      const actualSlot = this._actualSlot(this.invSelectedSlot);
+      if (actualSlot >= 0) this.openEnhanceModal?.(actualSlot);
+    });
+    container.add(this.invEnhanceBtn);
+
+    // 分解按钮（仅装备显示）
+    this.invDecomposeBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 100, '[🪓 分解]', {
+      fontSize: '12px', fill: '#ff8866', fontFamily: 'Courier New'
+    }).setInteractive({ useHandCursor: true }).setVisible(false);
+    this.invDecomposeBtn.on('pointerdown', () => {
+      if (this.invSelectedSlot < 0) return;
+      const actualSlot = this._actualSlot(this.invSelectedSlot);
+      if (actualSlot >= 0) this.openDecomposeModal?.(actualSlot);
+    });
+    container.add(this.invDecomposeBtn);
+
     this.invSelectedSlot = -1;
 
     // Context menu container (scene-level, high depth)
@@ -340,6 +362,8 @@ export const InventoryPanel = {
       this.invUseBtn.setVisible(item.type === 'consumable');
       this.invEquipBtn.setVisible(item.type === 'equipment');
       this.invDropBtn.setVisible(item.type !== 'quest');
+      this.invEnhanceBtn?.setVisible(item.type === 'equipment');
+      this.invDecomposeBtn?.setVisible(item.type === 'equipment');
     } else {
       this.invDetailName.setText('');
       this.invDetailRarity.setText('');
@@ -347,6 +371,8 @@ export const InventoryPanel = {
       this.invUseBtn.setVisible(false);
       this.invEquipBtn.setVisible(false);
       this.invDropBtn.setVisible(false);
+      this.invEnhanceBtn?.setVisible(false);
+      this.invDecomposeBtn?.setVisible(false);
       if (this.invCompareText) this.invCompareText.setVisible(false);
     }
 

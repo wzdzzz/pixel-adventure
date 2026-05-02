@@ -118,7 +118,16 @@ export const SmithyPanel = {
       this._smithyModal = null;
     }
     // 修复：modal 期间网格 cell 的 pointerout 被吞，关闭后重绘恢复边框
-    if (this.refreshInventoryTab) this.refreshInventoryTab();
+    // 用 delayedCall 推迟一帧避免在 Phaser render 过程中触发 setColor → drawImage null
+    if (this.scene && this.scene.isActive() && this.refreshInventoryTab) {
+      this.time.delayedCall(0, () => {
+        try {
+          if (this.scene.isActive()) this.refreshInventoryTab();
+        } catch (e) {
+          // 静默：场景在销毁中
+        }
+      });
+    }
   },
 
   _enhanceErrText(reason) {
