@@ -346,7 +346,7 @@ export const CharacterPanel = {
     this.charContextMenu.removeAll(true);
     this.charContextMenu.setVisible(true);
 
-    const bg = this.add.rectangle(0, 0, 100, 0, 0x2a2a3e, 0.95)
+    const bg = this.add.rectangle(0, 0, 120, 0, 0x2a2a3e, 0.95)
       .setStrokeStyle(1, 0x5a5a7a).setOrigin(0, 0);
     this.charContextMenu.add(bg);
 
@@ -363,9 +363,15 @@ export const CharacterPanel = {
     };
 
     // 强化（直接传 instance）
-    addOpt('🔨 强化', '#ffdd66', () => {
-      this.openEnhanceModal?.(equipped);
-    });
+    addOpt('🔨 强化', '#ffdd66', () => this.openEnhanceModal?.(equipped));
+
+    // 洗练
+    addOpt('♻ 洗练', '#66ccff', () => this.openReforgeModal?.(equipped));
+
+    // 镶嵌（仅当装备有插槽时）
+    if (equipped.sockets && equipped.sockets.length > 0) {
+      addOpt('💎 镶嵌', '#aa88ff', () => this.openSocketModal?.(equipped));
+    }
 
     // 卸下
     addOpt('📥 卸下', '#aaccff', () => {
@@ -375,7 +381,7 @@ export const CharacterPanel = {
       this.refreshInventoryTab();
     });
 
-    bg.setSize(100, optY + 4);
+    bg.setSize(120, optY + 4);
     this.charContextMenu.setPosition(pointer.x, pointer.y);
 
     this.input.once('pointerdown', () => {
