@@ -23,6 +23,11 @@ npx vite --force  # 清除 Vite 缓存启动
 - **3 职业**：warrior / archer / mage，各自一份 `*Skills.js` + `classConfig.primaryAttackStat`
 - **敌人技能驱动**：4 种技能 type（melee_strike / ranged_shot / charge_attack / aoe_burst）+ 战斗状态机（PATROL ↔ CHASE → SKILL_TELEGRAPH → SKILL_ACTIVE → SKILL_RECOVERY）
 - **多槽存档**：3 槽位（key 形如 `pixel_adventure_save_1`），支持元数据预览
+- **装备系统**（已完成 Phase 1+2+3）：
+  - 实例化 instance（每件唯一） + 6 品质（含 mythic）+ 词条池 + 强化（+0~+15）
+  - 洗练（chaos_essence + 锁定 1-2 条）+ 神圣洗练（divine_heart，T1 ×3 + 5 次保底）
+  - 孔位 + 4 色 × 10 级宝石（3 同合 1 高级）+ 触发型词条（onHit/onKill/onSkillCast/onCrit）
+  - 装备制作（recipes.js）+ 4 套装系统（2/4/6 件触发）+ 神器配方（mythic, world_core）
 
 ## 关键约定
 - 中文注释和 UI 文本

@@ -1,6 +1,6 @@
 # 像素远征 — 架构总览
 
-> 最后更新：2026-05-03
+> 最后更新：2026-05-03（装备 Phase 3：套装 + 神圣洗练 + 神器配方）
 
 ## 技术栈
 
@@ -32,12 +32,19 @@ src/
 │   ├── EnemySkillSystem.js     # 敌人技能：冷却 + AI 选技能 + 4 种 type 执行
 │   ├── StatusEffectSystem.js   # Buff/Debuff/DoT：应用、tick、修饰符
 │   ├── InventorySystem.js      # 背包：32 格、堆叠、排序
-│   ├── EquipmentSystem.js      # 装备：8 槽位、等级/职业限制
+│   ├── EquipmentSystem.js      # 装备：8 槽位、等级/职业限制 + 套装合并
+│   ├── EquipmentGenerator.js   # 装备实例生成：rarity/affixes/sockets
+│   ├── EnhanceSystem.js        # 强化：+0~+15 + 材料消耗
+│   ├── ReforgeSystem.js        # 洗练：词条重 roll + 神圣洗练 + 5 次保底
+│   ├── GemSystem.js            # 宝石：镶嵌/拆卸 + 3 同合成
+│   ├── CraftingSystem.js       # 装备制作：配方表 → EquipmentGenerator
+│   ├── TriggerSystem.js        # 触发型词条：onHit/onKill/onSkillCast/onCrit
+│   ├── SetSystem.js            # 套装系统：2/4/6 件触发效果
 │   ├── LootEngine.js           # 掉落：加权随机、品质缩放
 │   ├── LevelSystem.js          # 等级：经验、升级、属性/技能点
 │   ├── SkillTreeSystem.js      # 天赋树
 │   ├── QuestSystem.js          # 任务追踪
-│   ├── SaveSystem.js           # 3 槽位存档 + 老存档迁移
+│   ├── SaveSystem.js           # 3 槽位存档 + 老存档迁移（兼容 sockets/reforgePity）
 │   ├── FloatingTextManager.js  # 飘字伤害/治疗
 │   ├── UIManager.js            # 对话窗口
 │   └── WarFog.js               # 战争迷雾（暂未启用）
@@ -69,8 +76,13 @@ src/
     ├── enemySkills.js          # 4 种敌人技能 type 定义
     ├── enemyConfig.js          # 怪物 → 技能列表/isBoss/aggroDelay
     ├── levels.js               # 关卡地图 + 敌人/NPC/道具
-    ├── lootTables.js           # 掉落表 + 品质倍率
-    ├── items.json              # 装备/消耗品/收集品
+    ├── lootTables.js           # 掉落表 + 品质倍率（含 mythic）
+    ├── items.json              # 装备模板（含 setId）/消耗品/材料/宝石
+    ├── affixes.js              # 38+ 词条池（含 _trigger 触发型）
+    ├── gems.js                 # 4 色 × 10 级宝石 + makeGemInstance
+    ├── recipes.js              # 装备制作配方（含 4 mythic 神器）
+    ├── sets.js                 # 4 套装定义（2/4/6 件触发）
+    ├── materials.js            # 材料元数据
     └── quests.js               # 任务定义
 ```
 

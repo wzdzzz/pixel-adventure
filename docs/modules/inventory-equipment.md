@@ -176,3 +176,69 @@ enemy.die → emit 'enemyDropLoot' → LootEngine.roll(enemyId, dropBonus)
 1. `items.json` 加条目（含 `slot/rarity/weaponType/level/baseStats`）
 2. `lootTables.js` 配掉落权重
 3. 自动处理：品质缩放、属性加成、UI 显示、限制检查
+
+---
+
+## Phase 1+2+3 升级（装备实例化 + 词条 + 强化 + 制作 + 套装）
+
+### 实例化装备
+每次掉落生成唯一实例（`instanceId`），与模板（`items.json`）解耦：
+```js
+{
+  instanceId, templateId,
+  rarity, level, enhanceLevel,
+  affixes: [{ id, value }],
+  sockets: [{ gemId, gemLevel }],
+  reforgePity: 0      // Phase 3：洗练保底计数
+}
+```
+
+### 6 品质 + 词条
+- 品质：`common / uncommon / rare / epic / legendary / mythic`
+- `RARITY_MULTIPLIERS` × `(1 + 0.1 × level)` × `(1 + 0.05 × enhanceLevel)`
+- 词条池见 `data/affixes.js`：T1（最强）~ T5；带 `_base_xxx` / `_trigger` 特殊 stat
+
+### 强化系统（Phase 1, `EnhanceSystem.js`）
++0~+15，每级消耗递增材料；失败可能降级（保底机制保留）。
+
+### 洗练（Phase 2+3, `ReforgeSystem.js`）
+- 普通：chaos_essence ×2 + 1000 金币
+- 锁定 1/2 条：+ soul_crystal
+- **神圣洗练（Phase 3）**：+ divine_heart ×1，T1 词条权重 ×3
+- **保底机制**：连续 5 次洗练未出 T1 → 强制至少 1 条 T1（`reforgePity` 字段计数）
+
+### 孔位 + 宝石（Phase 2, `GemSystem.js`）
+- 装备生成时按品质带 0-4 孔（rare=1 / epic=2 / legendary=3 / mythic=4）
+- 4 色宝石 × 10 级，3 同色同级合成高 1 级（红=攻击 / 蓝=法强 / 绿=生命 / 黄=暴击）
+- 镶嵌效果由 `EquipmentSystem.getStatBonuses()` 累加
+
+### 触发型词条（Phase 2, `TriggerSystem.js`）
+- 词条 `stat='_trigger'`，带 `trigger: { event, chance, effect, power }`
+- 触发点：`onHit / onKill / onSkillCast / onCrit`
+- 触发效果：`spawn_fireball / heal_pct / reduce_cd / lifesteal_pct`
+- 由 `InteractionHandler` / `Player.onSkillActive` 注入
+
+### 装备制作（Phase 2+3, `CraftingSystem.js`）
+- 配方表：`data/recipes.js`
+- Phase 2：6 个普通配方（rare / epic 装备）
+- Phase 3：4 个 mythic 配方需 `world_core` / `divine_heart`
+
+### 套装系统（Phase 3, `SetSystem.js`）
+- `data/sets.js`：4 套装 × 6 件，2/4/6 件触发
+- 装备模板带 `setId` 字段（运行时查 `items.json`）
+- 通过 `EquipmentSystem.getStatBonuses()` 末尾合并到三通道（flatBonuses/bonusPct/bonuses）
+- `EquipmentSystem.getActiveSets()` 暴露给 `CharacterPanel` 渲染
+
+### 顶级材料（Phase 3）
+| 材料 | rarity | 用途 |
+|------|--------|------|
+| `chaos_essence` | rare | 洗练基础 |
+| `soul_crystal` | epic | 锁词条 |
+| `star_fragment` | rare | 宝石升级 |
+| `refining_stone` | uncommon | 高级制作 |
+| `divine_heart` | legendary | 神圣洗练 / 神器配方 |
+| `world_core` | mythic | 神话配方专属 |
+
+### 存档兼容
+`SaveSystem.fromJSON()` 加载时为老 instance 补齐：
+- `instanceId / affixes / enhanceLevel / sockets / reforgePity` 缺省
