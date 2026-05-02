@@ -38,6 +38,20 @@ export class Stats {
       critRate: 0, armorPen: 0, dropBonus: 0, cdr: 0, encumbrance: 0
     };
 
+    // 百分比加成（来自装备词条、buff 等）— 应用于 derived 派生值
+    this.bonusPct = {
+      attack: 0,        // attack × (1 + attackPct)
+      defense: 0,
+      maxHp: 0,
+      maxMp: 0,
+      moveSpeed: 0,
+      attackSpeed: 0,
+      hpRegen: 0,
+      critRate: 0,      // 注意：critRate 既可 flat 也可 pct，pct 在最后乘
+      critDmg: 0,
+      cdr: 0
+    };
+
     // 缓存计算结果
     this._cache = null;
   }
@@ -75,6 +89,20 @@ export class Stats {
       cdr:         Math.min(40, int * 0.2 + this.flatBonuses.cdr),     // hard cap 40%
       encumbrance: this.flatBonuses.encumbrance                        // reserved
     };
+
+    // 应用百分比加成
+    const pct = this.bonusPct;
+    this._cache.attack      *= (1 + (pct.attack      || 0));
+    this._cache.defense     *= (1 + (pct.defense     || 0));
+    this._cache.maxHp       *= (1 + (pct.maxHp       || 0));
+    this._cache.maxMp       *= (1 + (pct.maxMp       || 0));
+    this._cache.moveSpeed   *= (1 + (pct.moveSpeed   || 0));
+    this._cache.attackSpeed *= (1 + (pct.attackSpeed || 0));
+    this._cache.hpRegen     *= (1 + (pct.hpRegen     || 0));
+    this._cache.critRate    += (pct.critRate || 0);  // critRate 直接加百分点
+    this._cache.critDmg     += (pct.critDmg  || 0);
+    this._cache.cdr         = Math.min(40, this._cache.cdr + (pct.cdr || 0));
+
     return this._cache;
   }
 
@@ -104,6 +132,18 @@ export class Stats {
   /** 设置二级属性直接加成 */
   setFlatBonus(stat, value) {
     this.flatBonuses[stat] = value;
+    this.invalidate();
+  }
+
+  /** 整体设置百分比加成（装备调用，覆盖式） */
+  setBonusPct(pctMap) {
+    this.bonusPct = { ...this.bonusPct, ...pctMap };
+    this.invalidate();
+  }
+
+  /** 单项加 */
+  addBonusPct(stat, value) {
+    this.bonusPct[stat] = (this.bonusPct[stat] || 0) + value;
     this.invalidate();
   }
 
