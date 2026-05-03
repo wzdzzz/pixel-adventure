@@ -21,6 +21,7 @@ import { levelData } from '../data/levels.js';
 import itemData from '../data/items.json';
 import { LevelBuilder } from '../managers/LevelBuilder.js';
 import { InteractionHandler } from '../managers/InteractionHandler.js';
+import { getLevelSuppression } from '../data/monsterScaling.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -346,10 +347,14 @@ export class MainGameScene extends Phaser.Scene {
       this.enemyHitboxes = this.enemyHitboxes || [];
       this.enemyHitboxes.push(hitbox);
       const overlap = this.physics.add.overlap(this.player.sprite, hitbox, () => {
-        const dmg = hitbox._enemySkillDamage || 0;
+        const baseDmg = hitbox._enemySkillDamage || 0;
         const owner = hitbox._enemyOwner;
-        if (this.player && dmg > 0 && !this.player.isInvulnerable) {
-          this.player.takeDamage(dmg, owner?.sprite?.x, owner?.sprite?.y);
+        if (this.player && baseDmg > 0 && !this.player.isInvulnerable) {
+          const enemyLevel = owner?.finalLevel || 1;
+          const playerLevel = this.levelSystem?.level || 1;
+          const suppressMult = getLevelSuppression(enemyLevel, playerLevel);
+          const finalDmg = Math.round(baseDmg * suppressMult);
+          this.player.takeDamage(finalDmg, owner?.sprite?.x, owner?.sprite?.y);
         }
         hitbox.body.enable = false;
       });
@@ -407,9 +412,9 @@ export class MainGameScene extends Phaser.Scene {
       }
     });
 
-    this.events.on('enemyDropLoot', (enemyId, x, y) => {
+    this.events.on('enemyDropLoot', (enemyId, x, y, enemyLevel) => {
       const dropBonus = this.player ? this.player.stats.getDerived().dropBonus : 0;
-      const drops = LootEngine.roll(enemyId, dropBonus);
+      const drops = LootEngine.roll(enemyId, dropBonus, enemyLevel);
 
       drops.forEach((drop, i) => {
         // Scatter drops in a circle to prevent stacking

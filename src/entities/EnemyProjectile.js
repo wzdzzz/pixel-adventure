@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getLevelSuppression } from '../data/monsterScaling.js';
 
 /**
  * 敌人弹道实体
@@ -71,7 +72,11 @@ export class EnemyProjectile {
   onHit(target) {
     if (!this.alive) return;
     if (target && typeof target.takeDamage === 'function' && this.damage > 0) {
-      target.takeDamage(this.damage, this.sprite.x, this.sprite.y);
+      const enemyLevel = this.owner?.finalLevel || 1;
+      const playerLevel = target.levelSystem?.level || target.scene?.levelSystem?.level || 1;
+      const suppressMult = getLevelSuppression(enemyLevel, playerLevel);
+      const finalDmg = Math.round(this.damage * suppressMult);
+      target.takeDamage(finalDmg, this.sprite.x, this.sprite.y);
     }
     // 命中爆点
     this.scene.tweens.add({
