@@ -519,7 +519,7 @@ export class Enemy extends Actor {
   // ── Loot ───────────────────────────────────────────────────────
 
   dropLoot() {
-    this.scene.events.emit('enemyDropLoot', this.config.id, this.sprite.x, this.sprite.y, this.finalLevel, this.isBoss);
+    this.scene.events.emit('enemyDropLoot', this.config.id, this.sprite.x, this.sprite.y, this.finalLevel, this.isBoss, this.tier);
   }
 
   // ── Cleanup ────────────────────────────────────────────────────

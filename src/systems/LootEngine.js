@@ -22,12 +22,9 @@ export class LootEngine {
    * @param  {number} dropBonus  luck-based % bonus applied to equipment pool weights
    * @returns {Array<{itemData: object, quantity: number}>}
    */
-  static roll(enemyId, dropBonus = 0, enemyLevel = 1, isBoss = false) {
+  static roll(enemyId, dropBonus = 0, enemyLevel = 1, isBoss = false, tier = 'normal') {
     const table = LOOT_TABLES[enemyId];
     if (!table) return [];
-
-    const numDrops = Phaser.Math.Between(table.minDrops, table.maxDrops);
-    const drops = [];
 
     // 注入 dropBonus / enemyLevel / isBoss 到装备 pool，便于 _rollItem 内取用
     table.pools.forEach(p => {
@@ -38,14 +35,71 @@ export class LootEngine {
       }
     });
 
+    const drops = [];
+
+    // ── Boss 保底：1 件传说级以上装备 + 4~6 件随机掉落 ──
+    if (tier === 'boss') {
+      const guaranteed = LootEngine._rollGuaranteedEquip(table, enemyLevel, true);
+      if (guaranteed) drops.push(guaranteed);
+
+      const extraCount = Phaser.Math.Between(4, 6);
+      for (let i = 0; i < extraCount; i++) {
+        const result = LootEngine._rollPool(table.pools, dropBonus);
+        if (result) drops.push(result);
+      }
+      return drops;
+    }
+
+    // ── 普通 pool roll ──
+    const numDrops = Phaser.Math.Between(table.minDrops, table.maxDrops);
     for (let i = 0; i < numDrops; i++) {
       const result = LootEngine._rollPool(table.pools, dropBonus);
-      if (result) {
-        drops.push(result);
+      if (result) drops.push(result);
+    }
+
+    // ── Elite 保底：至少 1 件装备 ──
+    if (tier === 'elite') {
+      const hasEquip = drops.some(d => d.itemData?.type === 'equipment');
+      if (!hasEquip) {
+        const equip = LootEngine._rollGuaranteedEquip(table, enemyLevel, false);
+        if (equip) drops.push(equip);
       }
     }
 
     return drops;
+  }
+
+  /**
+   * 生成一件保底装备
+   * @param {object} table    掉落表
+   * @param {number} level    装备等级（= 怪物等级，不 ±1）
+   * @param {boolean} forceHighRarity  true = 传说/神话，false = 随机品质
+   */
+  static _rollGuaranteedEquip(table, level, forceHighRarity) {
+    // 从掉落表的 equipment pool 中随机选一个模板
+    const equipPool = table.pools.find(p => p.name === 'equipment');
+    if (!equipPool || !equipPool.items || equipPool.items.length === 0) return null;
+
+    // 加权随机选模板
+    const totalWeight = equipPool.items.reduce((s, e) => s + e.weight, 0);
+    let roll = Math.random() * totalWeight;
+    let selected = equipPool.items[equipPool.items.length - 1];
+    for (const entry of equipPool.items) {
+      roll -= entry.weight;
+      if (roll <= 0) { selected = entry; break; }
+    }
+
+    const baseData = itemData.items[selected.id];
+    if (!baseData || baseData.type !== 'equipment') return null;
+
+    // 品质：Boss 保底传说+（80% legendary, 20% mythic），Elite 走普通 roll
+    const rarity = forceHighRarity
+      ? (Math.random() < 0.2 ? 'mythic' : 'legendary')
+      : EquipmentGenerator.rollRarity({ isBoss: false, dropBonus: equipPool._dropBonus || 0 });
+
+    const instance = EquipmentGenerator.generate(selected.id, rarity, level);
+    if (!instance) return null;
+    return { itemData: instance, quantity: 1 };
   }
 
   // ── Internal helpers ─────────────────────────────────────────────────────
