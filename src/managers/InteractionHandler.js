@@ -5,6 +5,7 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import { levelData } from '../data/levels.js';
 import itemData from '../data/items.json';
 import { getEffectTemplate } from '../data/statusEffects.js';
+import { getLevelSuppression } from '../data/monsterScaling.js';
 
 export const InteractionHandler = {
   handleChestProximity(chest) {
@@ -198,9 +199,13 @@ export const InteractionHandler = {
     if (!this.player.attackHitbox.body.enable) return;
     if (this.player.attackHitRegistered) return;
     if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
-    enemy.takeDamage(this.player.getAttack(), this.player.sprite.x, this.player.sprite.y);
+    const baseDmg = this.player.getAttack();
+    const playerLevel = this.player.levelSystem?.level || 1;
+    const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
+    const finalDmg = Math.round(baseDmg * suppressMult);
+    enemy.takeDamage(finalDmg, this.player.sprite.x, this.player.sprite.y);
     if (this.triggerSystem) {
-      this.triggerSystem.fire('onHit', { enemy, damage: this.player.getAttack() });
+      this.triggerSystem.fire('onHit', { enemy, damage: finalDmg });
       if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
     }
     this.player.onAttackHit();
@@ -232,7 +237,10 @@ export const InteractionHandler = {
 
       // 蓄力技能：按蓄力比例缩放伤害
       const chargeRatio = (skill.effect.chargeable && this.player._chargeRatio) ? this.player._chargeRatio : 1.0;
-      const damage = Math.floor(this.player.getAttack() * damageMultiplier * chargeRatio);
+      let damage = Math.floor(this.player.getAttack() * damageMultiplier * chargeRatio);
+      const playerLevel = this.player.levelSystem?.level || 1;
+      const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
+      damage = Math.round(damage * suppressMult);
 
       // Apply lifesteal from status effects + equipment flatBonuses
       const mods = this.player.statusEffects.getModifiers();
@@ -290,7 +298,10 @@ export const InteractionHandler = {
     }
     // ─── Multi-hit: spin ───
     else if (effectType === 'spin') {
-      const damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
+      let damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
+      const playerLevel = this.player.levelSystem?.level || 1;
+      const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
+      damage = Math.round(damage * suppressMult);
 
       const originalIFrames = enemy.iFramesDuration;
       enemy.iFramesDuration = 180;
