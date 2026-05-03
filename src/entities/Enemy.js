@@ -3,6 +3,7 @@ import { TEXTURES, CHARACTERS } from '../assets/AssetManager.js';
 import { Actor } from './Actor.js';
 import { EnemySkillSystem } from '../systems/EnemySkillSystem.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
+import { scaleBaseStats, applyDerivedScaling } from '../data/monsterScaling.js';
 
 export const EnemyState = {
   PATROL: 'PATROL',
@@ -36,6 +37,11 @@ export class Enemy extends Actor {
       lck: 1
     };
 
+    // ── 等级缩放 ──
+    const finalLevel = mergedConfig.finalLevel || mergedConfig.level || 1;
+    const tier = mergedConfig.tier || 'normal';
+    const scaledStats = scaleBaseStats(statsConfig, finalLevel);
+
     // Determine character type and texture from config
     const characterType = mergedConfig.id || null;
     const charConfig = characterType ? CHARACTERS[characterType] : null;
@@ -43,10 +49,16 @@ export class Enemy extends Actor {
       ? `${charConfig.prefix}_${String(charConfig.frames[0]).padStart(2, '0')}`
       : TEXTURES.ENEMY;
 
-    super(scene, x, y, textureKey, statsConfig, characterType);
+    super(scene, x, y, textureKey, scaledStats, characterType);
 
     // Enemy-specific config (detection range, patrol range, raw damage, etc.)
     this.config = mergedConfig;
+
+    this.finalLevel = finalLevel;
+    this.tier = tier;
+
+    // 派生属性缩放（等级成长 + Tier 倍率）
+    this._applyLevelScaling(finalLevel, tier);
 
     // Random slime color variant
     if (characterType === 'slime') {
@@ -110,6 +122,32 @@ export class Enemy extends Actor {
     }
 
     this.startPatrol();
+  }
+
+  /** 应用等级派生缩放 + Tier 倍率 */
+  _applyLevelScaling(level, tier) {
+    const derived = this.stats.getDerived();
+    const scaled = applyDerivedScaling(
+      { maxHp: derived.maxHp, attack: derived.attack },
+      level,
+      tier
+    );
+
+    // 将差值注入 flatBonuses
+    const hpDiff = scaled.maxHp - derived.maxHp;
+    const atkDiff = scaled.attack - derived.attack;
+
+    if (hpDiff !== 0) {
+      this.stats.flatBonuses.maxHp = (this.stats.flatBonuses.maxHp || 0) + hpDiff;
+    }
+    if (atkDiff !== 0) {
+      this.stats.flatBonuses.attack = (this.stats.flatBonuses.attack || 0) + atkDiff;
+    }
+    this.stats.invalidate();
+
+    // 重置 HP 到新的 maxHp
+    this.maxHp = this.stats.getDerived().maxHp;
+    this.hp = this.maxHp;
   }
 
   // ── Health bar (头顶血条) ──────────────────────────────────────
@@ -469,7 +507,7 @@ export class Enemy extends Actor {
   // ── Loot ───────────────────────────────────────────────────────
 
   dropLoot() {
-    this.scene.events.emit('enemyDropLoot', this.config.id, this.sprite.x, this.sprite.y);
+    this.scene.events.emit('enemyDropLoot', this.config.id, this.sprite.x, this.sprite.y, this.finalLevel);
   }
 
   // ── Cleanup ────────────────────────────────────────────────────
