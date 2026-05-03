@@ -279,6 +279,7 @@ export const LEVEL_TILE = TILE;
 export const levelData = [
   {
     name: '第一关 - 迷雾森林',
+    recommendedLevel: 3,
     generateMap: generateLevel1Map,
     playerStart: { x: 150, y: 150 },
     enemies: [
@@ -331,6 +332,7 @@ export const levelData = [
   },
   {
     name: '第二关 - 古老废墟',
+    recommendedLevel: 5,
     generateMap: generateLevel2Map,
     playerStart: { x: 800, y: 1100 },
     enemies: [
