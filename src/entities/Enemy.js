@@ -167,6 +167,13 @@ export class Enemy extends Actor {
     this.hbFill.setOrigin(0, 0.5);
     this.hbFill.setDepth(901);
 
+    // 等级标签
+    this.hbLevelText = this.scene.add.text(
+      this.sprite.x, this.sprite.y,
+      `Lv.${this.finalLevel}`,
+      { fontSize: '8px', fill: '#ffffff', fontFamily: 'Courier New' }
+    ).setOrigin(1, 0.5).setDepth(902);
+
     this.updateHealthBar();
   }
 
@@ -177,6 +184,10 @@ export class Enemy extends Actor {
     // 前景从背景左边缘起
     const leftX = this.sprite.x - this.hbWidth / 2;
     this.hbFill.setPosition(leftX, topY);
+
+    if (this.hbLevelText) {
+      this.hbLevelText.setPosition(this.sprite.x - this.hbWidth / 2 - 4, topY);
+    }
 
     const pct = Math.max(0, Math.min(1, this.hp / this.maxHp));
     this.hbFill.width = this.hbWidth * pct;
@@ -194,6 +205,7 @@ export class Enemy extends Actor {
   destroyHealthBar() {
     if (this.hbBg) { this.hbBg.destroy(); this.hbBg = null; }
     if (this.hbFill) { this.hbFill.destroy(); this.hbFill = null; }
+    if (this.hbLevelText) { this.hbLevelText.destroy(); this.hbLevelText = null; }
   }
 
   // ── Combat state ──────────────────────────────────────────────
