@@ -6,6 +6,8 @@
  * 每 3 级获得 1 技能点
  * 击杀高等级敌人获得额外经验，低等级敌人经验递减
  */
+import { SCALING_CONFIG, TIER } from '../data/monsterScaling.js';
+
 export class LevelSystem {
   constructor(scene) {
     this.scene = scene;
@@ -52,9 +54,9 @@ export class LevelSystem {
     return true;
   }
 
-  getEnemyXp(enemyConfig) {
-    const enemyLevel = enemyConfig.level || 1;
-    return enemyLevel * 15;
+  getEnemyXp(enemyLevel = 1, tier = TIER.NORMAL) {
+    const tm = SCALING_CONFIG.tierMultipliers[tier] || SCALING_CONFIG.tierMultipliers[TIER.NORMAL];
+    return Math.round(enemyLevel * 15 * tm.xp);
   }
 
   toJSON() {
