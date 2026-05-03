@@ -412,9 +412,9 @@ export class MainGameScene extends Phaser.Scene {
       }
     });
 
-    this.events.on('enemyDropLoot', (enemyId, x, y, enemyLevel) => {
+    this.events.on('enemyDropLoot', (enemyId, x, y, enemyLevel, isBoss) => {
       const dropBonus = this.player ? this.player.stats.getDerived().dropBonus : 0;
-      const drops = LootEngine.roll(enemyId, dropBonus, enemyLevel);
+      const drops = LootEngine.roll(enemyId, dropBonus, enemyLevel, isBoss);
 
       drops.forEach((drop, i) => {
         // Scatter drops in a circle to prevent stacking

@@ -22,18 +22,19 @@ export class LootEngine {
    * @param  {number} dropBonus  luck-based % bonus applied to equipment pool weights
    * @returns {Array<{itemData: object, quantity: number}>}
    */
-  static roll(enemyId, dropBonus = 0, enemyLevel = 1) {
+  static roll(enemyId, dropBonus = 0, enemyLevel = 1, isBoss = false) {
     const table = LOOT_TABLES[enemyId];
     if (!table) return [];
 
     const numDrops = Phaser.Math.Between(table.minDrops, table.maxDrops);
     const drops = [];
 
-    // 注入 dropBonus 到装备 pool，便于 _rollItem 内取用做品质 roll
+    // 注入 dropBonus / enemyLevel / isBoss 到装备 pool，便于 _rollItem 内取用
     table.pools.forEach(p => {
       if (p.name === 'equipment') {
         p._dropBonus = dropBonus;
         p._enemyLevel = enemyLevel;
+        p._isBoss = isBoss;
       }
     });
 
