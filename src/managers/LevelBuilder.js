@@ -6,6 +6,8 @@ import { Item } from '../entities/Item.js';
 import { NPC, NPCState } from '../entities/NPC.js';
 import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
+import { rollTierOffset } from '../data/monsterScaling.js';
+import { getEnemyConfig } from '../data/enemyConfig.js';
 
 const TILE = LEVEL_TILE;
 
@@ -269,14 +271,28 @@ export const LevelBuilder = {
 
   createEnemies(level) {
     const empty = this.getEmptyTiles();
+    const recommendedLevel = level.recommendedLevel || 1;
     // Support both array and legacy single-object format
     const groups = Array.isArray(level.enemies) ? level.enemies : [level.enemies];
     groups.forEach(group => {
       const config = itemData.enemies[group.type];
       if (!config) return;
+
+      // 从 enemyConfig 读取 tier
+      const enemyCfg = getEnemyConfig(group.type);
+      const tier = enemyCfg.tier || 'normal';
+
       const positions = this.pickRandomPositions(empty, group.count);
       positions.forEach(pos => {
-        this.enemies.push(new Enemy(this, pos.x, pos.y, config));
+        // 最终等级 = 推荐等级 + Tier偏移，最低1级
+        const offset = rollTierOffset(tier);
+        const finalLevel = Math.max(1, recommendedLevel + offset);
+
+        this.enemies.push(new Enemy(this, pos.x, pos.y, {
+          ...config,
+          finalLevel,
+          tier,
+        }));
       });
     });
   },
