@@ -106,26 +106,42 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     // Panel toggle keys
-    this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
-    this.iKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.gamePaused = false;
     this._exitConfirm = null;
 
-    const openPanel = () => {
-      if (this.scene.isActive('PanelScene') || this.gamePaused) return;
+    // C=角色, B=背包, X=技能, L=日志 — 再按关闭
+    const panelKeys = {
+      C: 'character',
+      B: 'inventory',
+      X: 'skillTree',
+      L: 'questLog'
+    };
+
+    const openPanelTab = (tabName) => {
+      if (this.dialoguing) return;
+      // 面板已打开时由 PanelScene 自己处理快捷键，这里不重复
+      if (this.scene.isActive('PanelScene')) return;
+      if (this.gamePaused) return;
       this.pauseGame();
+      this.registry.set('panelDefaultTab', tabName);
       this.scene.launch('PanelScene');
       this.scene.bringToTop('PanelScene');
     };
 
+    Object.entries(panelKeys).forEach(([keyChar, tabName]) => {
+      const key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[keyChar]);
+      key.on('down', () => openPanelTab(tabName));
+    });
+
+    // TAB 也可开面板（默认角色页）
+    this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.tabKey.on('down', (event) => {
       if (event.originalEvent) event.originalEvent.preventDefault();
-      openPanel();
+      openPanelTab('character');
     });
-    this.iKey.on('down', () => openPanel());
 
-    // ESC：显示返回主菜单确认
+    // ESC：关闭面板或显示返回主菜单确认
     this.escKey.on('down', () => {
       if (this.scene.isActive('PanelScene')) return; // 面板自己处理
       if (this.dialoguing) return;
@@ -136,11 +152,26 @@ export class MainGameScene extends Phaser.Scene {
       }
     });
 
-    // F：浏览器真全屏切换（需用户按键触发，浏览器才允许）
+    // F：浏览器真全屏切换
     this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.fKey.on('down', () => {
       if (this.scale.isFullscreen) this.scale.stopFullscreen();
       else this.scale.startFullscreen();
+    });
+
+    // F1-F4：物品快捷栏
+    const fKeys = [
+      Phaser.Input.Keyboard.KeyCodes.F1,
+      Phaser.Input.Keyboard.KeyCodes.F2,
+      Phaser.Input.Keyboard.KeyCodes.F3,
+      Phaser.Input.Keyboard.KeyCodes.F4
+    ];
+    fKeys.forEach((keyCode, i) => {
+      const key = this.input.keyboard.addKey(keyCode);
+      key.on('down', (event) => {
+        if (event.originalEvent) event.originalEvent.preventDefault();
+        this.useItemSlot(i);
+      });
     });
 
     this.time.addEvent({
@@ -660,6 +691,18 @@ export class MainGameScene extends Phaser.Scene {
   resumeGame() {
     this.physics.resume();
     this.gamePaused = false;
+  }
+
+  /** 使用物品快捷栏第 i 个槽位 */
+  useItemSlot(i) {
+    const player = this.player;
+    if (!player || !this.inventory) return;
+    const slotIdx = player.itemSlots?.[i];
+    if (slotIdx == null) return;
+    const item = this.inventory.getSlot(slotIdx);
+    if (!item || item.type !== 'consumable') return;
+    this.inventory.useItem(slotIdx);
+    this.events.emit('itemSlotsChanged');
   }
 
   getInteractionPriority(target) {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TEXTURES } from '../assets/AssetManager.js';
 import { Tooltip } from '../ui/Tooltip.js';
+import itemData from '../data/items.json';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -16,18 +17,18 @@ export class UIScene extends Phaser.Scene {
 
     this.createHUD();
     this.createHealthBar();
-    this.createScoreDisplay();
     this.createKeyDisplay();
     this.createGoldDisplay();
     this.createLevelDisplay();
-    this.createControlsHint();
     this.createSkillBar();
+    this.createItemBar();
     this.createBuffBar();
     this.tooltip = new Tooltip(this, { delay: 500 });
     this.attachSkillSlotTooltips();
     this.attachBuffSlotTooltips();
     this.setupEvents();
     this.createQuestTracker();
+    this.createDebugButton();
 
     // Listen for resize events to reposition all HUD elements
     this.scale.on('resize', this.onResize, this);
@@ -35,11 +36,9 @@ export class UIScene extends Phaser.Scene {
     // Cleanup all external listeners when the scene shuts down
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.onResize, this);
-      // 移除挂在 MainGameScene 事件上的监听，防止场景重启时引用已销毁的 UI 对象
       if (this.gameScene) {
         this.gameScene.events.off('playerHpChanged');
         this.gameScene.events.off('playerResourceChanged');
-        this.gameScene.events.off('scoreChanged');
         this.gameScene.events.off('keysChanged');
         this.gameScene.events.off('levelChanged');
         this.gameScene.events.off('xpChanged');
@@ -49,135 +48,99 @@ export class UIScene extends Phaser.Scene {
         this.gameScene.events.off('questProgressUpdated');
         this.gameScene.events.off('questCompleted');
         this.gameScene.events.off('skillSlotsChanged');
+        this.gameScene.events.off('itemSlotsChanged');
       }
     });
   }
 
   createHUD() {
-    const width = this._uiW;
-    const height = this._uiH;
-
-    this.hudBg = this.add.rectangle(0, 0, width, 70, 0x000000, 0.7).setOrigin(0, 0);
-    this.bottomBar = this.add.rectangle(0, height - 30, width, 30, 0x000000, 0.5).setOrigin(0, 0);
-
-    this.hudBg.setDepth(1);
-    this.bottomBar.setDepth(1);
+    // 左下角状态区域背景
+    this.hudBg = this.add.rectangle(0, this._uiH - 120, 280, 120, 0x000000, 0.7)
+      .setOrigin(0, 0).setDepth(1);
   }
 
   createHealthBar() {
-    // HP
-    this.heartIcon = this.add.image(20, 18, TEXTURES.HEART).setScale(0.8).setDepth(2);
-    this.hpBarBg = this.add.rectangle(50, 18, 150, 12, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    const height = this._uiH;
+    const baseX = 15;
+    const baseY = height - 110;
+
+    // Level display
+    this.playerLevelText = this.add.text(baseX, baseY, 'LV.1', {
+      fontSize: '13px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+    }).setDepth(3);
+
+    // HP - 红色
+    this.heartIcon = this.add.image(baseX + 10, baseY + 24, TEXTURES.HEART).setScale(0.8).setDepth(2);
+    this.hpBarBg = this.add.rectangle(baseX + 30, baseY + 24, 180, 14, 0x333333).setOrigin(0, 0.5).setDepth(2);
     this.hpBarBg.setStrokeStyle(1, 0x666666);
-    this.hpGhost = this.add.rectangle(51, 18, 148, 10, 0xffffff, 0.4).setOrigin(0, 0.5).setDepth(2.5);
-    this.hpBar = this.add.rectangle(51, 18, 148, 10, 0x00ff00).setOrigin(0, 0.5).setDepth(3);
-    this.hpText = this.add.text(210, 18, '100/100', {
-      fontSize: '12px',
-      fill: '#ffffff',
-      fontFamily: 'Courier New'
+    this.hpGhost = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, 0xffffff, 0.4).setOrigin(0, 0.5).setDepth(2.5);
+    this.hpBar = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, 0xcc3333).setOrigin(0, 0.5).setDepth(3);
+    this.hpText = this.add.text(baseX + 215, baseY + 24, '100/100', {
+      fontSize: '11px', fill: '#ffffff', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // Level display next to HP bar
-    this.playerLevelText = this.add.text(210, 8, 'LV.1', {
-      fontSize: '11px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+    // Stamina bar - 蓝色
+    this.staminaBarBg = this.add.rectangle(baseX + 30, baseY + 44, 180, 10, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    this.staminaBarBg.setStrokeStyle(1, 0x333344);
+    this.staminaBar = this.add.rectangle(baseX + 31, baseY + 44, 178, 8, 0x3388dd).setOrigin(0, 0.5).setDepth(3);
+    this.staminaText = this.add.text(baseX + 215, baseY + 44, '140/140', {
+      fontSize: '10px', fill: '#5599ee', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // Stamina bar (replaces MP) - yellow
-    this.staminaBarBg = this.add.rectangle(50, 35, 150, 10, 0x333333).setOrigin(0, 0.5).setDepth(2);
-    this.staminaBarBg.setStrokeStyle(1, 0x444433);
-    this.staminaBar = this.add.rectangle(51, 35, 148, 8, 0xddcc00).setOrigin(0, 0.5).setDepth(3);
-    this.staminaText = this.add.text(210, 35, '140/140', {
-      fontSize: '11px',
-      fill: '#ddcc44',
-      fontFamily: 'Courier New'
+    // Rage bar - 橙色
+    this.rageBarBg = this.add.rectangle(baseX + 30, baseY + 60, 180, 8, 0x333333).setOrigin(0, 0.5).setDepth(2);
+    this.rageBarBg.setStrokeStyle(1, 0x443322);
+    this.rageBar = this.add.rectangle(baseX + 31, baseY + 60, 0, 6, 0xff8822).setOrigin(0, 0.5).setDepth(3);
+    this.rageText = this.add.text(baseX + 215, baseY + 60, '0/100', {
+      fontSize: '9px', fill: '#ffaa44', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // Rage bar - red, below stamina
-    this.rageBarBg = this.add.rectangle(50, 48, 150, 8, 0x333333).setOrigin(0, 0.5).setDepth(2);
-    this.rageBarBg.setStrokeStyle(1, 0x443333);
-    this.rageBar = this.add.rectangle(51, 48, 0, 6, 0xff3333).setOrigin(0, 0.5).setDepth(3);
-    this.rageText = this.add.text(210, 48, '0/100', {
-      fontSize: '9px',
-      fill: '#ff6644',
-      fontFamily: 'Courier New'
-    }).setOrigin(0, 0.5).setDepth(3);
-
-    // XP bar (moved down)
-    this.xpBarBg = this.add.rectangle(50, 58, 150, 6, 0x222233).setOrigin(0, 0.5).setDepth(2);
+    // XP bar
+    this.xpBarBg = this.add.rectangle(baseX + 30, baseY + 76, 180, 6, 0x222233).setOrigin(0, 0.5).setDepth(2);
     this.xpBarBg.setStrokeStyle(1, 0x333344);
-    this.xpBar = this.add.rectangle(51, 58, 0, 4, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
-    this.xpText = this.add.text(210, 58, 'XP: 0/40', {
+    this.xpBar = this.add.rectangle(baseX + 31, baseY + 76, 0, 4, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
+    this.xpText = this.add.text(baseX + 215, baseY + 76, 'XP: 0/40', {
       fontSize: '9px', fill: '#9988cc', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
-  }
 
-  createScoreDisplay() {
-    const width = this._uiW;
-
-    this.scoreLabelText = this.add.text(width / 2, 15, '分数', {
-      fontSize: '12px',
-      fill: '#aaaaaa',
-      fontFamily: 'Courier New'
-    }).setOrigin(0.5).setDepth(2);
-
-    this.scoreText = this.add.text(width / 2, 32, '0', {
-      fontSize: '18px',
-      fill: '#ffff00',
-      fontFamily: 'Courier New'
-    }).setOrigin(0.5).setDepth(2);
-  }
-
-  createKeyDisplay() {
-    const width = this._uiW;
-
-    this.keyIcon = this.add.image(width - 200, 25, TEXTURES.KEY).setScale(0.8).setDepth(2);
-    this.keyText = this.add.text(width - 180, 25, 'x0', {
-      fontSize: '14px',
-      fill: '#ff69b4',
-      fontFamily: 'Courier New'
+    // Key + Gold below XP
+    this.keyIcon = this.add.image(baseX + 30, baseY + 95, TEXTURES.KEY).setScale(0.7).setDepth(2);
+    this.keyText = this.add.text(baseX + 45, baseY + 95, 'x0', {
+      fontSize: '11px', fill: '#ff69b4', fontFamily: 'Courier New'
+    }).setOrigin(0, 0.5).setDepth(2);
+    this.goldText = this.add.text(baseX + 100, baseY + 95, '💰 0', {
+      fontSize: '11px', fill: '#ffd700', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(2);
   }
 
+  createKeyDisplay() {
+    // 已整合到 createHealthBar 左下角
+  }
+
   createGoldDisplay() {
-    const width = this._uiW;
-    this.goldText = this.add.text(width - 200, 40, '💰 0', {
-      fontSize: '11px', fill: '#ffd700', fontFamily: 'Courier New'
-    }).setDepth(2);
+    // 已整合到 createHealthBar 左下角
   }
 
   createLevelDisplay() {
+    // 右上角仅保留关卡名
     const width = this._uiW;
-
-    this.levelText = this.add.text(width - 80, 25, '第一关', {
-      fontSize: '12px',
-      fill: '#7c4dff',
-      fontFamily: 'Courier New'
-    }).setOrigin(0.5, 0.5).setDepth(2);
-  }
-
-  createControlsHint() {
-    const width = this._uiW;
-    const height = this._uiH;
-
-    this.controlsText = this.add.text(width / 2, height - 15, 'WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板 | F:全屏', {
-      fontSize: '12px',
-      fill: '#888888',
-      fontFamily: 'Courier New'
-    }).setOrigin(0.5).setDepth(2);
+    this.levelText = this.add.text(width - 15, 15, '第一关', {
+      fontSize: '12px', fill: '#7c4dff', fontFamily: 'Courier New'
+    }).setOrigin(1, 0).setDepth(2);
   }
 
   createSkillBar() {
     const width = this._uiW;
     const height = this._uiH;
-    const slotSize = 36;
+    const slotSize = 40;
     const gap = 6;
+    // 4 技能 + 4 物品 = 8 槽, 中间留 gap*2 分隔
     const totalW = 4 * slotSize + 3 * gap;
-    const startX = width / 2 - totalW / 2;
-    const slotY = height - 52; // above bottom bar
+    const startX = width / 2 - totalW / 2 - (4 * slotSize + 4 * gap) / 2 - gap;
+    const slotY = height - 50;
 
     this.skillSlots = [];
 
-    // Read skill slots and defs from the player dynamically
     const player = this.gameScene?.player;
     const playerSlots = player?.skillSlots || [null, null, null, null];
     const skillDefs = player?.skillEngine?.getSkillDefs() || {};
@@ -187,35 +150,68 @@ export class UIScene extends Phaser.Scene {
       const skillId = playerSlots[i];
       const base = skillId ? skillDefs[skillId] : null;
 
-      // Slot background
       const bg = this.add.rectangle(x, slotY, slotSize, slotSize, 0x1a1a2e, 0.85)
         .setStrokeStyle(1, base ? 0x5a5a8a : 0x333344).setDepth(4);
 
-      // Skill icon text
       const icon = this.add.text(x, slotY - 2, base ? base.icon : '', {
-        fontSize: '16px', fontFamily: 'Courier New'
+        fontSize: '18px', fontFamily: 'Courier New'
       }).setOrigin(0.5).setDepth(5);
 
-      // Key label
       const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `${i + 1}`, {
-        fontSize: '8px', fill: '#aaaaaa', fontFamily: 'Courier New'
+        fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New'
       }).setDepth(6);
 
-      // Cooldown overlay (darkening rectangle)
       const cdOverlay = this.add.rectangle(x, slotY, slotSize - 2, 0, 0x000000, 0.6)
         .setOrigin(0.5, 1).setDepth(5.5);
 
-      // Cooldown text
       const cdText = this.add.text(x, slotY + 2, '', {
-        fontSize: '10px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '11px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(6).setVisible(false);
 
-      // Level text
       const lvText = this.add.text(x + slotSize / 2 - 2, slotY + slotSize / 2 - 2, '', {
-        fontSize: '7px', fill: '#aaccff', fontFamily: 'Courier New'
+        fontSize: '8px', fill: '#aaccff', fontFamily: 'Courier New'
       }).setOrigin(1, 1).setDepth(6);
 
       this.skillSlots.push({ bg, icon, keyLabel, cdOverlay, cdText, lvText, skillId, x, y: slotY, size: slotSize });
+    }
+  }
+
+  createItemBar() {
+    const width = this._uiW;
+    const height = this._uiH;
+    const slotSize = 40;
+    const gap = 6;
+    const totalSkillW = 4 * slotSize + 3 * gap;
+    const startX = width / 2 - totalSkillW / 2 - (4 * slotSize + 4 * gap) / 2 - gap;
+    const itemStartX = startX + totalSkillW + gap * 3;
+    const slotY = height - 50;
+
+    this.itemSlots = [];
+
+    // 从玩家读取物品快捷栏
+    const player = this.gameScene?.player;
+    const playerItemSlots = player?.itemSlots || [null, null, null, null];
+
+    for (let i = 0; i < 4; i++) {
+      const x = itemStartX + i * (slotSize + gap) + slotSize / 2;
+
+      const bg = this.add.rectangle(x, slotY, slotSize, slotSize, 0x1a2a1e, 0.85)
+        .setStrokeStyle(1, 0x3a5a3a).setDepth(4);
+
+      const icon = this.add.text(x, slotY - 2, '', {
+        fontSize: '16px', fontFamily: 'Courier New'
+      }).setOrigin(0.5).setDepth(5);
+
+      const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `F${i + 1}`, {
+        fontSize: '8px', fill: '#88aa88', fontFamily: 'Courier New'
+      }).setDepth(6);
+
+      const countText = this.add.text(x + slotSize / 2 - 3, slotY + slotSize / 2 - 3, '', {
+        fontSize: '9px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2
+      }).setOrigin(1, 1).setDepth(6);
+
+      this.itemSlots.push({ bg, icon, keyLabel, countText, x, y: slotY, size: slotSize });
     }
   }
 
@@ -280,15 +276,38 @@ export class UIScene extends Phaser.Scene {
       slot.skillId = id;
       slot.icon.setText(base ? base.icon : '');
       slot.bg.setStrokeStyle(1, base ? 0x5a5a8a : 0x333344);
-      // 清除冷却显示（旧技能的冷却状态不再适用）
       slot.cdOverlay.setSize(slot.size - 2, 0);
       slot.cdText.setVisible(false);
       slot.lvText.setText('');
     });
   }
 
+  /** 物品快捷栏刷新 */
+  refreshItemSlots() {
+    if (!this.itemSlots) return;
+    const player = this.gameScene?.player;
+    const inventory = this.gameScene?.inventory;
+    const itemSlotIds = player?.itemSlots || [null, null, null, null];
+
+    this.itemSlots.forEach((slot, i) => {
+      const slotIdx = itemSlotIds[i];
+      if (slotIdx != null && inventory) {
+        const item = inventory.getSlot(slotIdx);
+        if (item && item.type === 'consumable') {
+          slot.icon.setText(item.icon || '🧪');
+          slot.countText.setText(item.quantity > 1 ? `${item.quantity}` : '');
+          slot.bg.setStrokeStyle(1, 0x55aa55);
+          return;
+        }
+      }
+      // 空槽或无效
+      slot.icon.setText('');
+      slot.countText.setText('');
+      slot.bg.setStrokeStyle(1, 0x3a5a3a);
+    });
+  }
+
   createBuffBar() {
-    // 池：最多 8 个 buff 同时显示
     this.buffSlots = [];
     this.buffSlotMax = 8;
     this.buffIconSize = 28;
@@ -319,17 +338,16 @@ export class UIScene extends Phaser.Scene {
     const width = this._uiW;
     const height = this._uiH;
     const size = this.buffIconSize;
-    const gap = 4;
-    const totalW = visible.length * size + Math.max(0, visible.length - 1) * gap;
+    const gapB = 4;
+    const totalW = visible.length * size + Math.max(0, visible.length - 1) * gapB;
     const startX = width / 2 - totalW / 2 + size / 2;
-    const y = height - 92; // 在技能栏上方
+    const y = height - 80; // 在技能栏上方
 
     this.buffSlots.forEach((slot, i) => {
       if (i < visible.length) {
         const b = visible[i];
-        const x = startX + i * (size + gap);
+        const x = startX + i * (size + gapB);
         slot.bg.setPosition(x, y).setVisible(true);
-        // 按类型上色：buff 绿、debuff 红、其他黄
         if (b.type === 'debuff' || b.type === 'dot') {
           slot.bg.setStrokeStyle(1, 0xff6666);
         } else if (b.type === 'buff') {
@@ -338,12 +356,10 @@ export class UIScene extends Phaser.Scene {
           slot.bg.setStrokeStyle(1, 0xffdd44);
         }
         slot.icon.setPosition(x, y - 2).setText(b.icon || '✨').setVisible(true);
-        // 倒计时（秒）— 内嵌在图标底部
         const sec = Math.max(0, b.remaining / 1000);
         slot.time.setPosition(x, y + size / 2 - 5)
           .setText(sec >= 10 ? `${Math.floor(sec)}` : sec.toFixed(1))
           .setVisible(true);
-        // 叠加层数
         if (b.stacks > 1) {
           slot.stacks.setPosition(x + size / 2 - 2, y - size / 2 + 1)
             .setText(`x${b.stacks}`).setVisible(true);
@@ -360,69 +376,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   onResize(gameSize) {
-    // Update camera size & 重算 UI 缩放
     this.cameras.main.setSize(gameSize.width, gameSize.height);
     this._uiW = gameSize.width;
     this._uiH = gameSize.height;
-    const width = this._uiW;
-    const height = this._uiH;
-
-    // Top bar: full width
-    this.hudBg.setPosition(0, 0);
-    this.hudBg.setSize(width, 70);
-
-    // Bottom bar: full width, anchored to bottom
-    this.bottomBar.setPosition(0, height - 30);
-    this.bottomBar.setSize(width, 30);
-
-    // HP/MP bars: top-left, fixed offset (20, 18) — no change needed for these
-    // (heartIcon, hpBarBg, hpBar, hpText, mpBarBg, mpBar, mpText stay at fixed left positions)
-
-    // Score: top-center
-    this.scoreLabelText.setPosition(width / 2, 15);
-    this.scoreText.setPosition(width / 2, 32);
-
-    // Keys: top-right
-    this.keyIcon.setPosition(width - 200, 25);
-    this.keyText.setPosition(width - 180, 25);
-
-    // Level name: top-right
-    this.levelText.setPosition(width - 80, 25);
-
-    // Controls hint: bottom-center
-    this.controlsText.setPosition(width / 2, height - 15);
-
-    // Skill bar: bottom-center above controls
-    if (this.skillSlots) {
-      const slotSize = 36;
-      const gap = 6;
-      const totalW = 4 * slotSize + 3 * gap;
-      const startX = width / 2 - totalW / 2;
-      const slotY = height - 52;
-
-      this.skillSlots.forEach((slot, i) => {
-        const x = startX + i * (slotSize + gap) + slotSize / 2;
-        slot.x = x;
-        slot.y = slotY;
-        slot.bg.setPosition(x, slotY);
-        slot.icon.setPosition(x, slotY - 2);
-        slot.keyLabel.setPosition(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1);
-        slot.cdOverlay.setPosition(x, slotY + (slotSize - 2) / 2);
-        slot.cdText.setPosition(x, slotY + 2);
-        slot.lvText.setPosition(x + slotSize / 2 - 2, slotY + slotSize / 2 - 2);
-      });
-    }
-
-    // Gold display
-    if (this.goldText) this.goldText.setPosition(width - 200, 40);
-
-    // Quest tracker
-    if (this.questTrackerBg) {
-      this.questTrackerBg.setPosition(width - 10, height - 40);
-      this.questTrackerTitle.setPosition(width - 205, height - 95);
-      this.questTrackerObj1.setPosition(width - 205, height - 80);
-      this.questTrackerObj2.setPosition(width - 205, height - 65);
-    }
   }
 
   setupEvents() {
@@ -431,13 +387,15 @@ export class UIScene extends Phaser.Scene {
         this.updateHealthBar(hp, maxHp);
       });
 
-      this.gameScene.events.on('playerResourceChanged', (stamina, maxStamina, rage, maxRage) => {
-        this.updateStaminaBar(stamina, maxStamina);
+      this.gameScene.events.on('playerResourceChanged', (stamina, maxStamina, rage, maxRage, mana, maxMana) => {
+        // 蓝条：法师显示魔力，其他显示体力
+        const isMage = this.gameScene?.player?.classType === 'mage';
+        if (isMage) {
+          this.updateStaminaBar(mana, maxMana);
+        } else {
+          this.updateStaminaBar(stamina, maxStamina);
+        }
         this.updateRageBar(rage, maxRage);
-      });
-
-      this.gameScene.events.on('scoreChanged', (score) => {
-        this.updateScore(score);
       });
 
       this.gameScene.events.on('keysChanged', (count) => {
@@ -448,12 +406,10 @@ export class UIScene extends Phaser.Scene {
         this.updateLevelDisplay(name, index);
       });
 
-      // XP changes
       this.gameScene.events.on('xpChanged', (xp, xpRequired) => {
         this.updateXpBar(xp, xpRequired);
       });
 
-      // Level up
       this.gameScene.events.on('levelUp', (level) => {
         if (this.playerLevelText) this.playerLevelText.setText(`LV.${level}`);
       });
@@ -465,7 +421,6 @@ export class UIScene extends Phaser.Scene {
         this.updateXpBar(levelSystem.xp, levelSystem.getXpRequired());
       }
 
-      // Gold changes
       this.gameScene.events.on('goldChanged', (gold) => {
         if (this.goldText) this.goldText.setText(`💰 ${gold}`);
       });
@@ -475,18 +430,19 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.on('questProgressUpdated', () => this.updateQuestTracker());
       this.gameScene.events.on('questCompleted', () => this.updateQuestTracker());
 
-      // 技能槽位变化（来自技能面板装备按钮）
+      // 技能槽位变化
       this.gameScene.events.on('skillSlotsChanged', () => this.refreshSkillSlots());
+
+      // 物品快捷栏变化
+      this.gameScene.events.on('itemSlotsChanged', () => this.refreshItemSlots());
     }
   }
 
   updateHealthBar(hp, maxHp) {
     const percentage = hp / maxHp;
-    const newWidth = Math.max(0, 148 * percentage);
+    const newWidth = Math.max(0, 178 * percentage);
 
-    // Ghost bar - only on decrease
     if (newWidth < this.hpBar.width) {
-      // Stop any existing ghost tween
       if (this.hpGhostTween) this.hpGhostTween.stop();
       this.hpGhost.width = this.hpBar.width;
       this.hpGhostTween = this.tweens.add({
@@ -496,18 +452,17 @@ export class UIScene extends Phaser.Scene {
         ease: 'Quad.easeOut'
       });
     } else {
-      // On heal, ghost immediately matches
       this.hpGhost.width = newWidth;
     }
 
     this.hpBar.width = newWidth;
 
     if (percentage > 0.6) {
-      this.hpBar.setFillStyle(0x00ff00);
+      this.hpBar.setFillStyle(0xcc3333);
     } else if (percentage > 0.3) {
-      this.hpBar.setFillStyle(0xffff00);
+      this.hpBar.setFillStyle(0xdd2222);
     } else {
-      this.hpBar.setFillStyle(0xff0000);
+      this.hpBar.setFillStyle(0xff1111);
     }
 
     this.hpText.setText(`${Math.floor(hp)}/${maxHp}`);
@@ -524,16 +479,15 @@ export class UIScene extends Phaser.Scene {
   updateStaminaBar(stamina, maxStamina) {
     if (!maxStamina || maxStamina <= 0) return;
     const percentage = stamina / maxStamina;
-    this.staminaBar.width = Math.max(0, 148 * percentage);
+    this.staminaBar.width = Math.max(0, 178 * percentage);
     this.staminaText.setText(`${Math.floor(stamina)}/${maxStamina}`);
   }
 
   updateRageBar(rage, maxRage) {
     const percentage = rage / maxRage;
-    this.rageBar.width = Math.max(0, 148 * percentage);
+    this.rageBar.width = Math.max(0, 178 * percentage);
     this.rageText.setText(`${Math.floor(rage)}/${maxRage}`);
 
-    // Rage bar pulses when full
     if (rage >= maxRage && !this._ragePulsing) {
       this._ragePulsing = true;
       this._ragePulseTween = this.tweens.add({
@@ -547,41 +501,18 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  updateScore(score) {
-    this.scoreText.setText(score.toString());
-    this.tweens.add({
-      targets: this.scoreText,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      duration: 100,
-      yoyo: true
-    });
-  }
-
   updateKeyCount(count) {
-    this.keyText.setText(`x${count}`);
-    this.tweens.add({
-      targets: this.keyText,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 100,
-      yoyo: true
-    });
+    if (this.keyText) this.keyText.setText(`x${count}`);
   }
 
   updateLevelDisplay(name, index) {
-    this.levelText.setText(name);
-    this.tweens.add({
-      targets: this.levelText,
-      scaleX: 1.3, scaleY: 1.3,
-      duration: 200, yoyo: true
-    });
+    if (this.levelText) this.levelText.setText(name);
   }
 
   updateXpBar(xp, xpRequired) {
     if (!this.xpBar) return;
     const percentage = xpRequired > 0 ? xp / xpRequired : 0;
-    this.xpBar.width = Math.max(0, 148 * percentage);
+    this.xpBar.width = Math.max(0, 178 * percentage);
     this.xpText.setText(`XP: ${xp}/${xpRequired}`);
   }
 
@@ -589,18 +520,18 @@ export class UIScene extends Phaser.Scene {
     const width = this._uiW;
     const height = this._uiH;
 
-    this.questTrackerBg = this.add.rectangle(width - 10, height - 40, 200, 60, 0x000000, 0.5)
+    this.questTrackerBg = this.add.rectangle(width - 10, height - 90, 200, 60, 0x000000, 0.5)
       .setOrigin(1, 1).setStrokeStyle(1, 0x333355).setDepth(1);
 
-    this.questTrackerTitle = this.add.text(width - 205, height - 95, '', {
+    this.questTrackerTitle = this.add.text(width - 205, height - 145, '', {
       fontSize: '10px', fill: '#ffaa44', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setDepth(2);
 
-    this.questTrackerObj1 = this.add.text(width - 205, height - 80, '', {
+    this.questTrackerObj1 = this.add.text(width - 205, height - 130, '', {
       fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New'
     }).setDepth(2);
 
-    this.questTrackerObj2 = this.add.text(width - 205, height - 65, '', {
+    this.questTrackerObj2 = this.add.text(width - 205, height - 115, '', {
       fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New'
     }).setDepth(2);
   }
@@ -629,6 +560,7 @@ export class UIScene extends Phaser.Scene {
   update() {
     this.updateSkillBar();
     this.updateBuffBar();
+    this.updateItemBar();
   }
 
   updateSkillBar() {
@@ -641,11 +573,9 @@ export class UIScene extends Phaser.Scene {
       const cdInfo = engine.getCooldownInfo(slot.skillId);
       const level = engine.getSkillLevel(slot.skillId);
 
-      // Level display
       slot.lvText.setText(`Lv${level}`);
 
       if (cdInfo.remaining > 0) {
-        // On cooldown
         const fraction = cdInfo.fraction;
         slot.cdOverlay.setSize(slot.size - 2, (slot.size - 2) * fraction);
         slot.cdOverlay.setPosition(slot.x, slot.y + (slot.size - 2) / 2);
@@ -653,7 +583,6 @@ export class UIScene extends Phaser.Scene {
         slot.cdText.setVisible(true);
         slot.bg.setStrokeStyle(1, 0x444444);
       } else {
-        // Ready
         slot.cdOverlay.setSize(slot.size - 2, 0);
         slot.cdText.setVisible(false);
 
@@ -661,14 +590,77 @@ export class UIScene extends Phaser.Scene {
         if (check.canUse) {
           slot.bg.setStrokeStyle(1, 0x66aaff);
         } else {
-          slot.bg.setStrokeStyle(1, 0x664444); // insufficient resource
+          slot.bg.setStrokeStyle(1, 0x664444);
         }
       }
 
-      // Highlight when actively casting this skill
       if (engine.activeSkillId === slot.skillId) {
         slot.bg.setStrokeStyle(2, 0xffdd44);
       }
     }
+  }
+
+  updateItemBar() {
+    if (!this.itemSlots) return;
+    const player = this.gameScene?.player;
+    const inventory = this.gameScene?.inventory;
+    if (!player || !inventory) return;
+
+    const itemSlotIds = player.itemSlots || [null, null, null, null];
+    this.itemSlots.forEach((slot, i) => {
+      const slotIdx = itemSlotIds[i];
+      if (slotIdx != null) {
+        const item = inventory.getSlot(slotIdx);
+        if (item && item.type === 'consumable') {
+          slot.icon.setText(item.icon || '🧪');
+          slot.countText.setText(item.quantity > 1 ? `${item.quantity}` : '');
+          slot.bg.setStrokeStyle(1, 0x55aa55);
+          return;
+        }
+      }
+      slot.icon.setText('');
+      slot.countText.setText('');
+      slot.bg.setStrokeStyle(1, 0x3a5a3a);
+    });
+  }
+
+  createDebugButton() {
+    const btn = this.add.text(this._uiW - 10, 40, '🛠 +材料', {
+      fontSize: '12px', fill: '#ff6666', fontFamily: 'Courier New',
+      backgroundColor: '#1a1a2e', padding: { x: 6, y: 4 }
+    }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
+
+    btn.on('pointerover', () => btn.setColor('#ffaaaa'));
+    btn.on('pointerout', () => btn.setColor('#ff6666'));
+    btn.on('pointerdown', () => {
+      const inventory = this.gameScene?.inventory;
+      if (!inventory) return;
+
+      // 所有材料各加 9999
+      const matIds = [
+        'iron_shard', 'enhance_stone', 'ancient_core',
+        'chaos_essence', 'soul_crystal', 'divine_heart',
+        'world_core', 'refining_stone', 'star_fragment'
+      ];
+      matIds.forEach(id => {
+        const data = itemData.items?.[id];
+        if (data) inventory.addItem({ ...data }, 9999);
+      });
+
+      // 金币 +99999
+      inventory.gold += 99999;
+      this.gameScene.events.emit('goldChanged', inventory.gold);
+
+      // 提示
+      const msg = this.add.text(this._uiW / 2, 80, '已添加全部材料 ×9999 + 金币 ×99999', {
+        fontSize: '14px', color: '#44ff44', fontFamily: 'Courier New',
+        fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+      }).setOrigin(0.5).setDepth(9999);
+      this.tweens.add({
+        targets: msg, alpha: 0, y: msg.y - 30,
+        duration: 1500, delay: 800,
+        onComplete: () => msg.destroy()
+      });
+    });
   }
 }

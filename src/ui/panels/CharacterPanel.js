@@ -2,12 +2,16 @@ import { formatEquipTooltip, getSetCount } from './InventoryPanel.js';
 
 export const CharacterPanel = {
   createCharacterTab() {
+    // 重置右键菜单引用（PanelScene 重开时旧容器已销毁）
+    this.charContextMenu = null;
+    this._charCtxDismiss = null;
+
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
     this.tabContainers.character = container;
 
     const contentTop = this.panelTop + 50;
-    const leftX = this.panelLeft + this.panelW * 0.22;
-    const rightX = this.panelX + this.panelW * 0.02;
+    const leftX = this.panelLeft + this.panelW * 0.25;
+    const rightX = this.panelLeft + this.panelW * 0.55;
     const topY = contentTop + 20;
 
     // Content background
@@ -17,27 +21,30 @@ export const CharacterPanel = {
     ).setStrokeStyle(1, 0x3a3a5a);
     container.add(contentBg);
 
-    // --- LEFT: Paper Doll ---
-    const leftTitle = this.add.text(leftX, topY, '-- 角色预览 --', {
-      fontSize: '12px', fill: '#8888aa', fontFamily: 'Courier New'
+    // --- LEFT: Paper Doll (加大区域) ---
+    const leftTitle = this.add.text(leftX, topY, '-- 角色装备 --', {
+      fontSize: '13px', fill: '#8888aa', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     container.add(leftTitle);
 
-    const previewY = topY + 130;
+    const previewY = topY + 160;
     const preview = this.add.sprite(leftX, previewY, 'hero_00');
-    preview.setDisplaySize(72, 104);
+    preview.setDisplaySize(84, 120);
     if (this.anims.exists('hero_idle')) preview.play('hero_idle');
     container.add(preview);
 
+    // 装备槽布局：4 行，第2-3排与武器/护甲列对齐，不挡人物
+    const rowGap = 70;
+    const colGap = 85;
     const slotMapping = [
-      { slot: 'weapon',   x: 0,   y: -100, label: '武器' },
-      { slot: 'helmet',   x: 0,   y: -60,  label: '头盔' },
-      { slot: 'necklace', x: -55, y: -30,  label: '项链' },
-      { slot: 'ring1',    x: 55,  y: -30,  label: '戒指' },
-      { slot: 'offhand',  x: -55, y: 30,   label: '副手' },
-      { slot: 'ring2',    x: 55,  y: 30,   label: '戒指' },
-      { slot: 'armor',    x: 0,   y: 60,   label: '护甲' },
-      { slot: 'boots',    x: 0,   y: 100,  label: '靴子' }
+      { slot: 'weapon',   x: -colGap, y: -rowGap * 1.5, label: '武器' },
+      { slot: 'helmet',   x: 0,       y: -rowGap * 1.5, label: '头盔' },
+      { slot: 'armor',    x: colGap,  y: -rowGap * 1.5, label: '护甲' },
+      { slot: 'offhand',  x: -colGap, y: -rowGap * 0.5, label: '副手' },
+      { slot: 'necklace', x: colGap,  y: -rowGap * 0.5, label: '项链' },
+      { slot: 'ring1',    x: -colGap, y: rowGap * 0.5,  label: '戒指' },
+      { slot: 'ring2',    x: colGap,  y: rowGap * 0.5,  label: '戒指' },
+      { slot: 'boots',    x: 0,       y: rowGap * 1.5,  label: '靴子' }
     ];
 
     this.equipSlotUI = {};
@@ -50,13 +57,13 @@ export const CharacterPanel = {
       const sx = leftX + def.x;
       const sy = previewY + def.y;
 
-      const cell = this.add.rectangle(sx, sy, 34, 34, 0x2a2a3a, 0.7)
+      const cell = this.add.rectangle(sx, sy, 42, 42, 0x2a2a3a, 0.7)
         .setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
       const icon = this.add.text(sx, sy, '', {
-        fontSize: '16px', fontFamily: 'Courier New'
+        fontSize: '18px', fontFamily: 'Courier New'
       }).setOrigin(0.5).setVisible(false);
-      const label = this.add.text(sx, sy + 20, def.label, {
-        fontSize: '8px', fill: '#555566', fontFamily: 'Courier New'
+      const label = this.add.text(sx, sy + 24, def.label, {
+        fontSize: '9px', fill: '#555566', fontFamily: 'Courier New'
       }).setOrigin(0.5);
 
       cell.on('pointerdown', (pointer) => {
@@ -66,7 +73,7 @@ export const CharacterPanel = {
         if (!equipped) return;
 
         // 右键 → 弹出菜单
-        if (pointer.button === 2) {
+        if (pointer.button === 2 || pointer.rightButtonDown()) {
           this._showCharContextMenu(def.slot, equipped, pointer);
           return;
         }
@@ -74,6 +81,17 @@ export const CharacterPanel = {
         equip.unequipToInventory(def.slot);
         this.refreshCharacterTab();
         this.refreshInventoryTab();
+      });
+
+      // 备用右键监听（某些 Phaser 版本 pointerdown 不传 button=2）
+      cell.on('pointerup', (pointer) => {
+        if (pointer.button === 2 || pointer.rightButtonDown()) {
+          const equip = this.gameScene?.equipmentSystem;
+          if (!equip) return;
+          const equipped = equip.getSlot(def.slot);
+          if (!equipped) return;
+          this._showCharContextMenu(def.slot, equipped, pointer);
+        }
       });
 
       cell.on('pointerover', () => {
@@ -93,21 +111,21 @@ export const CharacterPanel = {
       this.equipSlotUI[def.slot] = { cell, icon };
     });
 
-    const xpBarY = previewY + 150;
-    this.charLevelText = this.add.text(leftX - 60, xpBarY, 'LV.1', {
+    const xpBarY = previewY + 180;
+    this.charLevelText = this.add.text(leftX - 80, xpBarY, 'LV.1', {
       fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
     });
     container.add(this.charLevelText);
 
-    const xpBarBg = this.add.rectangle(leftX + 10, xpBarY + 7, 100, 10, 0x222233)
+    const xpBarBg = this.add.rectangle(leftX - 10, xpBarY + 7, 140, 10, 0x222233)
       .setStrokeStyle(1, 0x444466).setOrigin(0, 0.5);
     container.add(xpBarBg);
 
-    this.charXpBar = this.add.rectangle(leftX + 11, xpBarY + 7, 0, 8, 0x9966ff)
+    this.charXpBar = this.add.rectangle(leftX - 9, xpBarY + 7, 0, 8, 0x9966ff)
       .setOrigin(0, 0.5);
     container.add(this.charXpBar);
 
-    this.charXpText = this.add.text(leftX + 10 + 50, xpBarY + 7, '0/40', {
+    this.charXpText = this.add.text(leftX - 10 + 70, xpBarY + 7, '0/40', {
       fontSize: '9px', fill: '#aaaacc', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     container.add(this.charXpText);
@@ -221,7 +239,7 @@ export const CharacterPanel = {
     if (!equip || !equip.getActiveSets) return;
     const activeSets = equip.getActiveSets();
 
-    const rightX = this.panelX + this.panelW * 0.02;
+    const rightX = this.panelLeft + this.panelW * 0.55;
     const baseY = this.charSetsTitle.y + 18;
 
     if (!activeSets.length) {
@@ -261,13 +279,13 @@ export const CharacterPanel = {
     this.charLevelText.setText(`LV.${levelSystem.level}`);
     const xpReq = levelSystem.getXpRequired();
     const xpPct = Math.min(1, levelSystem.xp / xpReq);
-    this.charXpBar.setSize(Math.max(1, 98 * xpPct), 8);
+    this.charXpBar.setSize(Math.max(1, 138 * xpPct), 8);
     this.charXpText.setText(`${levelSystem.xp}/${xpReq}`);
 
     // Update base stats
     const stats = ['con', 'str', 'int', 'agi', 'per', 'lck'];
     stats.forEach(stat => {
-      const val = player.stats.getEffective(stat);
+      const val = Math.floor(player.stats.getEffective(stat));
       this.charStatValues[stat].setText(`${val}`);
     });
 
@@ -396,6 +414,12 @@ export const CharacterPanel = {
   },
 
   _showCharContextMenu(slotName, equipped, pointer) {
+    // 立即移除旧的关闭监听，防止它关掉即将显示的新菜单
+    if (this._charCtxDismiss) {
+      this.input.off('pointerdown', this._charCtxDismiss);
+      this._charCtxDismiss = null;
+    }
+
     if (!this.charContextMenu) {
       this.charContextMenu = this.add.container(0, 0).setDepth(30);
     }
@@ -440,8 +464,15 @@ export const CharacterPanel = {
     bg.setSize(120, optY + 4);
     this.charContextMenu.setPosition(pointer.x, pointer.y);
 
-    this.input.once('pointerdown', () => {
-      if (this.charContextMenu) this.charContextMenu.setVisible(false);
+    // 下一帧注册关闭监听，避免当前事件冒泡立即触发
+    this.time.delayedCall(0, () => {
+      this._charCtxDismiss = (p) => {
+        // 点击菜单项自身不触发（由菜单项的 pointerdown 处理）
+        if (this.charContextMenu) this.charContextMenu.setVisible(false);
+        this.input.off('pointerdown', this._charCtxDismiss);
+        this._charCtxDismiss = null;
+      };
+      this.input.on('pointerdown', this._charCtxDismiss);
     });
   },
 

@@ -81,8 +81,8 @@ export const ARCHER_SKILLS = {
     phases: { startup: 50, active: 200, recovery: 150 },
     effect: {
       type: 'dash',
-      distance: 200,
-      speed: 700,
+      distance: 300,
+      speed: 900,
       hitbox: { w: 30, h: 30 },
       baseDamageMultiplier: 0.8,
       knockback: 30
@@ -256,8 +256,8 @@ export const ARCHER_SKILLS = {
     phases: { startup: 60, active: 250, recovery: 150 },
     effect: {
       type: 'dash',
-      distance: 160,
-      speed: 700,
+      distance: 250,
+      speed: 900,
       reverse: true,            // 朝鼠标反方向位移（向后翻滚）
       hitbox: { w: 44, h: 36 },
       baseDamageMultiplier: 1.5,

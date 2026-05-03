@@ -110,17 +110,24 @@ this.questSystem     = new QuestSystem()
 
 | 元素 | 位置 | 内容 |
 |------|------|------|
-| HP 条 | 左上 | 红血条 + ghost 滞后效果 + 等级 |
-| 体力条 | HP 下方 | 黄条 |
-| 怒气条 | 体力下方 | 红条（满时脉冲） |
+| 等级 | 左下 | LV.N |
+| HP 条 | 左下 | 红色血条 + ghost 滞后效果 |
+| 蓝条 | HP 下方 | 蓝色（法师=魔力，射手=体力） |
+| 怒气条 | 蓝条下方 | 橙色（满时脉冲） |
 | 经验条 | 怒气下方 | 紫条 |
-| 分数 | 顶部居中 | 金币数 |
-| 钥匙/金币 | 右上 | 数量 |
+| 钥匙/金币 | 左下角底部 | 数量 |
 | 关卡名 | 右上 | 当前关卡 |
 | 任务追踪 | 右下 | 当前追踪任务 + 进度（最多 2 条目标） |
-| 技能栏 | 底部居中 | 4 槽位（图标 + 冷却倒计时 + 等级 + 按键标签） |
+| 技能栏 | 底部居中左 | 4 槽位（图标 + 冷却倒计时 + 等级 + 按键 1-4） |
+| 物品快捷栏 | 底部居中右 | 4 槽位（F1-F4，绿色调，消耗品图标+数量） |
 | Buff 栏 | 技能栏正上方 | 最多 8 个 buff 图标 + 倒计时（buff 绿框 / debuff 红框） |
-| 操作提示 | 底部 | 按键说明 |
+| Debug 按钮 | 右上 | 🛠 +材料（点击加 9999 材料 + 99999 金币，测试用） |
+
+### 物品快捷栏
+- `player.itemSlots = [null, null, null, null]` 存储背包格子索引
+- 背包右键消耗品可"设为快捷栏 F1/F2/F3/F4"
+- 游戏内按 F1-F4 使用对应消耗品
+- 存档保存/读取 itemSlots
 
 ### Tooltip 集成
 - 共享 `Tooltip` 实例（500ms hover）
@@ -128,11 +135,12 @@ this.questSystem     = new QuestSystem()
 - 内容动态读 `player.skillEngine.getScaledSkill(id)` 和 `player.statusEffects.getActiveSummary()`
 
 ### 事件监听
-- `playerHpChanged` / `playerResourceChanged` → 更新 HP/体力/怒气
+- `playerHpChanged` / `playerResourceChanged` → 更新 HP/蓝条/怒气（含 mana）
 - `xpChanged` / `levelUp` → 更新经验/等级
-- `scoreChanged/keysChanged/goldChanged/levelChanged`
+- `keysChanged/goldChanged/levelChanged`
 - `questActivated/Progress/Completed` → 任务追踪
 - `skillSlotsChanged` → `refreshSkillSlots`（不重建容器，仅更新图标）
+- `itemSlotsChanged` → `refreshItemSlots`
 
 ### 自适应
 - `resize` 事件 → 重新排版（虽然画布固定，备用）
@@ -140,18 +148,21 @@ this.questSystem     = new QuestSystem()
 
 ## PanelScene
 
-### 4 标签页
-| 标签 | 内容 |
-|------|------|
-| 角色 | 6 基础属性 + 14 派生属性 + 属性点分配 + 已激活套装 |
-| 背包 | 32 格、堆叠、操作菜单、双栏对比 tooltip |
-| 技能 | 2 列网格卡片、装备槽按钮、升级按钮、滚动 |
-| 任务 | 已激活/已完成任务列表 |
+### 5 标签页
+| 标签 | 快捷键 | 内容 |
+|------|--------|------|
+| 角色 | C | 纸娃娃 + 8 装备槽 + 6 基础属性 + 衍生属性 + 已激活套装 |
+| 背包 | B | 32 格、堆叠、右键菜单（使用/装备/强化/洗练/镶嵌/设快捷栏/丢弃） |
+| 技能 | X | 2 列网格卡片、装备槽按钮、升级按钮、滚动 |
+| 日志 | L | 已激活/已完成任务列表 |
+| 设置 | — | 操作说明（快捷键列表，暂不可自定义） |
 
 ### 触发
-- Tab / I 键打开
-- ESC / 再按 Tab 关闭
+- C/B/X/L 键打开对应标签（再按关闭）
+- TAB 打开（默认角色页）
+- ESC / TAB 关闭
 - 打开时 `pauseGame()`（physics.pause）
+- 面板内 C/B/X/L 切换标签或关闭（同标签关闭，不同标签切换）
 
 ### 双 Tooltip 容器
 PanelScene 持有两个 tooltip 容器（`tooltipContainer` + `tooltipContainer2`），用于背包装备悬浮时并排对比：

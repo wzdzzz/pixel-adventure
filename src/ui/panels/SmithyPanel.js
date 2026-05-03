@@ -2,6 +2,7 @@ import { MATERIALS, getEnhanceCost, getEnhanceSuccessRate, getEnhanceFailureBeha
 import { AFFIXES } from '../../data/affixes.js';
 import { RECIPES } from '../../data/recipes.js';
 import { GEMS } from '../../data/gems.js';
+import itemData from '../../data/items.json';
 
 /**
  * 强化/分解小窗口（modal in PanelScene）
@@ -23,20 +24,6 @@ export const SmithyPanel = {
     if (!eq || eq.type !== 'equipment') return;
     this._closeSmithyModal();
 
-    const enh = eq.enhanceLevel || 0;
-    const cost = getEnhanceCost(enh);
-    const rate = getEnhanceSuccessRate(enh);
-    const matName = cost ? (MATERIALS[cost.matId]?.name || cost.matId) : '';
-
-    // 检查可强化性
-    const check = this.gameScene.enhanceSystem.canEnhance(eq);
-    const canEnhance = check.ok;
-    const errText = canEnhance ? '' : this._enhanceErrText(check.reason);
-
-    // 持有材料数
-    const heldMat = cost ? this._countMatInInv(cost.matId) : 0;
-    const heldGold = inv?.gold || 0;
-
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
     const cx = w / 2, cy = h / 2;
@@ -44,67 +31,86 @@ export const SmithyPanel = {
     const c = this.add.container(0, 0).setDepth(50);
     const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
     const panel = this.add.rectangle(cx, cy, 380, 260, 0x1a1a2e, 0.98).setStrokeStyle(2, 0xffaa44);
-    const title = this.add.text(cx, cy - 110, `强化 ${eq.name} +${enh}`, {
+    const title = this.add.text(cx, cy - 110, '', {
       fontSize:'15px', color:'#ffdd66', fontFamily:'Courier New', fontStyle:'bold'
     }).setOrigin(0.5);
-
-    let infoLines;
-    if (enh >= 15) {
-      infoLines = ['已达最高强化等级 +15'];
-    } else {
-      const failBehavior = getEnhanceFailureBehavior(enh);
-      const failText = failBehavior === 'downgrade' ? '⚠ 失败降 1 级' : '失败保持等级';
-      infoLines = [
-        `下一级: +${enh+1}`,
-        `成功率: ${(rate*100).toFixed(0)}%   ${failText}`,
-        `材料: ${matName} ×${cost.count} (持有 ${heldMat})`,
-        `金币: ${cost.gold} (持有 ${heldGold})`
-      ];
-      if (errText) {
-        infoLines.push('');
-        infoLines.push(`⚠ ${errText}`);
-      }
-    }
-
-    const info = this.add.text(cx, cy - 35, infoLines.join('\n'), {
-      fontSize:'12px', color: canEnhance ? '#cccccc' : '#ffaaaa',
-      fontFamily:'Courier New', align:'center', lineSpacing:5
+    const info = this.add.text(cx, cy - 35, '', {
+      fontSize:'12px', color:'#cccccc', fontFamily:'Courier New', align:'center', lineSpacing:5
     }).setOrigin(0.5);
 
     c.add([dim, panel, title, info]);
 
-    // 强化按钮：仅 canEnhance 时可点击；不可强化时显示灰色禁用按钮
-    if (enh < 15) {
-      const enabled = canEnhance;
-      const okBg = this.add.rectangle(cx - 80, cy + 80, 130, 34,
-        enabled ? 0x224422 : 0x2a2a2a)
-        .setStrokeStyle(1, enabled ? 0x66ff88 : 0x555555);
-      if (enabled) okBg.setInteractive({ useHandCursor: true });
-      const okTxt = this.add.text(cx - 80, cy + 80, '强化', {
-        fontSize:'13px', color: enabled ? '#66ff88' : '#777777', fontFamily:'Courier New'
-      }).setOrigin(0.5);
-      if (enabled) {
-        okBg.on('pointerdown', () => {
-          const r = this.gameScene.enhanceSystem.enhance(isInstance ? eq : target);
-          if (r && r.result === 'invalid') {
-            this._showPanelToast?.(this._enhanceErrText(r.reason), '#ff6666');
-          }
-          this._closeSmithyModal();
-          if (this.refreshInventoryTab) this.refreshInventoryTab();
-          if (this.refreshCharacterTab) this.refreshCharacterTab();
-        });
-      }
-      c.add([okBg, okTxt]);
-    }
+    const okBg = this.add.rectangle(cx - 80, cy + 80, 130, 34, 0x224422)
+      .setStrokeStyle(1, 0x66ff88).setInteractive({ useHandCursor: true });
+    const okTxt = this.add.text(cx - 80, cy + 80, '强化', {
+      fontSize:'13px', color:'#66ff88', fontFamily:'Courier New'
+    }).setOrigin(0.5);
+    c.add([okBg, okTxt]);
 
     const cancelBg = this.add.rectangle(cx + 80, cy + 80, 130, 34, 0x442222)
       .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
-    const cancelTxt = this.add.text(cx + 80, cy + 80, '取消', {
+    const cancelTxt = this.add.text(cx + 80, cy + 80, '关闭', {
       fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
     }).setOrigin(0.5);
-    cancelBg.on('pointerdown', () => this._closeSmithyModal());
+    cancelBg.on('pointerdown', () => {
+      this._closeSmithyModal();
+      if (this.refreshInventoryTab) this.refreshInventoryTab();
+      if (this.refreshCharacterTab) this.refreshCharacterTab();
+    });
     c.add([cancelBg, cancelTxt]);
 
+    // 刷新面板显示
+    const refreshEnhanceUI = () => {
+      const enh = eq.enhanceLevel || 0;
+      const cost = getEnhanceCost(enh);
+      const rate = getEnhanceSuccessRate(enh);
+      const matName = cost ? (MATERIALS[cost.matId]?.name || cost.matId) : '';
+      const check = this.gameScene.enhanceSystem.canEnhance(eq);
+      const canEnhance = check.ok;
+      const errText = canEnhance ? '' : this._enhanceErrText(check.reason);
+      const heldMat = cost ? this._countMatInInv(cost.matId) : 0;
+      const heldGold = inv?.gold || 0;
+
+      title.setText(`强化 ${eq.name} +${enh}`);
+
+      if (enh >= 15) {
+        info.setText('已达最高强化等级 +15');
+        info.setColor('#ffaa44');
+        okBg.setFillStyle(0x2a2a2a).setStrokeStyle(1, 0x555555);
+        okTxt.setColor('#777777');
+        okBg.removeAllListeners('pointerdown');
+      } else {
+        const lines = [
+          `下一级: +${enh+1}`,
+          `成功率: ${(rate*100).toFixed(0)}%   失败不降级`,
+          `材料: ${matName} ×${cost.count} (持有 ${heldMat})`,
+          `金币: ${cost.gold} (持有 ${heldGold})`
+        ];
+        if (errText) { lines.push(''); lines.push(`⚠ ${errText}`); }
+        info.setText(lines.join('\n'));
+        info.setColor(canEnhance ? '#cccccc' : '#ffaaaa');
+
+        if (canEnhance) {
+          okBg.setFillStyle(0x224422).setStrokeStyle(1, 0x66ff88);
+          okTxt.setColor('#66ff88');
+        } else {
+          okBg.setFillStyle(0x2a2a2a).setStrokeStyle(1, 0x555555);
+          okTxt.setColor('#777777');
+        }
+      }
+    };
+
+    okBg.on('pointerdown', () => {
+      const check = this.gameScene.enhanceSystem.canEnhance(eq);
+      if (!check.ok) return;
+      const r = this.gameScene.enhanceSystem.enhance(isInstance ? eq : target);
+      if (r && r.result === 'invalid') {
+        this._showPanelToast?.(this._enhanceErrText(r.reason), '#ff6666');
+      }
+      refreshEnhanceUI();
+    });
+
+    refreshEnhanceUI();
     this._smithyModal = c;
   },
 
@@ -304,7 +310,7 @@ export const SmithyPanel = {
     const h = this.cameras.main.height;
     const cx = w / 2, cy = h / 2;
 
-    const lockedIds = new Set();
+    const lockedIndices = new Set(); // 用索引锁定，避免 ID 引用失效
     const locks = []; // 控件引用，用于刷新
 
     const c = this.add.container(0, 0).setDepth(50);
@@ -337,20 +343,20 @@ export const SmithyPanel = {
         fontSize:'11px', color:'#cccccc', fontFamily:'Courier New'
       }).setOrigin(0, 0.5);
       box.on('pointerdown', () => {
-        if (lockedIds.has(a.id)) {
-          lockedIds.delete(a.id);
+        if (lockedIndices.has(i)) {
+          lockedIndices.delete(i);
           box.setText('☐');
         } else {
-          if (lockedIds.size >= 2) {
+          if (lockedIndices.size >= 2) {
             this._showPanelToast?.('最多锁定 2 条词条', '#ffaa44');
             return;
           }
-          lockedIds.add(a.id);
+          lockedIndices.add(i);
           box.setText('☑');
         }
         refreshCost();
       });
-      locks.push({ a, box, lbl });
+      locks.push({ box, lbl, index: i });
       c.add([box, lbl]);
     });
 
@@ -362,18 +368,20 @@ export const SmithyPanel = {
 
     let divineMode = false;
 
+    const _matName = (id) => itemData.items?.[id]?.name || MATERIALS[id]?.name || id;
+
     const refreshCost = () => {
-      const cost = reforgeSys.getCost(lockedIds.size);
+      const cost = reforgeSys.getCost(lockedIndices.size);
       const lines = [
-        `锁定: ${lockedIds.size} 条${divineMode ? '  [神圣模式]' : ''}`,
-        `材料: ${cost.matId} ×${cost.count} (持有 ${this._countMatInInv(cost.matId)})`,
+        `锁定: ${lockedIndices.size} 条${divineMode ? '  [神圣模式]' : ''}`,
+        `材料: ${_matName(cost.matId)} ×${cost.count} (持有 ${this._countMatInInv(cost.matId)})`,
         `金币: ${cost.gold} (持有 ${this.gameScene.inventory.gold || 0})`
       ];
       cost.lockedExtras.forEach(e => {
-        lines.push(`+ ${e.matId} ×${e.count} (持有 ${this._countMatInInv(e.matId)})`);
+        lines.push(`+ ${_matName(e.matId)} ×${e.count} (持有 ${this._countMatInInv(e.matId)})`);
       });
       if (divineMode) {
-        lines.push(`+ divine_heart ×1 (持有 ${this._countMatInInv('divine_heart')})`);
+        lines.push(`+ ${_matName('divine_heart')} ×1 (持有 ${this._countMatInInv('divine_heart')})`);
         lines.push('T1 词条权重 ×3');
       }
       const pity = reforgeSys.getPity(eq);
@@ -401,13 +409,46 @@ export const SmithyPanel = {
     const okTxt = this.add.text(cx - 80, cy + 165, '洗练', {
       fontSize:'13px', color:'#66ff88', fontFamily:'Courier New'
     }).setOrigin(0.5);
+    const REFORGE_ERRORS = {
+      not_equipment: '该物品不是装备',
+      no_affixes: '该装备没有词条',
+      too_many_locks: '最多锁定 2 条',
+      no_material: '混沌精华不足',
+      no_gold: '金币不足',
+      no_material_extra: '灵魂结晶不足',
+      no_divine_heart: '神铸之心不足'
+    };
+
     okBg.on('pointerdown', () => {
-      const r = reforgeSys.reforge(eq, [...lockedIds], divineMode);
+      // 将锁定的索引转为当前词条 ID 传给 reforgeSystem
+      const lockedAffixIds = [...lockedIndices].map(idx => eq.affixes[idx]?.id).filter(Boolean);
+      const r = reforgeSys.reforge(eq, lockedAffixIds, divineMode);
       if (r.result === 'invalid') {
-        this._showPanelToast?.(`洗练失败: ${r.reason}`, '#ff6666');
+        this._showPanelToast?.(REFORGE_ERRORS[r.reason] || `洗练失败: ${r.reason}`, '#ff6666');
         return;
       }
-      this._closeSmithyModal();
+      // 洗练成功 — 刷新词条显示而非关闭弹窗
+      lockedIndices.clear();
+      locks.forEach((lockItem, i) => {
+        const a = eq.affixes[i];
+        if (a) {
+          const def = AFFIXES[a.id];
+          if (def) {
+            const isTrigger = def.stat === '_trigger';
+            const valText = isTrigger
+              ? `${(def.trigger?.chance*100 || 0).toFixed(0)}% 触发`
+              : (def.isFlat ? a.value.toFixed(1) : `${(a.value*100).toFixed(1)}%`);
+            lockItem.lbl.setText(`T${def.tier} ${def.name}: ${valText}`);
+            lockItem.box.setText('☐');
+          }
+        } else {
+          lockItem.lbl.setText('');
+          lockItem.box.setVisible(false);
+        }
+      });
+      refreshCost();
+      this.refreshCharacterTab?.();
+      this.refreshInventoryTab?.();
     });
     const cancelBg = this.add.rectangle(cx + 80, cy + 165, 130, 30, 0x442222)
       .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });

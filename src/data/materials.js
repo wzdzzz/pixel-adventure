@@ -41,9 +41,7 @@ export function getEnhanceSuccessRate(currentLevel) {
   return 0;
 }
 
-/** 强化失败行为：维持 / 降级 */
+/** 强化失败行为：全等级失败只消耗材料，不降级 */
 export function getEnhanceFailureBehavior(currentLevel) {
-  const next = currentLevel + 1;
-  if (next <= 10) return 'stay';
-  return 'downgrade';
+  return 'stay';
 }

@@ -176,6 +176,10 @@ export { formatEquipTooltip, calcEquipStats, getSetCount, STAT_LABEL };
 
 export const InventoryPanel = {
   createInventoryTab() {
+    // 重置右键菜单引用（PanelScene 重开时旧容器已销毁）
+    this.contextMenu = null;
+    this._invCtxDismiss = null;
+
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
     this.tabContainers.inventory = container;
 
@@ -772,7 +776,19 @@ export const InventoryPanel = {
       optionY += 20;
     };
 
-    if (item.type === 'consumable') addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
+    if (item.type === 'consumable') {
+      addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
+      // 设置到快捷栏 F1-F4
+      for (let si = 0; si < 4; si++) {
+        const slotIdx = si;
+        addOption(`设为快捷栏 F${si + 1}`, '#88aa88', () => {
+          const player = this.gameScene?.player;
+          if (!player) return;
+          player.itemSlots[slotIdx] = actualSlot;
+          this.gameScene.events.emit('itemSlotsChanged');
+        });
+      }
+    }
     // 装备：加装备/强化/洗练/镶嵌/分解
     if (item.type === 'equipment') {
       addOption('⚔ 装备', '#88ccff', () => {
@@ -803,8 +819,16 @@ export const InventoryPanel = {
     this.contextMenu.setVisible(true);
 
     // Close context menu on any click elsewhere
-    this.input.once('pointerdown', () => {
-      if (this.contextMenu) this.contextMenu.setVisible(false);
+    if (this._invCtxDismiss) {
+      this.input.off('pointerdown', this._invCtxDismiss);
+    }
+    this.time.delayedCall(0, () => {
+      this._invCtxDismiss = () => {
+        if (this.contextMenu) this.contextMenu.setVisible(false);
+        this.input.off('pointerdown', this._invCtxDismiss);
+        this._invCtxDismiss = null;
+      };
+      this.input.on('pointerdown', this._invCtxDismiss);
     });
   }
 };

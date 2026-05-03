@@ -42,7 +42,8 @@
     "gender": "male",
     "stats": { "base": { "con": 12, "str": 10, ... } },
     "statusEffects": [...],
-    "skillSlots": ["charge", "whirlwind", "warCry", "execute"]
+    "skillSlots": ["charge", "whirlwind", "warCry", "execute"],
+    "itemSlots": [5, null, null, 12]
   },
   "gameState": {
     "score": 1500,
@@ -106,6 +107,7 @@
 9. **equipmentSystem._applyBonuses 再次** — base 恢复后重算装备加成
 10. **statusEffects** — fromJSON
 11. **skillSlots** — 写入 + emit `skillSlotsChanged`
+12. **itemSlots** — 写入 + emit `itemSlotsChanged`
 12. **mana / rage / hp / stamina** — `Math.min(saved, max)` clamp（HP 必须在装备 maxHp 应用之后）
 13. emit `onHpChanged` / `onResourceChanged` 让 UI 同步
 14. `savedPlayerData` 设到 registry 备用

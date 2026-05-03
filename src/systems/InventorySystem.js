@@ -39,11 +39,11 @@ export class InventorySystem {
     // Try stacking first if item is stackable
     if (itemData.stackable) {
       const existingIdx = this.slots.findIndex(
-        s => s && s.id === itemData.id && s.quantity < (itemData.maxStack || 99)
+        s => s && s.id === itemData.id && s.quantity < (itemData.maxStack || 999)
       );
       if (existingIdx !== -1) {
         const slot = this.slots[existingIdx];
-        const maxStack = itemData.maxStack || 99;
+        const maxStack = itemData.maxStack || 999;
         const canAdd = maxStack - slot.quantity;
         const toAdd = Math.min(quantity, canAdd);
         slot.quantity += toAdd;
@@ -70,7 +70,7 @@ export class InventorySystem {
       texture: itemData.texture,
       rarity: itemData.rarity || 'common',
       stackable: itemData.stackable || false,
-      maxStack: itemData.maxStack || 1,
+      maxStack: itemData.maxStack || 999,
       level: itemData.level || 1,
       value: itemData.value || 0,
       sellPrice: itemData.sellPrice || 0,

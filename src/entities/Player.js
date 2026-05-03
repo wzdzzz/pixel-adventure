@@ -89,6 +89,7 @@ export class Player extends Actor {
     const skillModule = SKILL_MODULES[classType] || SKILL_MODULES.warrior;
     this._skillModule = skillModule; // exposed for UI panels
     this.skillSlots = [...skillModule.SKILL_SLOTS];
+    this.itemSlots = [null, null, null, null]; // F1-F4 物品快捷栏（存背包 slotIndex）
     const SKILL_DEFS_KEY = { warrior: 'WARRIOR_SKILLS', archer: 'ARCHER_SKILLS', mage: 'MAGE_SKILLS' };
     const skillDefs = skillModule[SKILL_DEFS_KEY[classType]] || {};
     this.skillEngine = new SkillEngine(scene, this, skillDefs, skillModule.getSkillAtLevel);
@@ -417,11 +418,11 @@ export class Player extends Actor {
 
   onHpChanged() {
     this.scene.events.emit('playerHpChanged', this.hp, this.maxHp);
-    this.scene.events.emit('playerResourceChanged', this.stamina, this.maxStamina, this.rage, this.maxRage);
+    this.scene.events.emit('playerResourceChanged', this.stamina, this.maxStamina, this.rage, this.maxRage, this.mana, this.maxMana);
   }
 
   onResourceChanged() {
-    this.scene.events.emit('playerResourceChanged', this.stamina, this.maxStamina, this.rage, this.maxRage);
+    this.scene.events.emit('playerResourceChanged', this.stamina, this.maxStamina, this.rage, this.maxRage, this.mana, this.maxMana);
   }
 
   die() {
@@ -642,7 +643,9 @@ export class Player extends Actor {
 
     // Update hitbox position during active phase
     if (activeSkill && this.skillEngine.activePhase === 'active') {
-      if (activeSkill.effect.type === 'dash') {
+      if (activeSkill.effect.type === 'leap_slam') {
+        // leap_slam 自行管理位移，不干预
+      } else if (activeSkill.effect.type === 'dash') {
         const dir = this._chargeDashDir || { x: this.facing, y: 0 };
         this.skillHitbox.setPosition(
           this.sprite.x + dir.x * 22,
@@ -699,6 +702,9 @@ export class Player extends Actor {
     switch (skill.effect.type) {
       case 'dash':
         this.startChargeDash(skill);
+        break;
+      case 'leap_slam':
+        this.startLeapSlam(skill);
         break;
       case 'spin':
         this.startWhirlwind(skill);
@@ -855,6 +861,188 @@ export class Player extends Actor {
     }
 
     this.sprite.setVelocity(this._chargeDashVelocity.vx, this._chargeDashVelocity.vy);
+  }
+
+  // ─── Leap Slam (跳斩) ───
+
+  startLeapSlam(skill) {
+    const effect = skill.effect;
+    const maxDistance = effect.distance || 350;
+
+    // 目标：鼠标位置，超出最大距离则沿方向取最远点
+    const pointer = this.scene.input.activePointer;
+    const cam = this.scene.cameras.main;
+    const mouseX = pointer.worldX ?? (pointer.x + cam.scrollX);
+    const mouseY = pointer.worldY ?? (pointer.y + cam.scrollY);
+
+    const startX = this.sprite.x;
+    const startY = this.sprite.y;
+    let dx = mouseX - startX;
+    let dy = mouseY - startY;
+    let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    // 归一化方向
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+
+    // 距离取 min(鼠标距离, 最大距离)
+    const actualDist = Math.min(dist, maxDistance);
+
+    if (Math.abs(dirX) > 0.05) {
+      this.facing = dirX > 0 ? 1 : -1;
+      this.sprite.setFlipX(this.facing < 0);
+    }
+
+    // 用闪现的墙壁碰撞检测找合法终点
+    const dest = this._findBlinkEndpoint(startX, startY, dirX, dirY, actualDist);
+    const endX = dest.x;
+    const endY = dest.y;
+
+    const leapHeight = effect.leapHeight || 80;
+    const leapDuration = effect.leapDuration || 400;
+
+    // 跳跃期间无敌 + 禁止移动
+    this.isInvulnerable = true;
+    this.sprite.setVelocity(0, 0);
+    this._leapSlamActive = true;
+
+    // 跳跃动画：抛物线位移
+    const startTime = this.scene.time.now;
+    const leapUpdate = () => {
+      if (!this._leapSlamActive || !this.sprite) return;
+      const elapsed = this.scene.time.now - startTime;
+      const t = Math.min(1, elapsed / leapDuration);
+
+      // 水平线性插值
+      const cx = startX + (endX - startX) * t;
+      const cy = startY + (endY - startY) * t;
+      // 抛物线高度偏移
+      const heightOffset = -leapHeight * 4 * t * (1 - t);
+
+      this.sprite.setPosition(cx, cy + heightOffset);
+
+      if (t < 1) {
+        this.scene.time.delayedCall(16, leapUpdate);
+      } else {
+        // 落地
+        this.sprite.setPosition(endX, endY);
+        this._leapSlamActive = false;
+        this.isInvulnerable = false;
+        this._onLeapSlamLand(skill, endX, endY);
+      }
+    };
+    leapUpdate();
+  }
+
+  _onLeapSlamLand(skill, x, y) {
+    const effect = skill.effect;
+
+    // 相机震动
+    if (effect.cameraShake) {
+      this.scene.cameras.main.shake(effect.cameraShake.duration, effect.cameraShake.intensity / 1000);
+    }
+
+    // 落地 AOE hitbox
+    const hw = effect.hitbox.w, hh = effect.hitbox.h;
+    this.skillHitbox.setSize(hw, hh);
+    this.skillHitbox.body.setSize(hw, hh);
+    this.skillHitbox.setPosition(x, y);
+    this.skillHitbox.body.enable = true;
+    this._chargeHitRegistered = false;
+
+    // 落地恢复怒气（基础 15）
+    const baseRageGain = 15;
+    this.addRage(baseRageGain);
+
+    // 检测范围内敌人并造伤
+    const enemies = this.scene.enemies || [];
+    let hitCount = 0;
+    enemies.forEach(enemy => {
+      if (!enemy.sprite?.active || !enemy.hp || enemy.hp <= 0) return;
+      const dx = enemy.sprite.x - x;
+      const dy = enemy.sprite.y - y;
+      if (Math.abs(dx) <= hw / 2 + 16 && Math.abs(dy) <= hh / 2 + 16) {
+        const dmg = Math.round(this.getAttack() * effect.baseDamageMultiplier);
+        enemy.takeDamage(dmg, this.sprite);
+        hitCount++;
+        // 击退
+        if (effect.knockback) {
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const kx = (dx / dist) * effect.knockback;
+          const ky = (dy / dist) * effect.knockback;
+          enemy.sprite.body?.setVelocity(kx, ky);
+        }
+      }
+    });
+
+    // 命中敌人额外恢复怒气
+    if (hitCount > 0) {
+      this.addRage(10 + hitCount * 5);
+    }
+
+    // 落地视觉特效：冲击波
+    const ring = this.scene.add.circle(x, y, 10, 0xff6600, 0.6).setDepth(1);
+    this.scene.tweens.add({
+      targets: ring,
+      radius: hw / 2 + 20,
+      alpha: 0,
+      duration: 300,
+      onUpdate: () => { ring.setRadius(ring.radius); },
+      onComplete: () => ring.destroy()
+    });
+
+    // 地面持续伤害区域
+    if (effect.groundDot) {
+      this._createGroundDot(x, y, skill);
+    }
+
+    // 短暂后关闭 hitbox
+    this.scene.time.delayedCall(150, () => {
+      if (this.skillHitbox) this.skillHitbox.body.enable = false;
+    });
+  }
+
+  _createGroundDot(x, y, skill) {
+    const dot = skill.effect.groundDot;
+    const radius = dot.radius || 60;
+    const duration = dot.duration || 3000;
+    const tickInterval = dot.tickInterval || 500;
+    const dmgMult = dot.damageMultiplier || 0.3;
+
+    // 视觉：地面灼烧圈
+    const zone = this.scene.add.circle(x, y, radius, 0xff4400, 0.25)
+      .setDepth(0).setStrokeStyle(2, 0xff6600, 0.5);
+
+    let elapsed = 0;
+    const tickTimer = this.scene.time.addEvent({
+      delay: tickInterval,
+      repeat: Math.floor(duration / tickInterval) - 1,
+      callback: () => {
+        elapsed += tickInterval;
+        // 对区域内敌人造伤
+        const enemies = this.scene.enemies || [];
+        enemies.forEach(enemy => {
+          if (!enemy.sprite?.active || !enemy.hp || enemy.hp <= 0) return;
+          const dx = enemy.sprite.x - x;
+          const dy = enemy.sprite.y - y;
+          if (dx * dx + dy * dy <= radius * radius) {
+            const tickDmg = Math.round(this.getAttack() * dmgMult);
+            enemy.takeDamage(tickDmg, this.sprite);
+          }
+        });
+        // 闪烁效果
+        zone.setAlpha(0.15 + Math.random() * 0.15);
+      }
+    });
+
+    // 到期销毁
+    this.scene.time.delayedCall(duration, () => {
+      tickTimer.destroy();
+      this.scene.tweens.add({
+        targets: zone, alpha: 0, duration: 300,
+        onComplete: () => zone.destroy()
+      });
+    });
   }
 
   // ─── Spin (Whirlwind) ───

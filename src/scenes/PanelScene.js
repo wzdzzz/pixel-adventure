@@ -6,9 +6,10 @@ import { QuestLogPanel } from '../ui/panels/QuestLogPanel.js';
 import { SmithyPanel } from '../ui/panels/SmithyPanel.js';
 import { Tooltip } from '../ui/Tooltip.js';
 
-const TABS = ['character', 'inventory', 'skillTree', 'questLog'];
-const TAB_LABELS = ['角色', '背包', '技能', '日志'];
-const TAB_ICONS = ['👤', '🎒', '⚔', '📜'];
+const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'settings'];
+const TAB_LABELS = ['角色', '背包', '技能', '日志', '设置'];
+const TAB_ICONS = ['👤', '🎒', '⚔', '📜', '⚙'];
+const TAB_KEYS = ['C', 'B', 'X', 'L', ''];
 
 export const RARITY_COLORS = {
   common:    { bg: 0x3a3a3a, border: 0x666666 },
@@ -40,14 +41,14 @@ export class PanelScene extends Phaser.Scene {
     // 禁用浏览器右键菜单
     this.game.canvas.oncontextmenu = (e) => { e.preventDefault(); return false; };
 
-    // Overlay background
+    // Overlay background（depth -1 确保不拦截面板内的 input）
     this.overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.6)
-      .setScrollFactor(0).setDepth(0)
+      .setScrollFactor(0).setDepth(-1)
       .setInteractive();
 
-    // Panel dimensions
-    this.panelW = Math.min(w * 0.8, 900);
-    this.panelH = Math.min(h * 0.85, 780);
+    // Panel dimensions — 加大面板
+    this.panelW = Math.min(w * 0.85, 1050);
+    this.panelH = Math.min(h * 0.9, 860);
     this.panelX = w / 2;
     this.panelY = h / 2;
     this.panelLeft = this.panelX - this.panelW / 2;
@@ -84,9 +85,14 @@ export class PanelScene extends Phaser.Scene {
     this.createInventoryTab();
     this.createSkillTreeTab();
     this.createQuestLogTab();
-    this.switchTab('character');
+    this.createSettingsTab();
 
-    // Input
+    // 读取默认标签页（由快捷键设置）
+    const defaultTab = this.gameScene?.registry?.get('panelDefaultTab') || 'character';
+    this.switchTab(defaultTab);
+    if (this.gameScene?.registry) this.gameScene.registry.set('panelDefaultTab', null);
+
+    // Input — ESC / TAB 关闭面板
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.escKey.on('down', () => this.closePanel());
@@ -95,15 +101,17 @@ export class PanelScene extends Phaser.Scene {
       this.closePanel();
     });
 
-    const numKeys = [
-      Phaser.Input.Keyboard.KeyCodes.ONE,
-      Phaser.Input.Keyboard.KeyCodes.TWO,
-      Phaser.Input.Keyboard.KeyCodes.THREE,
-      Phaser.Input.Keyboard.KeyCodes.FOUR
-    ];
-    numKeys.forEach((keyCode, i) => {
-      const key = this.input.keyboard.addKey(keyCode);
-      key.on('down', () => this.switchTab(TABS[i]));
+    // C/B/X/L 在面板内：同标签关闭，不同标签切换
+    const panelHotkeys = { C: 'character', B: 'inventory', X: 'skillTree', L: 'questLog' };
+    Object.entries(panelHotkeys).forEach(([keyChar, tabName]) => {
+      const key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[keyChar]);
+      key.on('down', () => {
+        if (this.activeTab === tabName) {
+          this.closePanel();
+        } else {
+          this.switchTab(tabName);
+        }
+      });
     });
 
     // 监听 showMessage（来自 EquipmentSystem 等）→ 在 PanelScene 自己的层级显示 toast
@@ -147,7 +155,8 @@ export class PanelScene extends Phaser.Scene {
         fontSize: '14px', fill: '#aaaacc', fontFamily: 'Courier New'
       }).setOrigin(0.5).setDepth(3);
 
-      const hint = this.add.text(tabX + tabW / 2 - 14, tabY - tabH / 2 + 4, `${i + 1}`, {
+      const hintChar = TAB_KEYS[i] || '';
+      const hint = this.add.text(tabX + tabW / 2 - 14, tabY - tabH / 2 + 4, hintChar, {
         fontSize: '9px', fill: '#666688', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0).setDepth(3);
 
@@ -189,6 +198,7 @@ export class PanelScene extends Phaser.Scene {
     if (tabName === 'inventory') this.refreshInventoryTab();
     if (tabName === 'skillTree') this.refreshSkillTreeTab();
     if (tabName === 'questLog') this.refreshQuestLogTab();
+    if (tabName === 'settings') this.refreshSettingsTab?.();
   }
 
   hideTooltip() {
@@ -247,6 +257,63 @@ export class PanelScene extends Phaser.Scene {
         }
       }
     });
+  }
+
+  createSettingsTab() {
+    const container = this.add.container(0, 0).setDepth(5).setVisible(false);
+    this.tabContainers.settings = container;
+
+    const contentTop = this.panelTop + 50;
+    const leftX = this.panelLeft + 40;
+    const topY = contentTop + 20;
+
+    const contentBg = this.add.rectangle(
+      this.panelX, contentTop + (this.panelH - 60) / 2,
+      this.panelW - 20, this.panelH - 60, 0x12121e, 0.8
+    ).setStrokeStyle(1, 0x3a3a5a);
+    container.add(contentBg);
+
+    const title = this.add.text(leftX, topY, '⚙ 操作说明', {
+      fontSize: '16px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+    });
+    container.add(title);
+
+    const bindings = [
+      ['移动', 'WASD / 方向键'],
+      ['普通攻击', '鼠标左键'],
+      ['技能 1-4', '数字键 1 / 2 / 3 / 4'],
+      ['物品快捷栏', 'F1 / F2 / F3 / F4'],
+      ['交互', 'E'],
+      ['角色面板', 'C（再按关闭）'],
+      ['背包面板', 'B（再按关闭）'],
+      ['技能面板', 'X（再按关闭）'],
+      ['日志面板', 'L（再按关闭）'],
+      ['面板总开关', 'TAB'],
+      ['关闭面板/菜单', 'ESC'],
+      ['全屏切换', 'F'],
+      ['右键菜单', '鼠标右键（背包/装备操作）'],
+    ];
+
+    bindings.forEach((pair, i) => {
+      const y = topY + 40 + i * 28;
+      const action = this.add.text(leftX + 10, y, pair[0], {
+        fontSize: '13px', fill: '#ccccdd', fontFamily: 'Courier New'
+      });
+      const key = this.add.text(leftX + 220, y, pair[1], {
+        fontSize: '13px', fill: '#88ccff', fontFamily: 'Courier New'
+      });
+      container.add([action, key]);
+    });
+
+    const note = this.add.text(leftX + 10, topY + 40 + bindings.length * 28 + 20,
+      '（快捷键暂不支持自定义）', {
+        fontSize: '11px', fill: '#666688', fontFamily: 'Courier New'
+      });
+    container.add(note);
+  }
+
+  refreshSettingsTab() {
+    // 静态内容，无需刷新
   }
 
   handleResize(gameSize) {

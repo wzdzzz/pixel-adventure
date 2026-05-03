@@ -16,11 +16,12 @@ Player (具体表现：hitbox 形态、移动、视觉)
 InteractionHandler.handleSkillHit (伤害结算、状态效果应用)
 ```
 
-## 5 种技能 effect type
+## 6 种技能 effect type
 
 | Type | 用途 | hitbox 形态 | 派发方法 |
 |------|------|-------------|----------|
 | `dash` | 位移 + 撞击（冲锋、闪现、翻滚） | 跟随玩家 22px 偏移；blink 跳到终点 | `startChargeDash` |
+| `leap_slam` | 跳向鼠标位置 + 落地 AOE + 地面 DoT | 落地点大范围 hitbox + 灼烧圈 | `startLeapSlam` |
 | `melee` | 前方矩形（含蓄力、扇形） | 远程职业：240×N 长 hitbox 沿瞄准方向 / cone 时为扇形 AABB | `startMeleeSkill`（特殊：`startConeSkill`） |
 | `spin` | 范围 AOE | 圆环；远程职业**锚定鼠标位置**（200px 内）；近战在玩家身上 | `startWhirlwind` |
 | `buff` | 自身增益（war cry / mage shield 等） | 无 | `startBuffSkill` |
@@ -53,6 +54,16 @@ InteractionHandler.handleSkillHit (伤害结算、状态效果应用)
     distance, speed,
     blink: true,                    // 真闪现：瞬移到终点（mage 闪现）
     reverse: true,                  // 反向：朝鼠标反方向位移（archer 翻滚射击）
+
+    // leap_slam 特有
+    leapHeight: 80,                 // 抛物线最高点
+    leapDuration: 400,              // 跳跃时间 ms
+    groundDot: {                    // 落地后地面持续伤害
+      damageMultiplier: 0.3,        // 每 tick 伤害倍率
+      duration: 3000,               // 持续时间 ms
+      tickInterval: 500,            // tick 间隔 ms
+      radius: 60                    // 灼烧半径
+    },
 
     // melee 特有
     hitbox: { w, h },

@@ -79,7 +79,8 @@ export class SaveSystem {
           gender: scene.player ? scene.player.gender : 'male',
           stats: scene.player ? scene.player.stats.toJSON() : null,
           statusEffects: scene.player?.statusEffects ? scene.player.statusEffects.toJSON() : [],
-          skillSlots: scene.player?.skillSlots ? scene.player.skillSlots.slice() : null
+          skillSlots: scene.player?.skillSlots ? scene.player.skillSlots.slice() : null,
+          itemSlots: scene.player?.itemSlots ? scene.player.itemSlots.slice() : null
         },
         gameState: {
           score: gameState.score,
@@ -220,6 +221,13 @@ export class SaveSystem {
           scene.player.skillSlots[i] = saveData.player.skillSlots[i] || null;
         }
         scene.events.emit('skillSlotsChanged', scene.player.skillSlots.slice());
+      }
+
+      if (scene.player && Array.isArray(saveData.player?.itemSlots)) {
+        for (let i = 0; i < scene.player.itemSlots.length && i < saveData.player.itemSlots.length; i++) {
+          scene.player.itemSlots[i] = saveData.player.itemSlots[i] ?? null;
+        }
+        scene.events.emit('itemSlotsChanged');
       }
 
       if (scene.player && saveData.player) {
