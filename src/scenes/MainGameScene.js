@@ -391,8 +391,8 @@ export class MainGameScene extends Phaser.Scene {
       // Grant XP for kill
       let xpAmount = 0;
       if (this.levelSystem) {
-        xpAmount = this.levelSystem.getEnemyXp(enemy.config);
-        this.levelSystem.addXp(xpAmount, enemy.config.level || 1);
+        xpAmount = this.levelSystem.getEnemyXp(enemy.finalLevel || 1, enemy.tier);
+        this.levelSystem.addXp(xpAmount, enemy.finalLevel || 1);
       }
 
       // Show XP floating text

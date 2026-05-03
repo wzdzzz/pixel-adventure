@@ -22,7 +22,7 @@ export class LootEngine {
    * @param  {number} dropBonus  luck-based % bonus applied to equipment pool weights
    * @returns {Array<{itemData: object, quantity: number}>}
    */
-  static roll(enemyId, dropBonus = 0) {
+  static roll(enemyId, dropBonus = 0, enemyLevel = 1) {
     const table = LOOT_TABLES[enemyId];
     if (!table) return [];
 
@@ -30,7 +30,12 @@ export class LootEngine {
     const drops = [];
 
     // 注入 dropBonus 到装备 pool，便于 _rollItem 内取用做品质 roll
-    table.pools.forEach(p => { if (p.name === 'equipment') p._dropBonus = dropBonus; });
+    table.pools.forEach(p => {
+      if (p.name === 'equipment') {
+        p._dropBonus = dropBonus;
+        p._enemyLevel = enemyLevel;
+      }
+    });
 
     for (let i = 0; i < numDrops; i++) {
       const result = LootEngine._rollPool(table.pools, dropBonus);
@@ -130,9 +135,11 @@ export class LootEngine {
     if (baseData.type === 'equipment') {
       const dropBonus = pool._dropBonus || 0;
       const isBoss = pool._isBoss || false;
-      const enemyLevel = baseData.level || 1;
+      // 装备等级 = 怪物等级 ±1，最低1
+      const baseLevel = pool._enemyLevel || baseData.level || 1;
+      const equipLevel = Math.max(1, baseLevel + Phaser.Math.Between(-1, 1));
       const rarity = EquipmentGenerator.rollRarity({ isBoss, dropBonus });
-      const instance = EquipmentGenerator.generate(selected.id, rarity, enemyLevel);
+      const instance = EquipmentGenerator.generate(selected.id, rarity, equipLevel);
       if (!instance) return null;
       return { itemData: instance, quantity: 1 };
     }
