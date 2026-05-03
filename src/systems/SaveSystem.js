@@ -236,9 +236,8 @@ export class SaveSystem {
         if (saveData.player.rage !== undefined) {
           scene.player.rage = Math.min(saveData.player.rage, scene.player.maxRage);
         }
-        // 通知 UI 刷新血条/资源条
-        if (scene.player.onHpChanged) scene.player.onHpChanged();
-        if (scene.player.onResourceChanged) scene.player.onResourceChanged();
+        // UI 刷新由 MainGameScene.create() 在 tryLoadSave() 之后统一触发，
+        // 避免加载过程中多次闪烁。
       }
 
       scene.registry.set('savedPlayerData', saveData.player);

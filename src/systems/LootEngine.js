@@ -11,6 +11,11 @@ import { LOOT_TABLES, RARITY_MULTIPLIERS } from '../data/lootTables.js';
 import itemData from '../data/items.json';
 import { EquipmentGenerator } from './EquipmentGenerator.js';
 
+/** 随机整数 [min, max]，替代 Phaser.Math.Between 避免引入 Phaser 依赖 */
+function randBetween(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 export class LootEngine {
 
   // ── Public ───────────────────────────────────────────────────────────────
@@ -42,7 +47,7 @@ export class LootEngine {
       const guaranteed = LootEngine._rollGuaranteedEquip(table, enemyLevel, true);
       if (guaranteed) drops.push(guaranteed);
 
-      const extraCount = Phaser.Math.Between(4, 6);
+      const extraCount = randBetween(4, 6);
       for (let i = 0; i < extraCount; i++) {
         const result = LootEngine._rollPool(table.pools, dropBonus);
         if (result) drops.push(result);
@@ -51,7 +56,7 @@ export class LootEngine {
     }
 
     // ── 普通 pool roll ──
-    const numDrops = Phaser.Math.Between(table.minDrops, table.maxDrops);
+    const numDrops = randBetween(table.minDrops, table.maxDrops);
     for (let i = 0; i < numDrops; i++) {
       const result = LootEngine._rollPool(table.pools, dropBonus);
       if (result) drops.push(result);
@@ -162,7 +167,7 @@ export class LootEngine {
       const baseData = itemData.items[entry.id];
       if (!baseData) return null;
 
-      const quantity = Phaser.Math.Between(entry.range[0], entry.range[1]);
+      const quantity = randBetween(entry.range[0], entry.range[1]);
       return { itemData: { ...baseData }, quantity };
     }
 
@@ -192,7 +197,7 @@ export class LootEngine {
       const isBoss = pool._isBoss || false;
       // 装备等级 = 怪物等级 ±1，最低1
       const baseLevel = pool._enemyLevel || baseData.level || 1;
-      const equipLevel = Math.max(1, baseLevel + Phaser.Math.Between(-1, 1));
+      const equipLevel = Math.max(1, baseLevel + randBetween(-1, 1));
       const rarity = EquipmentGenerator.rollRarity({ isBoss, dropBonus });
       const instance = EquipmentGenerator.generate(selected.id, rarity, equipLevel);
       if (!instance) return null;

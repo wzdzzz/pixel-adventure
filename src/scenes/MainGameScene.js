@@ -89,6 +89,22 @@ export class MainGameScene extends Phaser.Scene {
     this.tryLoadSave();
     this.setupEvents();
 
+    // 延迟一帧触发全部 UI 刷新，确保 UIScene 已完成事件注册
+    this.time.delayedCall(0, () => {
+      if (this.player) {
+        this.player.onHpChanged();
+        if (this.player.onResourceChanged) this.player.onResourceChanged();
+        // 技能槽回显（SaveSystem.load 时 UIScene 可能尚未注册 listener）
+        if (this.player.skillSlots) {
+          this.events.emit('skillSlotsChanged', this.player.skillSlots.slice());
+        }
+      }
+      // 金币回显
+      if (this.inventory) {
+        this.events.emit('goldChanged', this.inventory.gold || 0);
+      }
+    });
+
     // Panel toggle keys
     this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.iKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I);
@@ -423,12 +439,14 @@ export class MainGameScene extends Phaser.Scene {
         const dx = x + Math.cos(angle) * dist;
         const dy = y + Math.sin(angle) * dist;
 
-        this.events.emit('spawnItem', drop.itemData.id, dx, dy, drop.quantity);
+        // 装备实例用 templateId 做贴图查找，并传递完整实例数据
+        const spawnType = drop.itemData.templateId || drop.itemData.id;
+        this.events.emit('spawnItem', spawnType, dx, dy, drop.quantity, drop.itemData.type === 'equipment' ? drop.itemData : null);
 
         // Rarity glow for equipment drops
         if (drop.itemData.type === 'equipment') {
           const rarityGlowColors = {
-            uncommon: 0x44aa44, rare: 0x4444ff, epic: 0xaa44aa, legendary: 0xffaa00
+            uncommon: 0x44aa44, rare: 0x4444ff, epic: 0xaa44aa, legendary: 0xffaa00, mythic: 0xff4444
           };
           const glowColor = rarityGlowColors[drop.itemData.rarity];
           if (glowColor) {
@@ -441,13 +459,14 @@ export class MainGameScene extends Phaser.Scene {
           }
         }
 
-        // Legendary drop notification
-        if (drop.itemData.rarity === 'legendary') {
+        // Legendary / Mythic drop notification
+        if (drop.itemData.rarity === 'legendary' || drop.itemData.rarity === 'mythic') {
+          const isMythic = drop.itemData.rarity === 'mythic';
           const msg = this.add.text(
             this.cameras.main.width / 2, 60,
-            `传说装备掉落: ${drop.itemData.name}`,
+            `${isMythic ? '神话' : '传说'}装备掉落: ${drop.itemData.name}`,
             {
-              fontSize: '16px', fill: '#ffaa00', fontFamily: 'Courier New',
+              fontSize: '16px', fill: isMythic ? '#ff4444' : '#ffaa00', fontFamily: 'Courier New',
               fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
             }
           ).setOrigin(0.5).setScrollFactor(0).setDepth(300);
@@ -461,24 +480,28 @@ export class MainGameScene extends Phaser.Scene {
       });
     });
 
-    this.events.on('spawnItem', (type, x, y, quantity = 1) => {
+    this.events.on('spawnItem', (type, x, y, quantity = 1, equipmentInstance = null) => {
       const config = itemData.items[type];
-      if (config) {
+      if (config || equipmentInstance) {
+        const displayConfig = config || { name: equipmentInstance.name, texture: 'weapon_icon' };
         const item = new Item(this, x, y, type, {
           id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          ...config,
+          ...displayConfig,
           spawnQuantity: quantity,
+          pickupDelay: 500,  // 掉落物 0.5 秒后才可拾取，让玩家能看到
           onCollect: (item) => {
             if (type === 'coin') {
               const g = this.registry.get('gameState');
               g.score += item.value * quantity;
               this.registry.set('gameState', g);
               this.events.emit('scoreChanged', g.score);
-            } else if (type === 'potion' || type === 'heart') {
-              // Consumable items handled by inventory
             }
           }
         });
+        // 装备实例数据挂载到 Item 上，拾取时用于入背包
+        if (equipmentInstance) {
+          item.equipmentInstance = equipmentInstance;
+        }
         this.items.push(item);
         this.physics.add.overlap(this.player.sprite, item.sprite, () => this.handleItemPickup(item), null, this);
       }

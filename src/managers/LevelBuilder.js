@@ -265,8 +265,8 @@ export const LevelBuilder = {
     if (savedData?.rage !== undefined) {
       this.player.rage = Math.min(savedData.rage, this.player.maxRage);
     }
-    // Emit initial HP/resource so UI shows correct values
-    this.player.onHpChanged();
+    // 注意：不在这里调用 onHpChanged()，而是在 tryLoadSave() 之后统一触发，
+    // 避免存档加载时先闪一下 base HP 再跳到存档值。
   },
 
   createEnemies(level) {

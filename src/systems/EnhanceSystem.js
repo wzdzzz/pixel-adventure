@@ -133,7 +133,8 @@ export class EnhanceSystem {
     let remaining = count;
     for (let i = 0; i < inv.slots.length && remaining > 0; i++) {
       const s = inv.slots[i];
-      if (s && s.id === matId) {
+      // 仅消耗非装备物品，防止误删装备
+      if (s && s.id === matId && s.type !== 'equipment') {
         const take = Math.min(remaining, s.quantity);
         s.quantity -= take;
         remaining -= take;

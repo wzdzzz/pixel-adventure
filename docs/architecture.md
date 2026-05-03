@@ -1,6 +1,6 @@
 # 像素远征 — 架构总览
 
-> 最后更新：2026-05-03（装备 Phase 3：套装 + 神圣洗练 + 神器配方）
+> 最后更新：2026-05-03（UI 优化：双栏对比 tooltip、制作滚动、右键菜单、职业攻击力修复）
 
 ## 技术栈
 
@@ -17,7 +17,7 @@
 ```
 src/
 ├── main.js                     # 入口，Phaser Game 实例化
-├── config/gameConfig.js        # 画布 1920×1080、物理参数、全局常量
+├── config/gameConfig.js        # 画布 1920×1080、物理参数、全局常量、输入配置（右键菜单禁用）
 ├── assets/AssetManager.js      # 纹理生成、角色帧配置、动画定义
 ├── entities/
 │   ├── Actor.js                # 基类：HP/体力/怒气、I-Frames、Stats、StatusEffects
@@ -54,7 +54,7 @@ src/
 │   ├── SaveSelectScene.js      # 3 槽位存档选择/保存
 │   ├── MainGameScene.js        # 主场景：关卡、碰撞、AI、事件路由、ESC 菜单
 │   ├── UIScene.js              # HUD：HP/体力/怒气、技能栏、buff 栏、tooltip
-│   ├── PanelScene.js           # 面板：角色/背包/技能/任务（4 标签）
+│   ├── PanelScene.js           # 面板：角色/背包/技能/任务（4 标签）+ 双 tooltip 容器
 │   ├── GameOverScene.js        # 死亡画面
 │   └── VictoryScene.js         # 胜利画面
 ├── managers/

@@ -276,7 +276,7 @@ export class Actor {
       if (this.regenTimer >= 1000) {
         this.regenTimer -= 1000;
         if (this.hp < this.maxHp) {
-          this.hp = Math.min(this.maxHp, this.hp + hpRegen);
+          this.hp = Math.round(Math.min(this.maxHp, this.hp + hpRegen));
           this.onHpChanged();
         }
       }

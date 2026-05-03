@@ -325,9 +325,10 @@ export class Player extends Actor {
     const primaryStat = this.classConfig?.primaryAttackStat || 'str';
     const primary = this.stats.getEffective(primaryStat);
     const flatAttack = this.stats.flatBonuses?.attack || 0;
-    const baseAttack = primary * 2 + flatAttack;
+    const pctAttack = this.stats.bonusPct?.attack || 0;
+    const baseAttack = (primary * 2 + flatAttack) * (1 + pctAttack);
     const mod = this.statusEffects?.getModifiers().attack ?? 1;
-    return baseAttack * mod;
+    return Math.round(baseAttack * mod);
   }
 
   /** Returns true for archer/mage */
@@ -804,13 +805,16 @@ export class Player extends Actor {
     // 闪现：瞬移到终点（不走 velocity）
     if (effect.blink) {
       const distance = effect.distance || 200;
-      const endX = this.sprite.x + dirX * distance;
-      const endY = this.sprite.y + dirY * distance;
+
+      // 沿方向检测碰撞，在墙壁/障碍前停下
+      const dest = this._findBlinkEndpoint(
+        this.sprite.x, this.sprite.y, dirX, dirY, distance
+      );
 
       // 终点 hitbox（短暂 AOE）
       this.skillHitbox.setSize(effect.hitbox.w, effect.hitbox.h);
       this.skillHitbox.body.setSize(effect.hitbox.w, effect.hitbox.h);
-      this.skillHitbox.setPosition(endX, endY);
+      this.skillHitbox.setPosition(dest.x, dest.y);
       this.skillHitbox.body.enable = true;
 
       // 残影
@@ -820,8 +824,8 @@ export class Player extends Actor {
         if (this.sprite) this.sprite.setAlpha(1);
       });
 
-      // 瞬移
-      this.sprite.setPosition(endX, endY);
+      // 瞬移到合法终点
+      this.sprite.setPosition(dest.x, dest.y);
       this.sprite.setVelocity(0, 0);
       this._chargeDashVelocity = null;
       this._chargeHitRegistered = false;
@@ -1199,6 +1203,83 @@ export class Player extends Actor {
         proj.destroy();
       }
     });
+  }
+
+  /**
+   * 闪现终点修正：允许穿墙，但终点不能卡在墙里。
+   * 如果终点在墙壁/障碍/世界边界内，从终点往回退找到合法位置。
+   */
+  _findBlinkEndpoint(startX, startY, dirX, dirY, maxDist) {
+    const scene = this.scene;
+    const body = this.sprite.body;
+    const sx = this.sprite.scaleX || 1;
+    const sy = this.sprite.scaleY || 1;
+    const bw = body.width * sx;
+    const bh = body.height * sy;
+    const bodyCenterOffX = -this.sprite.displayWidth / 2 + body.offset.x * sx + bw / 2;
+    const bodyCenterOffY = -this.sprite.displayHeight / 2 + body.offset.y * sy + bh / 2;
+
+    // 收集碰撞体
+    const blockers = [];
+    const addGroup = (g) => {
+      if (!g) return;
+      for (const child of g.getChildren()) {
+        if (child.body) blockers.push(child.body);
+      }
+    };
+    addGroup(scene.walls);
+    addGroup(scene.obstacles);
+    if (scene.decorations) {
+      for (const child of scene.decorations.getChildren()) {
+        if (child.body) blockers.push(child.body);
+      }
+    }
+
+    const halfW = bw / 2;
+    const halfH = bh / 2;
+    const wb = scene.physics.world.bounds;
+
+    // 检测某位置是否被阻挡
+    const isBlocked = (px, py) => {
+      const bcx = px + bodyCenterOffX;
+      const bcy = py + bodyCenterOffY;
+      // 世界边界
+      if (bcx - halfW < wb.x || bcx + halfW > wb.x + wb.width ||
+          bcy - halfH < wb.y || bcy + halfH > wb.y + wb.height) {
+        return true;
+      }
+      // AABB 碰撞
+      for (const b of blockers) {
+        if (bcx + halfW > b.x && bcx - halfW < b.x + b.width &&
+            bcy + halfH > b.y && bcy - halfH < b.y + b.height) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // 先检测终点是否合法
+    const endX = startX + dirX * maxDist;
+    const endY = startY + dirY * maxDist;
+    if (!isBlocked(endX, endY)) {
+      return { x: endX, y: endY };
+    }
+
+    // 终点卡墙了，从终点往回退找合法位置
+    const stepSize = 8;
+    const steps = Math.ceil(maxDist / stepSize);
+    for (let i = 1; i <= steps; i++) {
+      const d = maxDist - i * stepSize;
+      if (d <= 0) break;
+      const tx = startX + dirX * d;
+      const ty = startY + dirY * d;
+      if (!isBlocked(tx, ty)) {
+        return { x: tx, y: ty };
+      }
+    }
+
+    // 全程被挡，留在原地
+    return { x: startX, y: startY };
   }
 
   /** Ghost afterimage for mage blink */

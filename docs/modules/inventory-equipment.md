@@ -239,6 +239,22 @@ enemy.die → emit 'enemyDropLoot' → LootEngine.roll(enemyId, dropBonus)
 | `divine_heart` | legendary | 神圣洗练 / 神器配方 |
 | `world_core` | mythic | 神话配方专属 |
 
+### 强化 UI
+- 强化模态显示成功率 + 失败后果提示
+- +1~+5 必定成功
+- +6~+10 成功率 70%，失败保持等级
+- +11~+15 成功率 40%，失败降 1 级（⚠ 警告标注）
+
+### 制作 UI
+- 制作模态 540×600，支持 mask-based 滚动浏览配方
+- 配方显示：品质颜色 + 材料需求（含持有数量） + rarity 标注
+- 滚轮滚动：Phaser wheel 事件参数 `(pointer, currentlyOver, deltaX, deltaY, deltaZ)`，deltaY 是第 4 参数
+
+### 宝石 UI
+- 镶嵌模态显示已镶嵌宝石属性值（`🔴 红宝石 Lv.3  +9 攻击`）
+- 宝石选择器显示每颗宝石的属性加成和持有数量
+- 合成模态显示宝石属性信息
+
 ### 存档兼容
 `SaveSystem.fromJSON()` 加载时为老 instance 补齐：
 - `instanceId / affixes / enhanceLevel / sockets / reforgePity` 缺省

@@ -3,7 +3,7 @@ import masterItemData from '../data/items.json';
 export class InventorySystem {
   constructor(scene) {
     this.scene = scene;
-    this.slots = new Array(32).fill(null); // 8x4 grid
+    this.slots = new Array(99).fill(null); // 11x9 grid
     this.gold = 0;
   }
 
@@ -115,7 +115,7 @@ export class InventorySystem {
   }
 
   swapSlots(fromIndex, toIndex) {
-    if (fromIndex < 0 || fromIndex >= 32 || toIndex < 0 || toIndex >= 32) return;
+    if (fromIndex < 0 || fromIndex >= 99 || toIndex < 0 || toIndex >= 99) return;
     const temp = this.slots[fromIndex];
     this.slots[fromIndex] = this.slots[toIndex];
     this.slots[toIndex] = temp;
@@ -180,17 +180,17 @@ export class InventorySystem {
     // Support both old array format and new object format
     if (Array.isArray(data)) {
       // Legacy format: array of items
-      this.slots = new Array(32).fill(null);
+      this.slots = new Array(99).fill(null);
       data.forEach((item, i) => {
-        if (item && i < 32) this.slots[i] = { ...item, quantity: item.quantity || 1 };
+        if (item && i < 99) this.slots[i] = { ...item, quantity: item.quantity || 1 };
       });
       this.gold = 0;
     } else {
       // New format: { slots, gold }
-      this.slots = new Array(32).fill(null);
+      this.slots = new Array(99).fill(null);
       if (data.slots) {
         data.slots.forEach((s, i) => {
-          if (s && i < 32) this.slots[i] = { ...s };
+          if (s && i < 99) this.slots[i] = { ...s };
         });
       }
       this.gold = data.gold || 0;
@@ -235,7 +235,7 @@ export class InventorySystem {
 
     this.slots.fill(null);
     result.forEach((item, i) => {
-      if (i < 32) this.slots[i] = item;
+      if (i < 99) this.slots[i] = item;
     });
   }
 }

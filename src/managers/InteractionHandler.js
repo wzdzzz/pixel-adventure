@@ -125,6 +125,17 @@ export const InteractionHandler = {
   },
 
   startLevelTransition() {
+    // 在销毁旧玩家前快照当前状态
+    const playerSnapshot = this.player ? {
+      stats: this.player.stats.toJSON(),
+      hp: this.player.hp,
+      stamina: this.player.stamina,
+      mana: this.player.mana,
+      rage: this.player.rage,
+      skillSlots: this.player.skillSlots ? this.player.skillSlots.slice() : null,
+      skillEngine: this.player.skillEngine ? this.player.skillEngine.toJSON() : null,
+    } : null;
+
     // Fade out
     this.cameras.main.fadeOut(500, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -139,6 +150,51 @@ export const InteractionHandler = {
 
       if (this.currentLevel + 1 < levelData.length) {
         this.loadLevel(this.currentLevel + 1);
+
+        // 恢复玩家状态（等级/属性/技能/装备加成）
+        if (playerSnapshot && this.player) {
+          // 1) 恢复 base stats（升级获得的属性点）
+          Object.keys(playerSnapshot.stats.base).forEach(key => {
+            this.player.stats.setBase(key, playerSnapshot.stats.base[key]);
+          });
+
+          // 2) 等级系统 HP 加成
+          const lvlHp = this.levelSystem ? (this.levelSystem.level - 1) * 5 : 0;
+          this.player.stats.setFlatBonus('maxHp', lvlHp);
+
+          // 3) 重新计算装备加成（装备系统在 scene 级别持久，只需重算）
+          if (this.equipmentSystem) {
+            this.equipmentSystem._applyBonuses();
+          }
+
+          // 4) 刷新属性缓存
+          this.player.stats.invalidate();
+          this.player.refreshStats();
+
+          // 5) 恢复资源（HP 回满 or 延续，这里选择延续当前值）
+          this.player.hp = Math.min(playerSnapshot.hp, this.player.maxHp);
+          this.player.stamina = Math.min(playerSnapshot.stamina, this.player.maxStamina);
+          this.player.mana = Math.min(playerSnapshot.mana, this.player.maxMana);
+          this.player.rage = Math.min(playerSnapshot.rage, this.player.maxRage);
+
+          // 6) 恢复技能槽配置
+          if (playerSnapshot.skillSlots && this.player.skillSlots) {
+            for (let i = 0; i < this.player.skillSlots.length && i < playerSnapshot.skillSlots.length; i++) {
+              this.player.skillSlots[i] = playerSnapshot.skillSlots[i] || null;
+            }
+            this.events.emit('skillSlotsChanged', this.player.skillSlots.slice());
+          }
+
+          // 7) 恢复技能引擎状态（已解锁技能等）
+          if (playerSnapshot.skillEngine && this.player.skillEngine) {
+            this.player.skillEngine.fromJSON(playerSnapshot.skillEngine);
+          }
+
+          // 8) 刷新 UI
+          this.player.onHpChanged();
+          if (this.player.onResourceChanged) this.player.onResourceChanged();
+        }
+
         this.cameras.main.fadeIn(500, 0, 0, 0);
       } else {
         // No more levels - victory
@@ -151,8 +207,8 @@ export const InteractionHandler = {
     if (item.isCollected) return;
     const result = item.collect();
     if (result) {
-      // Use full item definition from items.json for proper stacking/type
-      const fullData = itemData.items[item.type] || result;
+      // 装备实例：直接用挂载的完整实例数据入背包
+      const fullData = item.equipmentInstance || itemData.items[item.type] || result;
       const qty = item.spawnQuantity || 1;
       this.inventory.addItem(fullData, qty);
 
@@ -182,10 +238,13 @@ export const InteractionHandler = {
       const idx = this.items.indexOf(item);
       if (idx > -1) this.items.splice(idx, 1);
 
-      // Rarity notification for rare+ equipment
-      const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-      if (fullData.type === 'equipment' && rarityOrder.indexOf(fullData.rarity) >= 2) {
-        const color = fullData.rarity === 'legendary' ? 0xffaa00 : fullData.rarity === 'epic' ? 0xaa44aa : 0x4444ff;
+      // 装备拾取提示（所有品质）
+      if (fullData.type === 'equipment') {
+        const rarityColors = {
+          common: 0xaaaaaa, uncommon: 0x44aa44, rare: 0x4444ff,
+          epic: 0xaa44aa, legendary: 0xffaa00, mythic: 0xff4444
+        };
+        const color = rarityColors[fullData.rarity] || 0xaaaaaa;
         this.showQuickMessage(`获得了 ${fullData.name}！`, color);
       }
     }

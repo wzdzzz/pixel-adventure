@@ -1,3 +1,5 @@
+import { formatEquipTooltip, getSetCount } from './InventoryPanel.js';
+
 export const CharacterPanel = {
   createCharacterTab() {
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
@@ -64,7 +66,7 @@ export const CharacterPanel = {
         if (!equipped) return;
 
         // 右键 → 弹出菜单
-        if (pointer.rightButtonDown && pointer.rightButtonDown()) {
+        if (pointer.button === 2) {
           this._showCharContextMenu(def.slot, equipped, pointer);
           return;
         }
@@ -368,23 +370,27 @@ export const CharacterPanel = {
 
   showStatTooltip(stat, x, y) {
     if (!this.tooltipContainer) return;
+    if (this.tooltipContainer2) this.tooltipContainer2.setVisible(false);
 
     const player = this.gameScene?.player;
     if (!player) return;
 
+    this.tooltipBg.setStrokeStyle(1, 0x6666aa);
     const derived = player.stats.getDerived();
     const val = player.stats.getEffective(stat);
 
+    const primaryStat = player.classConfig?.primaryAttackStat || 'str';
     const tooltips = {
-      con: `体质 (CON) = ${val}\n+${val * 10} 最大生命\n+${(val * 0.5).toFixed(1)}/s 生命恢复\n+${(val * 0.5).toFixed(1)} 韧性`,
-      str: `力量 (STR) = ${val}\n+${val * 2} 物理攻击\n+${(val * 0.2).toFixed(1)} 韧性\n+${(val * 0.3).toFixed(1)} 破甲`,
-      int: `智力 (INT) = ${val}\n+${val * 15} 最大魔力\n+${val} 法术强度\n+${(val * 0.2).toFixed(1)}% 冷却缩减`,
-      agi: `敏捷 (AGI) = ${val}\n+${val}% 攻击速度\n+${val * 20 + 40} 移动速度`,
+      con: `体质 (CON) = ${val}\n+${val * 10} 最大生命\n+${(val * 0.05).toFixed(2)}/s 生命恢复\n+${(val * 0.5).toFixed(1)} 韧性`,
+      str: `力量 (STR) = ${val}` + (primaryStat === 'str' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${(val * 0.2).toFixed(1)} 韧性\n+${(val * 0.3).toFixed(1)} 破甲`,
+      int: `智力 (INT) = ${val}\n+${val * 15} 最大魔力\n+${val} 法术强度` + (primaryStat === 'int' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${(val * 0.2).toFixed(1)}% 冷却缩减`,
+      agi: `敏捷 (AGI) = ${val}` + (primaryStat === 'agi' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${val}% 攻击速度\n+${val * 20 + 40} 移动速度`,
       per: `感知 (PER) = ${val}\n+${(val * 0.5).toFixed(1)}% 暴击率\n+${(val * 0.5).toFixed(1)} 破甲`,
       lck: `幸运 (LCK) = ${val}\n+${(Math.sqrt(val) * 1).toFixed(1)}% 掉落加成`
     };
 
     this.tooltipText.setText(tooltips[stat] || '');
+    this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12);
     this.tooltipContainer.setPosition(x + 120, y - 10);
     this.tooltipContainer.setVisible(true);
   },
@@ -442,33 +448,24 @@ export const CharacterPanel = {
   showEquipTooltip(item, x, y) {
     if (!this.tooltipContainer) return;
 
-    const RARITY_NAMES = {
-      common: '普通', uncommon: '优秀', rare: '精良', epic: '史诗', legendary: '传说', mythic: '神话'
-    };
-    const STAT_NAMES = {
-      attack: '攻击', defense: '防御', maxHp: '生命', maxStamina: '体力',
-      spellPower: '法强', moveSpeed: '移速', attackSpeed: '攻速',
-      critRate: '暴击率', critDmg: '暴击伤害', hpRegen: 'HP回复'
-    };
-    const BASE_NAMES = { con: '体质', str: '力量', int: '智力', agi: '敏捷', per: '感知', lck: '幸运' };
-
-    let text = `${item.name}\n[${RARITY_NAMES[item.rarity] || '普通'}] Lv.${item.level || 1}\n`;
-    if (item.baseStats) {
-      for (const [k, v] of Object.entries(item.baseStats)) {
-        text += `  ${STAT_NAMES[k] || k}: +${v}\n`;
-      }
-    }
-    if (item.statBonuses) {
-      for (const [k, v] of Object.entries(item.statBonuses)) {
-        if (v > 0) text += `  ${BASE_NAMES[k] || k}: +${v}\n`;
-      }
-    }
-    text += `\n点击卸下装备`;
-
+    const sc = getSetCount(this.gameScene?.equipmentSystem, item);
+    const text = formatEquipTooltip(item, sc) + '\n\n左键卸下 | 右键菜单';
     this.tooltipText.setText(text);
-    const bounds = this.tooltipText.getBounds();
-    this.tooltipBg.setSize(bounds.width + 16, bounds.height + 12);
-    this.tooltipContainer.setPosition(x, y);
+
+    const rarity = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
+    this.tooltipBg.setStrokeStyle(1, rarity.border);
+    this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12);
+
+    // 屏幕边界检测
+    let tx = x, ty = y;
+    const camW = this.cameras.main.width;
+    const camH = this.cameras.main.height;
+    if (tx + this.tooltipText.width + 16 > camW) tx = x - this.tooltipText.width - 40;
+    if (ty + this.tooltipText.height + 12 > camH) ty = camH - this.tooltipText.height - 16;
+    if (ty < 4) ty = 4;
+
+    this.tooltipContainer.setPosition(tx, ty);
     this.tooltipContainer.setVisible(true);
+    if (this.tooltipContainer2) this.tooltipContainer2.setVisible(false);
   }
 };

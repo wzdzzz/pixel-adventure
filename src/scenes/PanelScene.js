@@ -15,7 +15,8 @@ export const RARITY_COLORS = {
   uncommon:  { bg: 0x1a3a1a, border: 0x44bb44 },
   rare:      { bg: 0x1a1a3a, border: 0x4488ff },
   epic:      { bg: 0x2a1a3a, border: 0xbb44ff },
-  legendary: { bg: 0x3a2a1a, border: 0xffaa00 }
+  legendary: { bg: 0x3a2a1a, border: 0xffaa00 },
+  mythic:    { bg: 0x3a1a1a, border: 0xff4444 }
 };
 
 export class PanelScene extends Phaser.Scene {
@@ -36,6 +37,9 @@ export class PanelScene extends Phaser.Scene {
     // Shared constants
     this.RARITY_COLORS = RARITY_COLORS;
 
+    // 禁用浏览器右键菜单
+    this.game.canvas.oncontextmenu = (e) => { e.preventDefault(); return false; };
+
     // Overlay background
     this.overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.6)
       .setScrollFactor(0).setDepth(0)
@@ -43,7 +47,7 @@ export class PanelScene extends Phaser.Scene {
 
     // Panel dimensions
     this.panelW = Math.min(w * 0.8, 900);
-    this.panelH = Math.min(h * 0.8, 600);
+    this.panelH = Math.min(h * 0.85, 780);
     this.panelX = w / 2;
     this.panelY = h / 2;
     this.panelLeft = this.panelX - this.panelW / 2;
@@ -61,6 +65,15 @@ export class PanelScene extends Phaser.Scene {
       fontSize: '10px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
     });
     this.tooltipContainer.add([this.tooltipBg, this.tooltipText]);
+
+    // 第二个 tooltip（并排对比用）
+    this.tooltipContainer2 = this.add.container(0, 0).setDepth(20).setVisible(false);
+    this.tooltipBg2 = this.add.rectangle(0, 0, 200, 80, 0x1a1a2e, 0.95)
+      .setStrokeStyle(1, 0x6666aa).setOrigin(0, 0);
+    this.tooltipText2 = this.add.text(8, 8, '', {
+      fontSize: '10px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
+    });
+    this.tooltipContainer2.add([this.tooltipBg2, this.tooltipText2]);
 
     // 通用 hover tooltip（技能卡用）
     this.hoverTooltip = new Tooltip(this, { delay: 500 });
@@ -180,6 +193,7 @@ export class PanelScene extends Phaser.Scene {
 
   hideTooltip() {
     if (this.tooltipContainer) this.tooltipContainer.setVisible(false);
+    if (this.tooltipContainer2) this.tooltipContainer2.setVisible(false);
   }
 
   playOpenAnimation() {

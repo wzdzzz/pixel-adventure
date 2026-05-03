@@ -143,8 +143,8 @@ this.questSystem     = new QuestSystem()
 ### 4 标签页
 | 标签 | 内容 |
 |------|------|
-| 角色 | 6 基础属性 + 14 派生属性 + 属性点分配 |
-| 背包 | 32 格、堆叠、操作菜单 |
+| 角色 | 6 基础属性 + 14 派生属性 + 属性点分配 + 已激活套装 |
+| 背包 | 32 格、堆叠、操作菜单、双栏对比 tooltip |
 | 技能 | 2 列网格卡片、装备槽按钮、升级按钮、滚动 |
 | 任务 | 已激活/已完成任务列表 |
 
@@ -153,7 +153,27 @@ this.questSystem     = new QuestSystem()
 - ESC / 再按 Tab 关闭
 - 打开时 `pauseGame()`（physics.pause）
 
-### Tooltip
+### 双 Tooltip 容器
+PanelScene 持有两个 tooltip 容器（`tooltipContainer` + `tooltipContainer2`），用于背包装备悬浮时并排对比：
+- **左侧**：当前悬浮装备的详细信息
+- **右侧**：已装备同槽位物品 + 属性差值标注（▲/▼）
+- 角色面板装备槽悬浮只显示单个 tooltip（无对比）
+- `hideTooltip()` 统一隐藏两个容器
+
+### 装备 Tooltip 内容（`formatEquipTooltip`）
+- 品质颜色边框 + 名称/等级/强化等级
+- 词条列表（含触发型词条描述）
+- 宝石孔位及已镶嵌宝石属性值（如 `孔1: 🔴 红宝石 Lv.3 (+9 攻击)`）
+- 套装效果展示：所有 2/4/6 件奖励 + ✓/○ 标记已激活/未激活
+- 由 `InventoryPanel.js` 导出，`CharacterPanel.js` 复用
+
+### 右键菜单
+- 背包：右键装备弹出菜单（使用/装备/强化/洗练/镶嵌/丢弃）
+- 角色面板：右键已装备物品弹出菜单（强化/洗练/镶嵌/卸下）
+- 浏览器右键菜单通过 `gameConfig.input.mouse.preventDefaultDown/Up` + canvas `oncontextmenu` 禁用
+- 使用 `pointer.button === 2` 检测右键（比 `rightButtonDown()` 更可靠）
+
+### Tooltip（通用）
 - `hoverTooltip = new Tooltip(this, { delay: 500 })`
 - 技能卡片 emoji 图标挂 tooltip 显示完整描述
 

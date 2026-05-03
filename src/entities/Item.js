@@ -20,6 +20,9 @@ export class Item {
 
     this.onCollect = config.onCollect || null;
     this.spawnQuantity = config.spawnQuantity || 1;
+    // 掉落物拾取保护期（毫秒），防止刚生成就被站在原地的玩家秒拾
+    this.pickupDelay = config.pickupDelay || 0;
+    this._spawnTime = Date.now();
 
     const textureKey = AssetManager.getTextureKey(type);
 
@@ -64,6 +67,8 @@ export class Item {
 
   collect() {
     if (this.isCollected) return null;
+    // 保护期内不可拾取
+    if (this.pickupDelay > 0 && Date.now() - this._spawnTime < this.pickupDelay) return null;
     this.isCollected = true;
 
     this.scene.tweens.add({

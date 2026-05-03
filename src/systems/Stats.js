@@ -85,7 +85,7 @@ export class Stats {
       spellPower:  int * 1          + this.flatBonuses.spellPower,
       moveSpeed:   agi * 20 + 40    + this.flatBonuses.moveSpeed,
       attackSpeed: 1.0 + agi * 0.01 + this.flatBonuses.attackSpeed,
-      hpRegen:     con * 0.5        + this.flatBonuses.hpRegen,
+      hpRegen:     con * 0.05       + this.flatBonuses.hpRegen,
       critDmg:     1.5 + str * 0.1  + this.flatBonuses.critDmg,
       critRate:    per * 0.5         + this.flatBonuses.critRate,      // percentage points (2.5 = 2.5%)
       tenacity:    con * 0.5 + str * 0.2 + this.flatBonuses.tenacity,  // raw value, consumed via diminishing returns
@@ -108,6 +108,12 @@ export class Stats {
     this._cache.critRate    += (pct.critRate || 0);  // critRate 直接加百分点
     this._cache.critDmg     += (pct.critDmg  || 0);
     this._cache.cdr         = Math.min(40, this._cache.cdr + (pct.cdr || 0));
+
+    // 取整关键属性，避免 UI 显示浮点数
+    this._cache.maxHp    = Math.round(this._cache.maxHp);
+    this._cache.maxMp    = Math.round(this._cache.maxMp);
+    this._cache.attack   = Math.round(this._cache.attack);
+    this._cache.defense  = Math.round(this._cache.defense);
 
     return this._cache;
   }

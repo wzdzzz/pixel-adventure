@@ -25,7 +25,7 @@ new Actor(scene, x, y, textureKey, statsConfig, characterId)
 ### 资源系统
 | 资源 | 公式 | 回复 |
 |------|------|------|
-| HP | `con*10 + flatBonus.maxHp` | 战斗中**禁用**回血；脱战后按 `hpRegen/秒`（仅 Enemy 战斗中冻结） |
+| HP | `con*10 + flatBonus.maxHp` | 脱战后按 `hpRegen/秒`（con×0.05 基准；仅 Enemy 战斗中冻结 hpRegen） |
 | 体力 | `con*8 + 60` | 停止使用 1 秒后，`con*0.8/秒` |
 | 法力 | `int*10 + 50` | 持续 `int*0.5/秒` |
 | 怒气 | 0-100 | 攻击 +8、被击 +12；脱战 3 秒后 5/秒 衰减 |
@@ -95,7 +95,7 @@ DEAD
 | archer | agi | ranged | stamina | `'agi'` |
 | mage | int | magic | mana | `'int'` |
 
-`Player.getAttack()` 重写为 `primary*2 + flatBonus.attack` × buff，确保升级 INT/AGI 也提升伤害。
+`Player.getAttack()` 重写为 `(primary*2 + flatBonus.attack) × (1 + bonusPct.attack)` × buff，确保升级 INT/AGI 也提升伤害，百分比攻击加成正确应用。
 
 ### 远程瞄准 (`getAimDirection()`)
 - 远程职业（archer/mage）读 `pointer.worldX/Y` → 单位向量

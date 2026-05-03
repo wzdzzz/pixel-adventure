@@ -145,7 +145,7 @@ skill_complete → onSkillComplete
 ### Charge Dash (`startChargeDash`)
 - `getAimDirection()` 决定方向
 - `effect.reverse: true` → 反向位移（archer 翻滚射击）
-- `effect.blink: true` → 直接 `setPosition(end)`，残影 + 终点 hitbox
+- `effect.blink: true` → 直接 `setPosition(end)`，残影 + 终点 hitbox。允许穿墙，但终点若在墙内则自动退到墙前（`_findBlinkEndpoint`）
 - 否则用 velocity 推进（warrior 冲锋、archer 翻滚等）
 
 ### Melee Skill (`startMeleeSkill`)

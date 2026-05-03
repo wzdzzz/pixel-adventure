@@ -25,7 +25,7 @@ manager.spawn(x, y, text, options)
 | 宝箱奖励 | `#ffdd44` 黄加粗 | `+50 分` |
 | 宝箱治疗 | `#66ff66` 绿 | `+25 HP` |
 
-被动 HP regen **不**飘字（避免每秒刷屏）。
+被动 HP regen（con×0.05/秒基准）**不**飘字（避免每秒刷屏）。
 
 ### 触发链
 - `Actor.takeDamage` 末尾 emit `actorDamaged`

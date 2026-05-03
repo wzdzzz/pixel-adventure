@@ -10,8 +10,8 @@ export class UIManager {
   createDialogueWindow(config = {}) {
     const width = config.width || 600;
     const height = config.height || 120;
-    const x = config.x || 400;
-    const y = config.y || 480;
+    const x = config.x || 960;
+    const y = config.y || 1000;
 
     const container = this.scene.add.container(x, y).setDepth(9990).setScrollFactor(0);
 

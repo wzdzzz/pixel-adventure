@@ -49,6 +49,12 @@ export function createPhaserConfig(scenes) {
         debug: false
       }
     },
+    input: {
+      mouse: {
+        preventDefaultDown: true,
+        preventDefaultUp: true
+      }
+    },
     scene: scenes,
     scale: {
       // 固定 1280×720 不缩放；窗口比画布大时居中显示，周围留黑

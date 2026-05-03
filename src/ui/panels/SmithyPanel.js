@@ -1,6 +1,7 @@
-import { MATERIALS, getEnhanceCost, getEnhanceSuccessRate } from '../../data/materials.js';
+import { MATERIALS, getEnhanceCost, getEnhanceSuccessRate, getEnhanceFailureBehavior } from '../../data/materials.js';
 import { AFFIXES } from '../../data/affixes.js';
 import { RECIPES } from '../../data/recipes.js';
+import { GEMS } from '../../data/gems.js';
 
 /**
  * 强化/分解小窗口（modal in PanelScene）
@@ -51,9 +52,11 @@ export const SmithyPanel = {
     if (enh >= 15) {
       infoLines = ['已达最高强化等级 +15'];
     } else {
+      const failBehavior = getEnhanceFailureBehavior(enh);
+      const failText = failBehavior === 'downgrade' ? '⚠ 失败降 1 级' : '失败保持等级';
       infoLines = [
         `下一级: +${enh+1}`,
-        `成功率: ${(rate*100).toFixed(0)}%`,
+        `成功率: ${(rate*100).toFixed(0)}%   ${failText}`,
         `材料: ${matName} ×${cost.count} (持有 ${heldMat})`,
         `金币: ${cost.gold} (持有 ${heldGold})`
       ];
@@ -251,6 +254,15 @@ export const SmithyPanel = {
   },
 
   _closeSmithyModal() {
+    // 清除滚动监听
+    if (this._gemFusionScrollHandler) {
+      this.input.off('wheel', this._gemFusionScrollHandler);
+      this._gemFusionScrollHandler = null;
+    }
+    if (this._craftScrollHandler) {
+      this.input.off('wheel', this._craftScrollHandler);
+      this._craftScrollHandler = null;
+    }
     if (this._smithyModal) {
       this._smithyModal.destroy();
       this._smithyModal = null;
@@ -442,7 +454,11 @@ export const SmithyPanel = {
 
         if (s.gemId) {
           // 已镶嵌
-          const gemName = `${s.gemId} Lv.${s.gemLevel}`;
+          const gem = GEMS[s.gemId];
+          const val = gem ? gem.baseValue * (s.gemLevel || 1) : 0;
+          const statLabel = { attack:'攻击', spellPower:'法强', maxHp:'生命', critRate:'暴击' }[gem?.stat] || gem?.stat || '';
+          const valText = gem?.stat === 'critRate' ? `+${val.toFixed(1)}%` : `+${val}`;
+          const gemName = `${gem?.icon || '◆'} ${gem?.name || s.gemId} Lv.${s.gemLevel}  ${valText} ${statLabel}`;
           const lbl = this.add.text(cx - 100, y, gemName, {
             fontSize:'11px', color:'#66ccff', fontFamily:'Courier New'
           }).setOrigin(0, 0.5);
@@ -512,7 +528,11 @@ export const SmithyPanel = {
       } else {
         gemEntries.forEach(({ s, idx }, i) => {
           const y = cy - 110 + i * 26;
-          const txt = this.add.text(cx - 180, y, `${s.icon || '◆'} ${s.name} ×${s.quantity}`, {
+          const gem = GEMS[s.id];
+          const val = gem ? gem.baseValue * (s.level || 1) : 0;
+          const statLabel = { attack:'攻击', spellPower:'法强', maxHp:'生命', critRate:'暴击' }[gem?.stat] || '';
+          const valText = gem?.stat === 'critRate' ? `+${val.toFixed(1)}%` : `+${val}`;
+          const txt = this.add.text(cx - 180, y, `${s.icon || '◆'} ${s.name}  ${valText}${statLabel}  ×${s.quantity}`, {
             fontSize:'12px', color:'#cccccc', fontFamily:'Courier New',
             backgroundColor:'#2a2a3e', padding:{ x:6, y:3 }
           }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
@@ -548,17 +568,18 @@ export const SmithyPanel = {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
     const cx = w / 2, cy = h / 2;
+    const panelW = 520, panelH = 560;
     const selected = [];  // slotIndex 数组
 
     const render = () => {
       if (this._smithyModal) this._smithyModal.destroy();
       const c = this.add.container(0, 0).setDepth(50);
       const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
-      const panel = this.add.rectangle(cx, cy, 460, 380, 0x1a1a2e, 0.98).setStrokeStyle(2, 0xffdd66);
-      const title = this.add.text(cx, cy - 165, '宝石合成', {
+      const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a1a2e, 0.98).setStrokeStyle(2, 0xffdd66);
+      const title = this.add.text(cx, cy - panelH / 2 + 25, '宝石合成', {
         fontSize:'15px', color:'#ffdd66', fontFamily:'Courier New', fontStyle:'bold'
       }).setOrigin(0.5);
-      const hint = this.add.text(cx, cy - 140, '选 3 颗同色同级宝石合成更高 1 级', {
+      const hint = this.add.text(cx, cy - panelH / 2 + 50, '选 3 颗同色同级宝石合成更高 1 级', {
         fontSize:'10px', color:'#888899', fontFamily:'Courier New'
       }).setOrigin(0.5);
       c.add([dim, panel, title, hint]);
@@ -567,21 +588,42 @@ export const SmithyPanel = {
         .map((s, idx) => ({ s, idx }))
         .filter(({ s }) => s && s.type === 'gem' && s.level < 10);
 
+      // 滚动列表区域
+      const listTop = cy - panelH / 2 + 70;
+      const listH = panelH - 160; // 列表可用高度
+      const rowH = 28;
+      const listLeft = cx - panelW / 2 + 30;
+      const listW = panelW - 60;
+
+      // 裁剪遮罩：只显示列表区域内的行
+      const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
+      maskGfx.fillRect(listLeft, listTop, listW, listH);
+      const mask = maskGfx.createGeometryMask();
+
+      // 列表内容容器（可滚动）
+      const listContainer = this.add.container(0, 0);
+      listContainer.setMask(mask);
+
       if (gemEntries.length === 0) {
-        const empty = this.add.text(cx, cy - 50, '没有可合成的宝石', {
+        const empty = this.add.text(cx, listTop + 50, '没有可合成的宝石', {
           fontSize:'12px', color:'#888899', fontFamily:'Courier New'
         }).setOrigin(0.5);
-        c.add(empty);
+        listContainer.add(empty);
       } else {
         gemEntries.forEach(({ s, idx }, i) => {
-          const y = cy - 110 + i * 24;
+          const y = listTop + i * rowH + rowH / 2;
           const isSel = selected.includes(idx);
-          const bg = this.add.rectangle(cx - 100, y, 280, 22,
+          const bg = this.add.rectangle(cx, y, listW, rowH - 4,
             isSel ? 0x3a4a3a : 0x2a2a3e)
             .setStrokeStyle(1, isSel ? 0x66ff88 : 0x5a5a7a)
-            .setInteractive({ useHandCursor: true }).setOrigin(0, 0.5);
-          const txt = this.add.text(cx - 90, y, `${s.icon || '◆'} ${s.name} ×${s.quantity}`, {
-            fontSize:'11px', color:'#cccccc', fontFamily:'Courier New'
+            .setInteractive({ useHandCursor: true });
+          const levelTag = `Lv.${s.level || 1}`;
+          const gem = GEMS[s.id];
+          const val = gem ? gem.baseValue * (s.level || 1) : 0;
+          const statLabel = { attack:'攻击', spellPower:'法强', maxHp:'生命', critRate:'暴击' }[gem?.stat] || '';
+          const valText = gem?.stat === 'critRate' ? `+${val.toFixed(1)}%` : `+${val}`;
+          const txt = this.add.text(listLeft + 10, y, `${s.icon || '◆'} ${s.name} ${levelTag}  ${valText}${statLabel}  ×${s.quantity}`, {
+            fontSize:'12px', color: isSel ? '#aaffaa' : '#cccccc', fontFamily:'Courier New'
           }).setOrigin(0, 0.5);
           bg.on('pointerdown', () => {
             const i2 = selected.indexOf(idx);
@@ -589,21 +631,40 @@ export const SmithyPanel = {
             else if (selected.length < 3) selected.push(idx);
             render();
           });
-          c.add([bg, txt]);
+          listContainer.add([bg, txt]);
+        });
+      }
+      c.add(listContainer);
+
+      // 滚动支持：鼠标滚轮
+      const maxScroll = Math.max(0, gemEntries.length * rowH - listH);
+      let scrollY = 0;
+      if (maxScroll > 0) {
+        const scrollHint = this.add.text(cx + panelW / 2 - 40, listTop + listH - 14, '▼滚动', {
+          fontSize:'9px', color:'#666677', fontFamily:'Courier New'
+        }).setOrigin(0.5);
+        c.add(scrollHint);
+
+        this.input.on('wheel', this._gemFusionScrollHandler = (_p, _over, _dx, dy) => {
+          scrollY = Math.max(0, Math.min(maxScroll, scrollY + dy * 0.5));
+          listContainer.setY(-scrollY);
         });
       }
 
-      const counterText = this.add.text(cx, cy + 110, `已选: ${selected.length}/3`, {
+      // 底部栏
+      const bottomY = cy + panelH / 2 - 60;
+      const counterText = this.add.text(cx, bottomY, `已选: ${selected.length}/3`, {
         fontSize:'12px', color:'#ffdd66', fontFamily:'Courier New'
       }).setOrigin(0.5);
       c.add(counterText);
 
+      const btnY = bottomY + 35;
       const enabled = selected.length === 3;
-      const okBg = this.add.rectangle(cx - 80, cy + 155, 130, 32,
+      const okBg = this.add.rectangle(cx - 80, btnY, 130, 32,
         enabled ? 0x224422 : 0x2a2a2a)
         .setStrokeStyle(1, enabled ? 0x66ff88 : 0x555555);
       if (enabled) okBg.setInteractive({ useHandCursor: true });
-      const okTxt = this.add.text(cx - 80, cy + 155, '合成', {
+      const okTxt = this.add.text(cx - 80, btnY, '合成', {
         fontSize:'13px', color: enabled ? '#66ff88' : '#777777', fontFamily:'Courier New'
       }).setOrigin(0.5);
       if (enabled) {
@@ -616,9 +677,9 @@ export const SmithyPanel = {
         });
       }
 
-      const cancelBg = this.add.rectangle(cx + 80, cy + 155, 130, 32, 0x442222)
+      const cancelBg = this.add.rectangle(cx + 80, btnY, 130, 32, 0x442222)
         .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
-      const cancelTxt = this.add.text(cx + 80, cy + 155, '取消', {
+      const cancelTxt = this.add.text(cx + 80, btnY, '取消', {
         fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
       }).setOrigin(0.5);
       cancelBg.on('pointerdown', () => this._closeSmithyModal());
@@ -638,38 +699,72 @@ export const SmithyPanel = {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
     const cx = w / 2, cy = h / 2;
+    const panelW = 540, panelH = 600;
 
     const render = () => {
       if (this._smithyModal) this._smithyModal.destroy();
       const c = this.add.container(0, 0).setDepth(50);
       const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
-      const panel = this.add.rectangle(cx, cy, 480, 420, 0x1a1a2e, 0.98).setStrokeStyle(2, 0x88ddaa);
-      const title = this.add.text(cx, cy - 185, '装备制作', {
+      const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a1a2e, 0.98).setStrokeStyle(2, 0x88ddaa);
+      const title = this.add.text(cx, cy - panelH / 2 + 25, '装备制作', {
         fontSize:'15px', color:'#88ddaa', fontFamily:'Courier New', fontStyle:'bold'
       }).setOrigin(0.5);
-      c.add([dim, panel, title]);
+      const hint = this.add.text(cx, cy - panelH / 2 + 50, '选择配方制作装备，材料不足时按钮禁用', {
+        fontSize:'10px', color:'#888899', fontFamily:'Courier New'
+      }).setOrigin(0.5);
+      c.add([dim, panel, title, hint]);
+
+      // 滚动列表区域
+      const listTop = cy - panelH / 2 + 70;
+      const listH = panelH - 150;
+      const rowH = 54;
+      const listLeft = cx - panelW / 2 + 20;
+      const listW = panelW - 40;
+
+      // 裁剪遮罩
+      const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
+      maskGfx.fillRect(listLeft, listTop, listW, listH);
+      const mask = maskGfx.createGeometryMask();
+
+      const listContainer = this.add.container(0, 0);
+      listContainer.setMask(mask);
 
       const recipes = craftSys.listRecipes();
+      const RARITY_COLOR = {
+        common:'#cccccc', uncommon:'#44cc44', rare:'#4488ff',
+        epic:'#bb44ff', legendary:'#ffaa00', mythic:'#ff4444'
+      };
+
       recipes.forEach((rcp, i) => {
-        const y = cy - 145 + i * 50;
+        const y = listTop + i * rowH + rowH / 2;
         const check = craftSys.canCraft(rcp.id);
         const enabled = check.ok;
-        const matsText = rcp.materials.map(m =>
-          `${m.matId} ×${m.count}`).join(', ');
-        const lvlText = rcp.requiredLevel ? ` (需 Lv.${rcp.requiredLevel})` : '';
-        const lbl = this.add.text(cx - 220, y - 8, `${rcp.name}${lvlText}`, {
-          fontSize:'12px', color: enabled ? '#cccccc' : '#777777',
+
+        const bg = this.add.rectangle(cx, y, listW - 10, rowH - 4,
+          enabled ? 0x1e2e1e : 0x2a2a2a)
+          .setStrokeStyle(1, enabled ? 0x448844 : 0x444444);
+
+        const rarityColor = RARITY_COLOR[rcp.resultRarity] || '#cccccc';
+        const lvlText = rcp.requiredLevel ? ` Lv.${rcp.requiredLevel}` : '';
+        const lbl = this.add.text(listLeft + 15, y - 10, `${rcp.name}${lvlText}`, {
+          fontSize:'12px', color: rarityColor,
           fontFamily:'Courier New', fontStyle:'bold'
         }).setOrigin(0, 0.5);
-        const detail = this.add.text(cx - 220, y + 8, `${matsText} | ${rcp.gold}金币`, {
-          fontSize:'10px', color:'#888899', fontFamily:'Courier New'
+
+        const matsText = rcp.materials.map(m => {
+          const held = this._countMatInInv(m.matId);
+          const color = held >= m.count ? '' : '!';
+          return `${m.matId}×${m.count}(${held})${color}`;
+        }).join('  ');
+        const detail = this.add.text(listLeft + 15, y + 10, `${matsText} | ${rcp.gold}金`, {
+          fontSize:'9px', color: enabled ? '#aaaaaa' : '#666666', fontFamily:'Courier New'
         }).setOrigin(0, 0.5);
 
-        const btnBg = this.add.rectangle(cx + 180, y, 80, 28,
+        const btnBg = this.add.rectangle(cx + listW / 2 - 55, y, 80, 28,
           enabled ? 0x224422 : 0x2a2a2a)
           .setStrokeStyle(1, enabled ? 0x66ff88 : 0x555555);
         if (enabled) btnBg.setInteractive({ useHandCursor: true });
-        const btnTxt = this.add.text(cx + 180, y, '制作', {
+        const btnTxt = this.add.text(cx + listW / 2 - 55, y, '制作', {
           fontSize:'11px', color: enabled ? '#66ff88' : '#777777',
           fontFamily:'Courier New'
         }).setOrigin(0.5);
@@ -682,12 +777,30 @@ export const SmithyPanel = {
             render();
           });
         }
-        c.add([lbl, detail, btnBg, btnTxt]);
+        listContainer.add([bg, lbl, detail, btnBg, btnTxt]);
       });
+      c.add(listContainer);
 
-      const cancelBg = this.add.rectangle(cx, cy + 175, 130, 32, 0x442222)
+      // 滚动支持
+      const maxScroll = Math.max(0, recipes.length * rowH - listH);
+      let scrollY = 0;
+      if (maxScroll > 0) {
+        const scrollHint = this.add.text(cx + panelW / 2 - 40, listTop + listH - 14, '▼滚动', {
+          fontSize:'9px', color:'#666677', fontFamily:'Courier New'
+        }).setOrigin(0.5);
+        c.add(scrollHint);
+
+        this.input.on('wheel', this._craftScrollHandler = (_p, _over, _dx, dy) => {
+          scrollY = Math.max(0, Math.min(maxScroll, scrollY + dy * 0.5));
+          listContainer.setY(-scrollY);
+        });
+      }
+
+      // 底部关闭按钮
+      const btnY = cy + panelH / 2 - 40;
+      const cancelBg = this.add.rectangle(cx, btnY, 130, 32, 0x442222)
         .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true });
-      const cancelTxt = this.add.text(cx, cy + 175, '关闭', {
+      const cancelTxt = this.add.text(cx, btnY, '关闭', {
         fontSize:'13px', color:'#ff8866', fontFamily:'Courier New'
       }).setOrigin(0.5);
       cancelBg.on('pointerdown', () => this._closeSmithyModal());
