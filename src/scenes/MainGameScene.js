@@ -223,7 +223,12 @@ export class MainGameScene extends Phaser.Scene {
     // 4. 创建 Chunk 管理器
     this.chunkManager = new ChunkManager(this, this.worldGenerator, this.worldState);
 
-    // 5. 创建玩家（生成在城镇中心）
+    // 5. 设置物理世界边界（16×16 chunks × 32 tiles × 32px = 16384px）
+    // 必须在创建玩家之前，因为 Actor 构造函数调用 setCollideWorldBounds(true)
+    const worldSize = 16 * 32 * 32; // 16384
+    this.physics.world.setBounds(0, 0, worldSize, worldSize);
+
+    // 5.1. 创建玩家（生成在城镇中心）
     // 城镇 chunk = (8,8)，世界坐标 = 8*1024+512 = 8704
     const spawnX = 8 * 1024 + 512;
     const spawnY = 8 * 1024 + 512;
