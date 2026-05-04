@@ -229,6 +229,9 @@ export class MainGameScene extends Phaser.Scene {
     const spawnY = 8 * 1024 + 512;
     this._createWorldPlayer(spawnX, spawnY);
 
+    // 5.5. 注册基础碰撞
+    this.setupWorldCollisions();
+
     // 6. 摄像机跟随玩家（不设边界）
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
     this.cameras.main.setDeadzone(80, 60);
@@ -289,7 +292,26 @@ export class MainGameScene extends Phaser.Scene {
     // 玩家 vs 墙壁层
     this.physics.add.collider(this.player.sprite, wallLayer);
 
+    // 现有敌人 vs 墙壁层（临时方案，Phase 6 完善后用 Group）
+    for (const enemy of this.enemies) {
+      if (enemy.sprite?.body) {
+        this.physics.add.collider(enemy.sprite, wallLayer);
+      }
+    }
+
     console.log(`[MainGameScene] 注册碰撞 chunk(${chunkX},${chunkY})`);
+  }
+
+  /**
+   * 开放世界碰撞设置（一次性注册）
+   * Chunk 墙壁碰撞在 chunk-loaded 事件中动态注册
+   */
+  setupWorldCollisions() {
+    if (!this.player?.sprite) return;
+
+    // 玩家 vs 静态障碍物（虽然开放世界不使用这些 groups，但保持兼容）
+    this.physics.add.collider(this.player.sprite, this.walls);
+    this.physics.add.collider(this.player.sprite, this.obstacles);
   }
 
   loadLevel(levelIndex) {
