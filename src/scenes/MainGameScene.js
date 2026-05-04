@@ -951,10 +951,13 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     if (this.player && this.player.sprite) {
-      this.enemies.forEach(e => {
-        e.update(this.player.sprite, delta);
-        if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
-      });
+      if (!this.useOpenWorld) {
+        // 关卡制模式：更新所有敌人（开放世界由 EntityManager 管理激活/休眠）
+        this.enemies.forEach(e => {
+          e.update(this.player.sprite, delta);
+          if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
+        });
+      }
       this.npcs.forEach(n => {
         if (n.updateState) n.updateState(this.inventory.getItems());
         const sprite = n.sprite || n;
