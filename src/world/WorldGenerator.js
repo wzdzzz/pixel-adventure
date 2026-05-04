@@ -7,6 +7,7 @@
  */
 import { createNoise2D } from 'simplex-noise';
 import { BIOMES, BIOME_ENEMIES, WORLD_CENTER, WORLD_RADIUS, getDifficultyAtChunk } from './biomes/biomeConfig.js';
+import { getLayoutOverride, getTemplate } from './WorldLayout.js';
 
 // ─── Tile ID 常量 ──────────────────────────────────────────
 export const TILE_IDS = {
@@ -171,6 +172,12 @@ export class WorldGenerator {
     const makeGrid = (fill) =>
       Array.from({ length: CHUNK_SIZE }, () => new Array(CHUNK_SIZE).fill(fill));
 
+    // ─── 0. 预制区域覆盖 ─────────────────────────────────────
+    const override = getLayoutOverride(chunkX, chunkY);
+    if (override) {
+      return getTemplate(override.template, chunkX, chunkY, override);
+    }
+
     // ─── 1. 边界检查 ───────────────────────────────────────
     if (!this.isInBounds(chunkX, chunkY)) {
       // 越界 chunk：全部填充 WALL（不可通行边界）
@@ -324,6 +331,13 @@ export class WorldGenerator {
    * @returns {Array<{id:string, type:string, localX:number, localY:number, level?:number, pack?:number, locked?:boolean}>}
    */
   generateChunkEntities(chunkX, chunkY, biome, wallData) {
+    // ─── 预制区域覆盖：直接返回模板实体 ────────────────────
+    const override = getLayoutOverride(chunkX, chunkY);
+    if (override) {
+      const tpl = getTemplate(override.template, chunkX, chunkY, override);
+      return tpl.entities || [];
+    }
+
     // 越界或无效 biome → 无实体
     if (!this.isInBounds(chunkX, chunkY)) return [];
     if (!BIOME_ENEMIES[biome]) return [];
