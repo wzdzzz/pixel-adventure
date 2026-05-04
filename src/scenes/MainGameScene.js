@@ -22,6 +22,12 @@ import itemData from '../data/items.json';
 import { LevelBuilder } from '../managers/LevelBuilder.js';
 import { InteractionHandler } from '../managers/InteractionHandler.js';
 import { getLevelSuppression } from '../data/monsterScaling.js';
+import { WorldGenerator } from '../world/WorldGenerator.js';
+import { ChunkManager } from '../world/ChunkManager.js';
+import { WorldStateManager } from '../world/WorldStateManager.js';
+import { EntityPool } from '../world/EntityPool.js';
+import { EntityManager } from '../world/EntityManager.js';
+import { BIOMES } from '../world/biomes/biomeConfig.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -47,6 +53,14 @@ export class MainGameScene extends Phaser.Scene {
     this.dialoguing = false;
     this.activeDialogueWindow = null;
     this.activeDialogueNpc = null;
+
+    // 开放世界系统
+    this.worldGenerator = null;
+    this.chunkManager = null;
+    this.worldState = null;
+    this.entityPool = null;
+    this.entityManager = null;
+    this.useOpenWorld = false;  // 标记是否使用开放世界模式
   }
 
   create() {
@@ -83,9 +97,9 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     const gs = this.registry.get('gameState');
-    this.currentLevel = gs.currentLevel || 0;
 
-    this.loadLevel(this.currentLevel);
+    // 使用开放世界模式
+    this.enterWorld();
     this.tryLoadSave();
     this.setupEvents();
 
@@ -179,6 +193,103 @@ export class MainGameScene extends Phaser.Scene {
       callback: () => SaveSystem.save(this),
       loop: true
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  开放世界入口
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * 初始化开放世界系统：WorldGenerator + ChunkManager + 玩家
+   * 替代原来的 loadLevel()
+   */
+  enterWorld(saveData = null) {
+    this.useOpenWorld = true;
+
+    // 1. 初始化世界状态
+    if (saveData?.worldState) {
+      this.worldState = WorldStateManager.deserialize(saveData.worldState);
+    } else {
+      this.worldState = new WorldStateManager(Date.now());
+    }
+
+    // 2. 创建世界生成器（种子化，确定性）
+    this.worldGenerator = new WorldGenerator(this.worldState.seed);
+
+    // 3. 创建实体池和管理器
+    this.entityPool = new EntityPool();
+    this.entityManager = new EntityManager();
+
+    // 4. 创建 Chunk 管理器
+    this.chunkManager = new ChunkManager(this, this.worldGenerator, this.worldState);
+
+    // 5. 创建玩家（生成在城镇中心）
+    // 城镇 chunk = (8,8)，世界坐标 = 8*1024+512 = 8704
+    const spawnX = 8 * 1024 + 512;
+    const spawnY = 8 * 1024 + 512;
+    this._createWorldPlayer(spawnX, spawnY);
+
+    // 6. 摄像机跟随玩家（不设边界）
+    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
+    this.cameras.main.setDeadzone(80, 60);
+    // 不 setBounds — 世界由 Chunk 流式加载
+
+    // 7. 首次触发 Chunk 加载
+    this.chunkManager.update(spawnX, spawnY);
+
+    // 8. 注册 chunk 事件：新 chunk 加载时注册墙壁碰撞
+    this.events.on('chunk-loaded', (data) => {
+      this._registerChunkCollisions(data.chunkX, data.chunkY);
+    });
+
+    // 9. 通知 UI
+    const biome = this.worldGenerator.getBiome(8, 8);
+    const biomeCfg = BIOMES[biome];
+    const biomeName = biomeCfg ? biomeCfg.name : biome;
+    this.events.emit('levelChanged', `${biomeName} — 城镇`, 0);
+
+    console.log(`[MainGameScene] 开放世界已初始化 seed=${this.worldState.seed}`);
+  }
+
+  /**
+   * 创建开放世界中的玩家
+   * 复用 LevelBuilder.createPlayer()，传入一个具有 playerStart 的虚拟 level 对象
+   */
+  _createWorldPlayer(x, y) {
+    // 创建必要的空 physics groups（开放世界不使用 walls/obstacles groups）
+    this.walls = this.physics.add.staticGroup();
+    this.obstacles = this.physics.add.staticGroup();
+    this.decorations = this.add.group();
+    this.groundTiles = this.add.group();
+    this.enemies = [];
+    this.items = [];
+    this.npcs = [];
+    this.breakables = [];
+    this.triggerZones = [];
+    this.chests = [];
+    this.enemyProjectiles = [];
+    this.enemyHitboxes = [];
+
+    // 创建一个虚拟 level 对象来复用 LevelBuilder.createPlayer()
+    // createPlayer 使用 level.playerStart.x/y 作为像素坐标
+    const dummyLevel = {
+      playerStart: { x, y }
+    };
+    this.mapData = [[0]]; // dummy — 开放世界不使用 mapData
+    this.createPlayer(dummyLevel);
+  }
+
+  /**
+   * 注册新加载 Chunk 的墙壁碰撞
+   */
+  _registerChunkCollisions(chunkX, chunkY) {
+    const wallLayer = this.chunkManager.getWallLayer(chunkX, chunkY);
+    if (!wallLayer || !this.player?.sprite) return;
+
+    // 玩家 vs 墙壁层
+    this.physics.add.collider(this.player.sprite, wallLayer);
+
+    console.log(`[MainGameScene] 注册碰撞 chunk(${chunkX},${chunkY})`);
   }
 
   loadLevel(levelIndex) {
@@ -635,6 +746,12 @@ export class MainGameScene extends Phaser.Scene {
           case 'heal':
             if (this.player) this.player.heal(itemData.effect.amount);
             break;
+          case 'restore_mana':
+            if (this.player) {
+              this.player.mana = Math.min(this.player.maxMana, this.player.mana + itemData.effect.amount);
+              this.player.onResourceChanged();
+            }
+            break;
         }
       }
     });
@@ -693,14 +810,16 @@ export class MainGameScene extends Phaser.Scene {
     this.gamePaused = false;
   }
 
-  /** 使用物品快捷栏第 i 个槽位 */
+  /** 使用物品快捷栏第 i 个槽位（按物品 id 查找背包） */
   useItemSlot(i) {
     const player = this.player;
     if (!player || !this.inventory) return;
-    const slotIdx = player.itemSlots?.[i];
-    if (slotIdx == null) return;
-    const item = this.inventory.getSlot(slotIdx);
-    if (!item || item.type !== 'consumable') return;
+    const itemId = player.itemSlots?.[i];
+    if (!itemId) return;
+    const slotIdx = this.inventory.slots.findIndex(
+      s => s && s.id === itemId && s.type === 'consumable'
+    );
+    if (slotIdx === -1) return;
     this.inventory.useItem(slotIdx);
     this.events.emit('itemSlotsChanged');
   }
@@ -723,6 +842,20 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     if (this.gamePaused) return;
+
+    // ─── 开放世界系统更新 ─────────────────────────
+    if (this.useOpenWorld && this.chunkManager && this.player?.sprite) {
+      // Chunk 流式加载/卸载
+      this.chunkManager.update(this.player.sprite.x, this.player.sprite.y);
+
+      // 实体距离分级
+      if (this.entityManager) {
+        const cam = this.cameras.main;
+        const camCenterX = cam.scrollX + cam.width / 2;
+        const camCenterY = cam.scrollY + cam.height / 2;
+        this.entityManager.update(camCenterX, camCenterY, this.chunkManager.activeChunks);
+      }
+    }
 
     // Reset enemy pushable each frame (player-enemy collider sets it false,
     // but enemies need to stay pushable for enemy-enemy collisions)
