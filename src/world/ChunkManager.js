@@ -315,6 +315,14 @@ export class ChunkManager {
     const chunkData = this.activeChunks.get(key);
     if (!chunkData) return;
 
+    // 先销毁所有关联的物理碰撞器（必须在 layer 销毁之前）
+    if (chunkData.colliders) {
+      for (const collider of chunkData.colliders) {
+        if (collider) collider.destroy();
+      }
+      chunkData.colliders = [];
+    }
+
     chunkData.groundLayer.destroy();
     chunkData.groundMap.destroy();
     chunkData.wallLayer.destroy();

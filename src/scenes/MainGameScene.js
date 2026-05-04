@@ -289,15 +289,15 @@ export class MainGameScene extends Phaser.Scene {
     const wallLayer = this.chunkManager.getWallLayer(chunkX, chunkY);
     if (!wallLayer || !this.player?.sprite) return;
 
-    // 玩家 vs 墙壁层
-    this.physics.add.collider(this.player.sprite, wallLayer);
+    const chunkData = this.chunkManager.getChunk(chunkX, chunkY);
+    if (!chunkData) return;
 
-    // 现有敌人 vs 墙壁层（临时方案，Phase 6 完善后用 Group）
-    for (const enemy of this.enemies) {
-      if (enemy.sprite?.body) {
-        this.physics.add.collider(enemy.sprite, wallLayer);
-      }
-    }
+    // 初始化碰撞器数组（卸载时需要逐个销毁）
+    if (!chunkData.colliders) chunkData.colliders = [];
+
+    // 玩家 vs 墙壁层
+    const playerCollider = this.physics.add.collider(this.player.sprite, wallLayer);
+    chunkData.colliders.push(playerCollider);
 
     console.log(`[MainGameScene] 注册碰撞 chunk(${chunkX},${chunkY})`);
   }
