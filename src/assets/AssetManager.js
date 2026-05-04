@@ -126,6 +126,7 @@ export const TEXTURES = {
   WALL: 'wall',
   OBSTACLE: 'obstacle',
   POTION: 'potion',
+  MANA_POTION: 'mana_potion',
   HEART: 'heart',
   GROUND: 'ground',
   PARTICLE: 'particle',
@@ -174,6 +175,7 @@ export class AssetManager {
     AssetManager.gen(scene, TEXTURES.OBSTACLE, () => AssetManager.createPixelBlock(scene, TEXTURES.OBSTACLE, 0x8b4513, 32, 32));
     AssetManager.gen(scene, TEXTURES.GROUND, () => AssetManager.createPixelBlock(scene, TEXTURES.GROUND, 0x2d2d3d, 32, 32));
     AssetManager.gen(scene, TEXTURES.POTION, () => AssetManager.createPixelItem(scene, TEXTURES.POTION, 0x00ff7f, 16, 20));
+    AssetManager.gen(scene, TEXTURES.MANA_POTION, () => AssetManager.createPixelItem(scene, TEXTURES.MANA_POTION, 0x4488ff, 16, 20));
     AssetManager.gen(scene, TEXTURES.HEART, () => AssetManager.createPixelHeart(scene, TEXTURES.HEART, 0xff1493, 20, 18));
     AssetManager.gen(scene, TEXTURES.PARTICLE, () => AssetManager.createPixelParticle(scene, TEXTURES.PARTICLE, 0xffffff, 4, 4));
     AssetManager.gen(scene, TEXTURES.ATTACK_EFFECT, () => AssetManager.createAttackEffect(scene, TEXTURES.ATTACK_EFFECT, 0xffffff, 40, 8));
@@ -199,6 +201,9 @@ export class AssetManager {
     AssetManager.gen(scene, TEXTURES.FOG_LIGHT, () => AssetManager.createFogLight(scene, TEXTURES.FOG_LIGHT, 200));
 
     console.log('[AssetManager] 所有纹理生成完成');
+
+    // 世界流式加载 tileset
+    AssetManager.generateWorldTileset(scene);
   }
 
   static createPixelCharacter(scene, key, color, width, height) {
@@ -607,6 +612,7 @@ export class AssetManager {
       'wall': TEXTURES.WALL,
       'obstacle': TEXTURES.OBSTACLE,
       'potion': TEXTURES.POTION,
+      'mana_potion': TEXTURES.MANA_POTION,
       'heart': TEXTURES.HEART,
       'tree': TEXTURES.TREE,
       'tree_pine': TEXTURES.TREE_PINE,
@@ -625,5 +631,377 @@ export class AssetManager {
       'chest_open': TEXTURES.CHEST_OPEN
     };
     return typeMap[type] || TEXTURES.COIN;
+  }
+
+  /**
+   * 生成世界 tileset 纹理 — 8列×6行, 每格 32×32
+   * Tile ID 映射: row = floor(id/8), col = id%8
+   * Row 0 (0-7): 地面层   Row 2 (16-20): 墙壁/碰撞层   Row 4 (32-36): 装饰层
+   */
+  static generateWorldTileset(scene) {
+    if (scene.textures.exists('world_tileset')) return;
+
+    const cols = 8;
+    const rows = 6;
+    const size = 32;
+    const canvas = document.createElement('canvas');
+    canvas.width = cols * size;
+    canvas.height = rows * size;
+    const ctx = canvas.getContext('2d');
+
+    // 地面层 (row 0)
+    AssetManager._drawTileToCanvas(ctx, 0, cols, size);  // GRASS
+    AssetManager._drawTileToCanvas(ctx, 1, cols, size);  // DIRT
+    AssetManager._drawTileToCanvas(ctx, 2, cols, size);  // SAND
+    AssetManager._drawTileToCanvas(ctx, 3, cols, size);  // SNOW
+    AssetManager._drawTileToCanvas(ctx, 4, cols, size);  // WATER
+    AssetManager._drawTileToCanvas(ctx, 5, cols, size);  // STONE_FLOOR
+    AssetManager._drawTileToCanvas(ctx, 6, cols, size);  // LAVA_FLOOR
+    AssetManager._drawTileToCanvas(ctx, 7, cols, size);  // SWAMP_FLOOR
+
+    // 墙壁/碰撞层 (row 2)
+    AssetManager._drawTileToCanvas(ctx, 16, cols, size); // WALL
+    AssetManager._drawTileToCanvas(ctx, 17, cols, size); // TREE
+    AssetManager._drawTileToCanvas(ctx, 18, cols, size); // TREE_PINE
+    AssetManager._drawTileToCanvas(ctx, 19, cols, size); // ROCK
+    AssetManager._drawTileToCanvas(ctx, 20, cols, size); // FENCE
+
+    // 装饰层 (row 4)
+    AssetManager._drawTileToCanvas(ctx, 32, cols, size); // FLOWER
+    AssetManager._drawTileToCanvas(ctx, 33, cols, size); // MUSHROOM
+    AssetManager._drawTileToCanvas(ctx, 34, cols, size); // GRASS_TALL
+    // 35 留空
+    AssetManager._drawTileToCanvas(ctx, 36, cols, size); // CAMPFIRE
+
+    scene.textures.addCanvas('world_tileset', canvas);
+    console.log('[AssetManager] 世界 tileset 纹理生成完成 (256×192)');
+  }
+
+  /**
+   * 在 tileset canvas 上绘制单个 tile
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} tileId - TILE_IDS 中的值
+   * @param {number} cols   - tileset 列数 (8)
+   * @param {number} size   - 单格像素尺寸 (32)
+   */
+  static _drawTileToCanvas(ctx, tileId, cols, size) {
+    const col = tileId % cols;
+    const row = Math.floor(tileId / cols);
+    const x = col * size;
+    const y = row * size;
+
+    const hexToCSS = (hex) => '#' + hex.toString(16).padStart(6, '0');
+
+    switch (tileId) {
+      // ===== 地面层 (row 0) =====
+
+      case 0: { // GRASS
+        ctx.fillStyle = hexToCSS(0x2e7d32);
+        ctx.fillRect(x, y, size, size);
+        // 草叶
+        ctx.fillStyle = hexToCSS(0x4caf50);
+        for (let i = 0; i < 8; i++) {
+          const gx = x + (i * 5 + 2) % (size - 3);
+          const gy = y + Math.floor(i / 3) * 10 + 4;
+          ctx.fillRect(gx, gy, 2, 6);
+        }
+        // 高光点缀
+        ctx.fillStyle = 'rgba(102, 187, 106, 0.4)';
+        ctx.fillRect(x + 4, y + 4, 3, 3);
+        ctx.fillRect(x + 20, y + 12, 3, 3);
+        break;
+      }
+
+      case 1: { // DIRT
+        ctx.fillStyle = hexToCSS(0x795548);
+        ctx.fillRect(x, y, size, size);
+        // 纹理斑点
+        ctx.fillStyle = hexToCSS(0x6d4c41);
+        ctx.fillRect(x + 4, y + 6, 4, 3);
+        ctx.fillRect(x + 18, y + 14, 5, 3);
+        ctx.fillRect(x + 10, y + 24, 4, 2);
+        ctx.fillStyle = hexToCSS(0x8d6e63);
+        ctx.fillRect(x + 14, y + 4, 3, 3);
+        ctx.fillRect(x + 24, y + 22, 3, 3);
+        ctx.fillRect(x + 2, y + 18, 3, 2);
+        break;
+      }
+
+      case 2: { // SAND
+        ctx.fillStyle = hexToCSS(0xdaa520);
+        ctx.fillRect(x, y, size, size);
+        // 沙粒点
+        ctx.fillStyle = hexToCSS(0xc49000);
+        ctx.fillRect(x + 5, y + 8, 2, 2);
+        ctx.fillRect(x + 18, y + 4, 2, 2);
+        ctx.fillRect(x + 12, y + 20, 2, 2);
+        ctx.fillRect(x + 26, y + 16, 2, 2);
+        ctx.fillStyle = hexToCSS(0xe6be4d);
+        ctx.fillRect(x + 8, y + 14, 3, 2);
+        ctx.fillRect(x + 22, y + 26, 3, 2);
+        break;
+      }
+
+      case 3: { // SNOW
+        ctx.fillStyle = hexToCSS(0xb0c4de);
+        ctx.fillRect(x, y, size, size);
+        // 雪花闪光
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillRect(x + 6, y + 6, 2, 2);
+        ctx.fillRect(x + 20, y + 10, 2, 2);
+        ctx.fillRect(x + 12, y + 22, 2, 2);
+        ctx.fillRect(x + 26, y + 4, 2, 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillRect(x + 16, y + 18, 3, 3);
+        ctx.fillRect(x + 2, y + 14, 3, 3);
+        break;
+      }
+
+      case 4: { // WATER
+        ctx.fillStyle = hexToCSS(0x1976d2);
+        ctx.fillRect(x, y, size, size);
+        // 波纹高光
+        ctx.fillStyle = 'rgba(100, 181, 246, 0.4)';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(x + 2 + i * 8, y + 8 + (i % 2) * 8, 6, 2);
+        }
+        ctx.fillStyle = 'rgba(187, 222, 251, 0.3)';
+        ctx.fillRect(x + 6, y + 4, 4, 2);
+        ctx.fillRect(x + 20, y + 18, 6, 2);
+        // 深色边缘
+        ctx.fillStyle = 'rgba(13, 71, 161, 0.2)';
+        ctx.fillRect(x, y + size - 2, size, 2);
+        ctx.fillRect(x + size - 2, y, 2, size);
+        break;
+      }
+
+      case 5: { // STONE_FLOOR
+        ctx.fillStyle = hexToCSS(0x757575);
+        ctx.fillRect(x, y, size, size);
+        // 砖缝线
+        ctx.fillStyle = hexToCSS(0x616161);
+        ctx.fillRect(x, y + 10, size, 1);
+        ctx.fillRect(x, y + 21, size, 1);
+        ctx.fillRect(x + 16, y, 1, 10);
+        ctx.fillRect(x + 8, y + 11, 1, 10);
+        ctx.fillRect(x + 24, y + 11, 1, 10);
+        ctx.fillRect(x + 16, y + 22, 1, 10);
+        // 浅色高光
+        ctx.fillStyle = 'rgba(189, 189, 189, 0.2)';
+        ctx.fillRect(x + 2, y + 2, 6, 3);
+        ctx.fillRect(x + 20, y + 13, 6, 3);
+        break;
+      }
+
+      case 6: { // LAVA_FLOOR
+        ctx.fillStyle = hexToCSS(0x8b0000);
+        ctx.fillRect(x, y, size, size);
+        // 橙色热斑
+        ctx.fillStyle = hexToCSS(0xff6600);
+        ctx.fillRect(x + 4, y + 6, 5, 4);
+        ctx.fillRect(x + 20, y + 18, 6, 5);
+        ctx.fillRect(x + 12, y + 12, 4, 3);
+        // 亮橙核心
+        ctx.fillStyle = hexToCSS(0xff9900);
+        ctx.fillRect(x + 5, y + 7, 3, 2);
+        ctx.fillRect(x + 22, y + 20, 3, 2);
+        // 黄色高亮
+        ctx.fillStyle = 'rgba(255, 235, 59, 0.5)';
+        ctx.fillRect(x + 6, y + 7, 2, 1);
+        ctx.fillRect(x + 23, y + 20, 1, 1);
+        break;
+      }
+
+      case 7: { // SWAMP_FLOOR
+        ctx.fillStyle = hexToCSS(0x556b2f);
+        ctx.fillRect(x, y, size, size);
+        // 沼泽泥斑
+        ctx.fillStyle = hexToCSS(0x3e4a22);
+        ctx.fillRect(x + 4, y + 8, 6, 4);
+        ctx.fillRect(x + 18, y + 20, 8, 5);
+        ctx.fillRect(x + 10, y + 2, 5, 3);
+        // 浑浊水面
+        ctx.fillStyle = 'rgba(105, 139, 34, 0.4)';
+        ctx.fillRect(x + 14, y + 14, 4, 3);
+        ctx.fillRect(x + 2, y + 22, 5, 3);
+        // 暗色气泡
+        ctx.fillStyle = 'rgba(30, 40, 15, 0.3)';
+        ctx.fillRect(x + 8, y + 16, 2, 2);
+        ctx.fillRect(x + 24, y + 6, 2, 2);
+        break;
+      }
+
+      // ===== 墙壁/碰撞层 (row 2) =====
+
+      case 16: { // WALL
+        ctx.fillStyle = hexToCSS(0x4a4a4a);
+        ctx.fillRect(x, y, size, size);
+        // 砖块图案
+        ctx.fillStyle = hexToCSS(0x3a3a3a);
+        ctx.fillRect(x, y + 8, size, 1);
+        ctx.fillRect(x, y + 16, size, 1);
+        ctx.fillRect(x, y + 24, size, 1);
+        ctx.fillRect(x + 16, y, 1, 8);
+        ctx.fillRect(x + 8, y + 9, 1, 7);
+        ctx.fillRect(x + 24, y + 9, 1, 7);
+        ctx.fillRect(x + 16, y + 17, 1, 7);
+        ctx.fillRect(x + 8, y + 25, 1, 7);
+        ctx.fillRect(x + 24, y + 25, 1, 7);
+        // 顶部高光
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(x, y, size, 2);
+        ctx.fillRect(x, y, 2, size);
+        // 底部阴影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.fillRect(x, y + size - 2, size, 2);
+        ctx.fillRect(x + size - 2, y, 2, size);
+        break;
+      }
+
+      case 17: { // TREE
+        // 透明背景（tilemap 会叠加在地面层上）
+        ctx.clearRect(x, y, size, size);
+        // 树干
+        ctx.fillStyle = hexToCSS(0x5d4037);
+        ctx.fillRect(x + 13, y + 16, 6, 16);
+        // 树冠
+        ctx.fillStyle = hexToCSS(0x228b22);
+        ctx.fillRect(x + 4, y + 4, 24, 20);
+        ctx.fillRect(x + 8, y, 16, 8);
+        // 暗绿叶丛
+        ctx.fillStyle = hexToCSS(0x1b5e20);
+        ctx.fillRect(x + 6, y + 10, 6, 4);
+        ctx.fillRect(x + 18, y + 6, 6, 4);
+        break;
+      }
+
+      case 18: { // TREE_PINE
+        ctx.clearRect(x, y, size, size);
+        // 树干
+        ctx.fillStyle = hexToCSS(0x4e342e);
+        ctx.fillRect(x + 14, y + 20, 4, 12);
+        // 三角形针叶 (用矩形层叠)
+        ctx.fillStyle = hexToCSS(0x0b5e0b);
+        ctx.fillRect(x + 10, y + 20, 12, 10);
+        ctx.fillRect(x + 8, y + 12, 16, 10);
+        ctx.fillRect(x + 6, y + 4, 20, 10);
+        ctx.fillRect(x + 12, y, 8, 6);
+        // 暗色阴影细节
+        ctx.fillStyle = hexToCSS(0x0a3d0a);
+        ctx.fillRect(x + 10, y + 16, 4, 4);
+        ctx.fillRect(x + 18, y + 10, 4, 4);
+        break;
+      }
+
+      case 19: { // ROCK
+        ctx.clearRect(x, y, size, size);
+        // 主石体
+        ctx.fillStyle = hexToCSS(0x757575);
+        ctx.fillRect(x + 4, y + 8, 24, 18);
+        ctx.fillRect(x + 8, y + 4, 16, 6);
+        // 亮面
+        ctx.fillStyle = hexToCSS(0x9e9e9e);
+        ctx.fillRect(x + 6, y + 8, 8, 4);
+        // 暗面
+        ctx.fillStyle = hexToCSS(0x424242);
+        ctx.fillRect(x + 18, y + 20, 8, 4);
+        break;
+      }
+
+      case 20: { // FENCE
+        ctx.clearRect(x, y, size, size);
+        // 水平横杆
+        ctx.fillStyle = hexToCSS(0x5d4037);
+        ctx.fillRect(x, y + 8, size, 4);
+        ctx.fillRect(x, y + 18, size, 4);
+        // 竖杆
+        ctx.fillRect(x + 2, y + 4, 4, 24);
+        ctx.fillRect(x + 26, y + 4, 4, 24);
+        // 尖顶
+        ctx.fillStyle = hexToCSS(0x4e342e);
+        ctx.fillRect(x + 4, y + 4, 2, 2);
+        ctx.fillRect(x + 28, y + 4, 2, 2);
+        break;
+      }
+
+      // ===== 装饰层 (row 4) =====
+
+      case 32: { // FLOWER
+        ctx.clearRect(x, y, size, size);
+        // 茎叶
+        ctx.fillStyle = hexToCSS(0x2e7d32);
+        ctx.fillRect(x + 14, y + 16, 4, 12);
+        ctx.fillRect(x + 10, y + 22, 4, 4);
+        ctx.fillRect(x + 18, y + 20, 4, 4);
+        // 花瓣
+        ctx.fillStyle = hexToCSS(0xe91e63);
+        ctx.fillRect(x + 12, y + 8, 8, 8);
+        // 花蕊
+        ctx.fillStyle = hexToCSS(0xffeb3b);
+        ctx.fillRect(x + 14, y + 10, 4, 4);
+        break;
+      }
+
+      case 33: { // MUSHROOM
+        ctx.clearRect(x, y, size, size);
+        // 菌柄
+        ctx.fillStyle = hexToCSS(0xd7ccc8);
+        ctx.fillRect(x + 12, y + 18, 8, 10);
+        // 菌盖
+        ctx.fillStyle = hexToCSS(0xff5722);
+        ctx.fillRect(x + 6, y + 8, 20, 12);
+        ctx.fillRect(x + 10, y + 4, 12, 6);
+        // 白色斑点
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillRect(x + 10, y + 10, 3, 3);
+        ctx.fillRect(x + 18, y + 12, 2, 2);
+        ctx.fillRect(x + 14, y + 6, 2, 2);
+        break;
+      }
+
+      case 34: { // GRASS_TALL
+        ctx.clearRect(x, y, size, size);
+        // 深绿底色 (半透明，可叠加)
+        ctx.fillStyle = 'rgba(27, 94, 32, 0.6)';
+        ctx.fillRect(x, y + 12, size, 20);
+        // 高草叶
+        ctx.fillStyle = hexToCSS(0x388e3c);
+        for (let i = 0; i < 12; i++) {
+          const gx = x + (i * 4 + 1) % (size - 2);
+          ctx.fillRect(gx, y + 2, 2, 10 + (i % 3) * 4);
+        }
+        // 亮绿叶片
+        ctx.fillStyle = 'rgba(129, 199, 132, 0.5)';
+        ctx.fillRect(x + 8, y + 6, 2, 8);
+        ctx.fillRect(x + 22, y + 4, 2, 10);
+        break;
+      }
+
+      // 35 留空，不绘制
+
+      case 36: { // CAMPFIRE
+        ctx.clearRect(x, y, size, size);
+        // 木柴
+        ctx.fillStyle = hexToCSS(0x5d4037);
+        ctx.fillRect(x + 4, y + 20, 4, 8);
+        ctx.fillRect(x + 24, y + 20, 4, 8);
+        // 木柴平台
+        ctx.fillStyle = hexToCSS(0x795548);
+        ctx.fillRect(x + 8, y + 18, 16, 6);
+        // 火焰外层
+        ctx.fillStyle = hexToCSS(0xff9800);
+        ctx.fillRect(x + 8, y + 8, 16, 14);
+        // 火焰内层
+        ctx.fillStyle = hexToCSS(0xffc107);
+        ctx.fillRect(x + 10, y + 10, 12, 10);
+        // 火焰核心
+        ctx.fillStyle = 'rgba(255, 235, 59, 0.8)';
+        ctx.fillRect(x + 13, y + 12, 6, 6);
+        break;
+      }
+
+      default:
+        break;
+    }
   }
 }
