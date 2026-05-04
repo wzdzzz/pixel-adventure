@@ -6,7 +6,7 @@
  * 无 Phaser 依赖。
  */
 import { createNoise2D } from 'simplex-noise';
-import { BIOMES, WORLD_CENTER, WORLD_RADIUS } from './biomes/biomeConfig.js';
+import { BIOMES, BIOME_ENEMIES, WORLD_CENTER, WORLD_RADIUS, getDifficultyAtChunk } from './biomes/biomeConfig.js';
 
 // ─── Tile ID 常量 ──────────────────────────────────────────
 export const TILE_IDS = {
@@ -311,5 +311,138 @@ export class WorldGenerator {
     }
 
     return { ground, walls, decorations, biome };
+  }
+
+  // ─── 实体生成清单（群落系统） ──────────────────────────────
+  /**
+   * 为一个 chunk 生成确定性的实体（敌人群落 + 宝箱）。
+   *
+   * @param {number} chunkX - chunk 列 (0..15)
+   * @param {number} chunkY - chunk 行 (0..15)
+   * @param {string} biome  - biome id（如 'forest', 'ruins'）
+   * @param {number[][]} wallData - 32×32 墙壁层数据
+   * @returns {Array<{id:string, type:string, localX:number, localY:number, level?:number, pack?:number, locked?:boolean}>}
+   */
+  generateChunkEntities(chunkX, chunkY, biome, wallData) {
+    // 越界或无效 biome → 无实体
+    if (!this.isInBounds(chunkX, chunkY)) return [];
+    if (!BIOME_ENEMIES[biome]) return [];
+
+    const entities = [];
+    let globalIndex = 0; // 全局实体计数，用于生成唯一 ID
+    let randIndex = 0;   // _seededRandom 的累加索引
+
+    // 辅助：获取下一个确定性随机数
+    const rand = () => this._seededRandom(chunkX, chunkY, randIndex++);
+
+    // 辅助：检查某 tile 位置是否可行走（非墙壁）
+    const isWalkable = (lx, ly) => {
+      if (lx < 0 || lx >= 32 || ly < 0 || ly >= 32) return false;
+      return wallData[ly][lx] === TILE_IDS.EMPTY;
+    };
+
+    // 辅助：在 4..27 范围内找一个可行走点，最多尝试 maxTries 次
+    const findWalkablePos = (maxTries = 6) => {
+      for (let t = 0; t < maxTries; t++) {
+        const lx = 4 + Math.floor(rand() * 24); // 4..27
+        const ly = 4 + Math.floor(rand() * 24);
+        if (isWalkable(lx, ly)) return { lx, ly };
+      }
+      return null; // 没找到
+    };
+
+    // ─── 1. 确定群落数量（基于 biome 敌人密度） ─────────────
+    const densityCfg = BIOMES[biome]?.enemyDensity || 'medium';
+    const packRanges = {
+      low:       [1, 2],
+      medium:    [2, 3],
+      high:      [3, 4],
+      very_high: [4, 5]
+    };
+    const [minPacks, maxPacks] = packRanges[densityCfg] || [2, 3];
+    const packCount = minPacks + Math.floor(rand() * (maxPacks - minPacks + 1));
+
+    // ─── 2. 难度 → 等级范围 ──────────────────────────────────
+    const difficulty = getDifficultyAtChunk(chunkX, chunkY);
+    let levelMin, levelMax;
+    if (difficulty < 0.2)      { levelMin = 1;  levelMax = 3;  }
+    else if (difficulty < 0.5) { levelMin = 3;  levelMax = 7;  }
+    else if (difficulty < 0.8) { levelMin = 7;  levelMax = 12; }
+    else                       { levelMin = 12; levelMax = 18; }
+
+    const enemies = BIOME_ENEMIES[biome];
+
+    // ─── 3. 生成每个群落 ─────────────────────────────────────
+    for (let p = 0; p < packCount; p++) {
+      // 3a. 群落中心
+      const center = findWalkablePos();
+      if (!center) continue; // 找不到位置则跳过
+
+      // 3b. 群落类型（patrol / camp / nest）
+      const typeRoll = rand();
+      let enemyCount;
+      if (typeRoll < 0.5) {
+        // patrol: 3-5
+        enemyCount = 3 + Math.floor(rand() * 3);
+      } else if (typeRoll < 0.8) {
+        // camp: 6-10
+        enemyCount = 6 + Math.floor(rand() * 5);
+      } else {
+        // nest: 12-20
+        enemyCount = 12 + Math.floor(rand() * 9);
+      }
+
+      // 3c. 生成群落内每个敌人
+      for (let e = 0; e < enemyCount; e++) {
+        // 从中心偏移 2-4 tile
+        const offsetX = Math.floor(rand() * 7) - 3; // -3..3
+        const offsetY = Math.floor(rand() * 7) - 3;
+        let lx = center.lx + offsetX;
+        let ly = center.ly + offsetY;
+
+        // 钳位到合法范围
+        lx = Math.max(1, Math.min(30, lx));
+        ly = Math.max(1, Math.min(30, ly));
+
+        // 跳过墙壁位置（尝试回退到中心）
+        if (!isWalkable(lx, ly)) {
+          lx = center.lx;
+          ly = center.ly;
+          if (!isWalkable(lx, ly)) continue;
+        }
+
+        // 轮换选择敌人类型
+        const enemyType = enemies[globalIndex % enemies.length];
+        // 等级 = 范围内随机 + 小偏移
+        const level = levelMin + Math.floor(rand() * (levelMax - levelMin + 1));
+
+        entities.push({
+          id: `${enemyType}_${chunkX}_${chunkY}_${globalIndex}`,
+          type: enemyType,
+          localX: lx,
+          localY: ly,
+          level,
+          pack: p
+        });
+        globalIndex++;
+      }
+    }
+
+    // ─── 4. 宝箱散布（0-2 个） ──────────────────────────────
+    const chestCount = Math.floor(rand() * 3); // 0, 1, 2
+    for (let c = 0; c < chestCount; c++) {
+      const pos = findWalkablePos();
+      if (!pos) continue;
+      const locked = rand() < 0.4;
+      entities.push({
+        id: `chest_${chunkX}_${chunkY}_${c}`,
+        type: 'chest',
+        localX: pos.lx,
+        localY: pos.ly,
+        locked
+      });
+    }
+
+    return entities;
   }
 }
