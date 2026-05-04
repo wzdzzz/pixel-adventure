@@ -485,6 +485,36 @@ export const InteractionHandler = {
     this.dialoguing = false;
   },
 
+  handleBonfireInteraction(bonfire) {
+    if (!this.worldState) return;
+
+    // 篝火休息：重置世界状态（魂系重生）
+    this.worldState.restAtBonfire();
+
+    // 回满 HP/MP/体力
+    const player = this.player;
+    if (player) {
+      player.hp = player.maxHp;
+      if (player.mana !== undefined) player.mana = player.maxMana;
+      if (player.stamina !== undefined) player.stamina = player.maxStamina;
+      player.onHpChanged();
+      if (player.onResourceChanged) player.onResourceChanged();
+    }
+
+    // 重新加载所有活跃 Chunk 的实体（怪物重生）
+    if (this.chunkManager?.respawnAllEntities) {
+      this.chunkManager.respawnAllEntities();
+    }
+
+    // 自动存档
+    SaveSystem.save(this);
+
+    this.events.emit('showMessage', '在篝火旁休息...怪物已重生');
+    this.events.emit('bonfireRest');
+
+    console.log('[InteractionHandler] 篝火休息完成');
+  },
+
   handleTriggerZone(zone) {
     if (zone.triggered || this.dialoguing) return;
     zone.triggered = true;

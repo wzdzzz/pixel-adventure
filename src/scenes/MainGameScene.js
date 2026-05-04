@@ -515,6 +515,12 @@ export class MainGameScene extends Phaser.Scene {
         return;
       }
 
+      // Check if it's a bonfire
+      if (target.bonfireInstance) {
+        this.handleBonfireInteraction(target.bonfireInstance);
+        return;
+      }
+
       if (npcInst && typeof npcInst.getNextDialogue === 'function') {
         this.handleNPCDialogue(npcInst);
       }
@@ -567,6 +573,15 @@ export class MainGameScene extends Phaser.Scene {
       g.score += 20;
       this.registry.set('gameState', g);
       this.events.emit('scoreChanged', g.score);
+
+      // 标记击杀到世界状态
+      if (this.worldState && enemy.entityId) {
+        this.worldState.markEntityKilled(enemy.entityId);
+        // Boss 永久击杀标记
+        if (enemy.isBoss) {
+          this.worldState.setFlag(`boss_${enemy.entityId}_defeated`, true);
+        }
+      }
 
       // Grant XP for kill
       let xpAmount = 0;
@@ -848,6 +863,7 @@ export class MainGameScene extends Phaser.Scene {
 
   getInteractionPriority(target) {
     if (target.npcInstance && target.npcInstance.dialogues) return 10;
+    if (target.bonfireInstance) return 9;
     if (target.chestInstance) return 8;
     if (target.portalInstance) return 6;
     return 2;

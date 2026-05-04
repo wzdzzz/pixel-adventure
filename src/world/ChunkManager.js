@@ -198,6 +198,25 @@ export class ChunkManager {
     chunkData.entities = [];
   }
 
+  /**
+   * 重新加载所有活跃 Chunk 的实体（篝火休息后调用）
+   * worldState.killedEntities 已被清空，所以重新生成会包含之前被杀的怪物
+   */
+  respawnAllEntities() {
+    // 清除所有 chunk 中的实体描述符
+    for (const [key, chunkData] of this.activeChunks) {
+      chunkData.entities = [];
+    }
+
+    // 重新为所有活跃 chunk 加载实体
+    for (const [key] of this.activeChunks) {
+      const [cx, cy] = key.split(',').map(Number);
+      this._loadChunkEntities(cx, cy);
+    }
+
+    console.log('[ChunkManager] 所有活跃 Chunk 实体已重生');
+  }
+
   // ═══════════════════════════════════════════════════════════
   //  工具方法
   // ═══════════════════════════════════════════════════════════
