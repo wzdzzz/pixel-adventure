@@ -1,3 +1,5 @@
+import { WorldStateManager } from '../world/WorldStateManager.js';
+
 /**
  * 存档/读档系统（3 槽位）
  *
@@ -94,7 +96,8 @@ export class SaveSystem {
         equipment: scene.equipmentSystem ? scene.equipmentSystem.toJSON() : null,
         skillTree: scene.skillTreeSystem ? scene.skillTreeSystem.toJSON() : null,
         skillEngine: scene.player?.skillEngine ? scene.player.skillEngine.toJSON() : null,
-        quests: scene.questSystem ? scene.questSystem.toJSON() : null
+        quests: scene.questSystem ? scene.questSystem.toJSON() : null,
+        worldState: scene.worldState?.serialize() || null
       };
 
       localStorage.setItem(SaveSystem._key(slotId), JSON.stringify(saveData));
@@ -200,6 +203,14 @@ export class SaveSystem {
         scene.questSystem.fromJSON(saveData.quests);
       }
 
+      // 恢复世界状态
+      if (saveData.worldState) {
+        scene.worldState = WorldStateManager.deserialize(saveData.worldState);
+      } else {
+        // 旧存档兼容：创建新的 WorldStateManager
+        scene.worldState = new WorldStateManager(Date.now());
+      }
+
       if (scene.player && saveData.player?.stats?.base) {
         Object.keys(saveData.player.stats.base).forEach(key => {
           scene.player.stats.setBase(key, saveData.player.stats.base[key]);
@@ -225,7 +236,13 @@ export class SaveSystem {
 
       if (scene.player && Array.isArray(saveData.player?.itemSlots)) {
         for (let i = 0; i < scene.player.itemSlots.length && i < saveData.player.itemSlots.length; i++) {
-          scene.player.itemSlots[i] = saveData.player.itemSlots[i] ?? null;
+          let v = saveData.player.itemSlots[i] ?? null;
+          // 兼容旧存档：数字索引 → 物品 id
+          if (typeof v === 'number' && scene.inventory) {
+            const slot = scene.inventory.getSlot(v);
+            v = (slot && slot.id) ? slot.id : null;
+          }
+          scene.player.itemSlots[i] = v;
         }
         scene.events.emit('itemSlotsChanged');
       }
@@ -309,7 +326,9 @@ export class SaveSystem {
         level,
         score,
         currentLevel,
-        levelName
+        levelName,
+        worldSeed: data.worldState?.seed || null,
+        exploredCount: data.worldState?.exploredChunks?.length || 0
       };
     } catch (_) {
       return null;
