@@ -12,6 +12,18 @@ export class SaveSystem {
   static SAVE_KEY_PREFIX = 'pixel_adventure_save_';
   static OLD_SAVE_KEY = 'pixel_adventure_save';
   static SLOT_COUNT = 3;
+  static SAVE_VERSION = '3.0.0';  // v3: 关卡制→开放世界迁移
+
+  /** 比较语义版本号，返回 -1/0/1 */
+  static _compareVersions(a, b) {
+    const pa = (a || '0.0.0').split('.').map(Number);
+    const pb = (b || '0.0.0').split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+      if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    }
+    return 0;
+  }
 
   /** 取槽位 key */
   static _key(slotId) {
@@ -58,7 +70,7 @@ export class SaveSystem {
 
       const saveData = {
         timestamp: Date.now(),
-        version: '2.2.0',
+        version: SaveSystem.SAVE_VERSION,
         slotId,
         // 简要元数据用于存档列表预览（不参与加载）
         meta: {
@@ -127,6 +139,16 @@ export class SaveSystem {
       if (!saveData.version) {
         console.log('[SaveSystem] 存档格式无效');
         return false;
+      }
+
+      // ── 旧存档迁移：关卡制 → 开放世界 (v3.0.0) ──
+      if (SaveSystem._compareVersions(saveData.version, '3.0.0') < 0) {
+        console.log(`[SaveSystem] 存档版本 ${saveData.version} < 3.0.0，执行开放世界迁移`);
+        // 旧关卡坐标在开放世界中无意义，重置到城镇中心
+        // 城镇中心 = chunk(8,8) 的中心像素位置: 8*1024+512 = 8704
+        if (saveData.player) {
+          saveData.player.position = { x: 8 * 1024 + 512, y: 8 * 1024 + 512 };
+        }
       }
 
       scene.registry.set('gameState', {
