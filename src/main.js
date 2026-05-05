@@ -8,6 +8,7 @@ import { VictoryScene } from './scenes/VictoryScene.js';
 import { PanelScene } from './scenes/PanelScene.js';
 import { MainMenuScene } from './scenes/MainMenuScene.js';
 import { SaveSelectScene } from './scenes/SaveSelectScene.js';
+import { WorldMapScene } from './scenes/WorldMapScene.js';
 
 /**
  * 游戏入口文件
@@ -28,6 +29,7 @@ const scenes = [
   MainGameScene,
   UIScene,
   PanelScene,
+  WorldMapScene,
   GameOverScene,
   VictoryScene
 ];

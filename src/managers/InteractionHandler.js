@@ -37,6 +37,11 @@ export const InteractionHandler = {
     this.player.canInteract = false;
     this.player.interactTarget = null;
 
+    // 标记宝箱到世界状态（持久化）
+    if (this.worldState && chest.entityId) {
+      this.worldState.markChestOpened(chest.entityId);
+    }
+
     // Reward
     const gs = this.registry.get('gameState');
     gs.score += chest.reward.score;
@@ -488,6 +493,14 @@ export const InteractionHandler = {
   handleBonfireInteraction(bonfire) {
     if (!this.worldState) return;
 
+    // 标记当前篝火所在 chunk 为已探索（确保传送解锁）
+    if (this.chunkManager && bonfire.x != null) {
+      const cx = Math.floor(bonfire.x / 1024);
+      const cy = Math.floor(bonfire.y / 1024);
+      const chunkKey = `${cx},${cy}`;
+      this.worldState.markChunkExplored(chunkKey);
+    }
+
     // 篝火休息：重置世界状态（魂系重生）
     this.worldState.restAtBonfire();
 
@@ -503,7 +516,15 @@ export const InteractionHandler = {
 
     // 重新加载所有活跃 Chunk 的实体（怪物重生）
     if (this.chunkManager?.respawnAllEntities) {
+      // 先清理所有已生成的 GameObjects
+      this._despawnAllWorldEntities();
+      // 重新生成实体描述符
       this.chunkManager.respawnAllEntities();
+      // 重新实例化 GameObjects
+      for (const [key] of this.chunkManager.activeChunks) {
+        const [cx, cy] = key.split(',').map(Number);
+        this._spawnChunkEntities(cx, cy);
+      }
     }
 
     // 自动存档

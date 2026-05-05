@@ -120,10 +120,10 @@ export class Actor {
     return int * 10 + 50;
   }
 
-  /** Mana regen rate per second based on INT */
+  /** Mana regen rate per second based on INT (脱战回复) */
   getManaRegenRate() {
     const int = this.stats.getEffective('int');
-    return int * 0.5;
+    return int * 0.05;
   }
 
   /** Use mana. Returns true if enough, false otherwise. */
@@ -298,8 +298,8 @@ export class Actor {
       this.onResourceChanged();
     }
 
-    // Mana regen (continuous)
-    if (this.mana < this.maxMana) {
+    // Mana regen (脱战时才回蓝)
+    if (this.mana < this.maxMana && !this.inCombat) {
       const manaPerFrame = this.getManaRegenRate() * (delta / 1000);
       this.mana = Math.min(this.maxMana, this.mana + manaPerFrame);
       this.onResourceChanged();

@@ -29,7 +29,7 @@ export class Item {
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 0.5);
     // Normalize item sprite sizes to fit the tile grid
-    const sizeMap = { coin: [20, 20], key: [20, 20], potion: [18, 22], artifact: [24, 24] };
+    const sizeMap = { coin: [20, 20], key: [20, 20], potion: [18, 22], mana_potion: [18, 22], artifact: [24, 24] };
     const sz = sizeMap[type] || [20, 20];
     this.sprite.setDisplaySize(sz[0], sz[1]);
     this.sprite.body.setAllowGravity(false);

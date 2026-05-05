@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { TEXTURES } from '../assets/AssetManager.js';
 import { Tooltip } from '../ui/Tooltip.js';
 import itemData from '../data/items.json';
+import { BIOMES, getDifficultyAtChunk } from '../world/biomes/biomeConfig.js';
+import { WORLD_LAYOUT } from '../world/WorldLayout.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -25,10 +27,12 @@ export class UIScene extends Phaser.Scene {
     this.createBuffBar();
     this.tooltip = new Tooltip(this, { delay: 500 });
     this.attachSkillSlotTooltips();
+    this.attachItemSlotTooltips();
     this.attachBuffSlotTooltips();
     this.setupEvents();
     this.createQuestTracker();
     this.createDebugButton();
+    this.createMinimap();
 
     // Listen for resize events to reposition all HUD elements
     this.scale.on('resize', this.onResize, this);
@@ -243,6 +247,34 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  /** 给物品快捷栏绑 tooltip：显示物品名称和描述 */
+  attachItemSlotTooltips() {
+    if (!this.itemSlots || !this.tooltip) return;
+    this.itemSlots.forEach((slot, i) => {
+      slot.bg.setInteractive({ useHandCursor: false });
+      this.tooltip.attach(slot.bg, () => {
+        const player = this.gameScene?.player;
+        const inventory = this.gameScene?.inventory;
+        const itemId = player?.itemSlots?.[i];
+        if (!itemId) return null;
+        // 从背包查总数量
+        let qty = 0;
+        if (inventory) {
+          for (const s of inventory.slots) {
+            if (s && s.id === itemId) qty += s.quantity || 0;
+          }
+        }
+        const data = itemData.items?.[itemId];
+        const name = data?.name || itemId;
+        const desc = data?.description || '';
+        return {
+          title: `${name} ×${qty}`,
+          body: `${desc}\n快捷键: F${i + 1}`
+        };
+      });
+    });
+  }
+
   /** 给 buff 栏 8 槽位绑 tooltip：内容动态读 player.statusEffects */
   attachBuffSlotTooltips() {
     if (!this.buffSlots || !this.tooltip) return;
@@ -282,28 +314,40 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  /** 物品快捷栏刷新 */
+  /** 物品快捷栏刷新（按物品 id 查找背包） */
   refreshItemSlots() {
     if (!this.itemSlots) return;
     const player = this.gameScene?.player;
     const inventory = this.gameScene?.inventory;
-    const itemSlotIds = player?.itemSlots || [null, null, null, null];
+    const boundIds = player?.itemSlots || [null, null, null, null];
 
     this.itemSlots.forEach((slot, i) => {
-      const slotIdx = itemSlotIds[i];
-      if (slotIdx != null && inventory) {
-        const item = inventory.getSlot(slotIdx);
-        if (item && item.type === 'consumable') {
-          slot.icon.setText(item.icon || '🧪');
-          slot.countText.setText(item.quantity > 1 ? `${item.quantity}` : '');
-          slot.bg.setStrokeStyle(1, 0x55aa55);
-          return;
+      const itemId = boundIds[i];
+      if (!itemId) {
+        slot.icon.setText('');
+        slot.countText.setText('');
+        slot.bg.setStrokeStyle(1, 0x3a5a3a);
+        return;
+      }
+      // 查背包里该 id 的总数量
+      let qty = 0;
+      let icon = '';
+      if (inventory) {
+        for (const s of inventory.slots) {
+          if (s && s.id === itemId) {
+            qty += s.quantity || 0;
+            if (!icon) icon = s.icon || '';
+          }
         }
       }
-      // 空槽或无效
-      slot.icon.setText('');
-      slot.countText.setText('');
-      slot.bg.setStrokeStyle(1, 0x3a5a3a);
+      // 没有 icon 则从 items.json 取
+      if (!icon) {
+        const data = itemData.items?.[itemId];
+        icon = data?.icon || '🧪';
+      }
+      slot.icon.setText(icon);
+      slot.countText.setText(`${qty}`);
+      slot.bg.setStrokeStyle(1, qty > 0 ? 0x55aa55 : 0x553333);
     });
   }
 
@@ -561,6 +605,7 @@ export class UIScene extends Phaser.Scene {
     this.updateSkillBar();
     this.updateBuffBar();
     this.updateItemBar();
+    this.updateMinimap();
   }
 
   updateSkillBar() {
@@ -601,27 +646,169 @@ export class UIScene extends Phaser.Scene {
   }
 
   updateItemBar() {
-    if (!this.itemSlots) return;
-    const player = this.gameScene?.player;
-    const inventory = this.gameScene?.inventory;
-    if (!player || !inventory) return;
+    // 复用 refreshItemSlots，逻辑一致
+    this.refreshItemSlots();
+  }
 
-    const itemSlotIds = player.itemSlots || [null, null, null, null];
-    this.itemSlots.forEach((slot, i) => {
-      const slotIdx = itemSlotIds[i];
-      if (slotIdx != null) {
-        const item = inventory.getSlot(slotIdx);
-        if (item && item.type === 'consumable') {
-          slot.icon.setText(item.icon || '🧪');
-          slot.countText.setText(item.quantity > 1 ? `${item.quantity}` : '');
-          slot.bg.setStrokeStyle(1, 0x55aa55);
-          return;
-        }
-      }
-      slot.icon.setText('');
-      slot.countText.setText('');
-      slot.bg.setStrokeStyle(1, 0x3a5a3a);
+  // ═══════════════════════════════════════════════════════════
+  //  小地图
+  // ═══════════════════════════════════════════════════════════
+
+  createMinimap() {
+    const mapX = 15;       // 左上角起始 X
+    const mapY = 15;       // 左上角起始 Y
+    const cellSize = 10;   // 每个 chunk 格子像素
+    const gridCount = 16;  // 16×16 chunks
+    const mapSize = cellSize * gridCount; // 160px
+    this._mm = { mapX, mapY, cellSize, gridCount, mapSize };
+
+    // 半透明底板
+    this._mmBg = this.add.rectangle(mapX, mapY, mapSize + 4, mapSize + 4, 0x000000, 0.7)
+      .setOrigin(0, 0).setStrokeStyle(1, 0x555577).setDepth(8);
+
+    // 用 Graphics 绘制 chunk 格子
+    this._mmGfx = this.add.graphics().setDepth(9);
+
+    // 特殊地点标记层
+    this._mmMarkers = this.add.graphics().setDepth(10);
+    this._drawMinimapMarkers();
+
+    // 玩家位置指示器（小亮点）
+    this._mmPlayerDot = this.add.circle(0, 0, 3, 0x00ff00).setDepth(11);
+    // 闪烁动画
+    this.tweens.add({
+      targets: this._mmPlayerDot,
+      alpha: 0.3, duration: 600, yoyo: true, repeat: -1
     });
+
+    // 信息文字（地图下方）
+    this._mmInfoText = this.add.text(mapX, mapY + mapSize + 10, '', {
+      fontSize: '10px', fill: '#cccccc', fontFamily: 'Courier New',
+      lineSpacing: 2
+    }).setDepth(8);
+
+    // 坐标文字
+    this._mmCoordText = this.add.text(mapX + mapSize + 4, mapY + mapSize + 10, '', {
+      fontSize: '10px', fill: '#888888', fontFamily: 'Courier New'
+    }).setOrigin(1, 0).setDepth(8);
+
+    // 缓存上次玩家所在 chunk 以减少重绘
+    this._mmLastCx = null;
+    this._mmLastCy = null;
+    // 强制首次绘制
+    this._mmNeedsRedraw = true;
+  }
+
+  /** 绘制特殊地点标记（城镇/营地/Boss），只在初始化时调用一次 */
+  _drawMinimapMarkers() {
+    const g = this._mmMarkers;
+    const { mapX, mapY, cellSize } = this._mm;
+    const ox = mapX + 2; // 底板 padding
+
+    // 城镇 — 白色方块
+    const town = WORLD_LAYOUT.town;
+    g.fillStyle(0xffffff, 0.9);
+    g.fillRect(ox + town.chunkX * cellSize + 2, mapY + 2 + town.chunkY * cellSize + 2, cellSize - 4, cellSize - 4);
+
+    // 营地 — 黄色小三角
+    for (const camp of WORLD_LAYOUT.camps) {
+      const cx = ox + camp.chunkX * cellSize + cellSize / 2;
+      const cy = mapY + 2 + camp.chunkY * cellSize + cellSize / 2;
+      g.fillStyle(0xffdd44, 0.9);
+      g.fillTriangle(cx, cy - 3, cx - 3, cy + 2, cx + 3, cy + 2);
+    }
+
+    // Boss — 红色菱形
+    for (const boss of WORLD_LAYOUT.bosses) {
+      const cx = ox + boss.chunkX * cellSize + cellSize / 2;
+      const cy = mapY + 2 + boss.chunkY * cellSize + cellSize / 2;
+      g.fillStyle(0xff3333, 0.9);
+      g.fillTriangle(cx, cy - 4, cx - 3, cy, cx + 3, cy);
+      g.fillTriangle(cx, cy + 4, cx - 3, cy, cx + 3, cy);
+    }
+  }
+
+  updateMinimap() {
+    if (!this._mm) return;
+    const gs = this.gameScene;
+    if (!gs || !gs.useOpenWorld) return;
+
+    const player = gs.player;
+    if (!player?.sprite) return;
+
+    const px = player.sprite.x;
+    const py = player.sprite.y;
+    const CHUNK_PX = 1024;
+    const cx = Math.floor(px / CHUNK_PX);
+    const cy = Math.floor(py / CHUNK_PX);
+
+    const { mapX, mapY, cellSize, gridCount, mapSize } = this._mm;
+    const ox = mapX + 2;
+    const oy = mapY + 2;
+
+    // 更新玩家亮点位置（亚格精度）
+    const fracX = (px / CHUNK_PX) / gridCount; // 0~1
+    const fracY = (py / CHUNK_PX) / gridCount;
+    this._mmPlayerDot.setPosition(
+      ox + fracX * mapSize,
+      oy + fracY * mapSize
+    );
+
+    // 只有玩家进入新 chunk 时重绘格子
+    if (cx !== this._mmLastCx || cy !== this._mmLastCy || this._mmNeedsRedraw) {
+      this._mmLastCx = cx;
+      this._mmLastCy = cy;
+      this._mmNeedsRedraw = false;
+      this._redrawMinimapGrid(cx, cy);
+    }
+
+    // 更新信息文字
+    const gen = gs.worldGenerator;
+    if (gen) {
+      const biomeId = gen.getBiome(cx, cy);
+      const biomeInfo = BIOMES[biomeId];
+      const diff = getDifficultyAtChunk(cx, cy);
+      const diffStr = diff < 0.3 ? '安全' : diff < 0.6 ? '普通' : diff < 0.85 ? '危险' : '极危';
+      this._mmInfoText.setText(`${biomeInfo?.name || biomeId}  ${diffStr}`);
+      this._mmCoordText.setText(`(${cx},${cy})`);
+
+      // 更新右上角区域名
+      if (this.levelText) {
+        this.levelText.setText(biomeInfo?.name || biomeId);
+      }
+    }
+  }
+
+  /** 重绘小地图 chunk 格子（biome 颜色 + 已探索高亮） */
+  _redrawMinimapGrid(playerCx, playerCy) {
+    const g = this._mmGfx;
+    g.clear();
+
+    const { mapX, mapY, cellSize, gridCount } = this._mm;
+    const ox = mapX + 2;
+    const oy = mapY + 2;
+    const gen = this.gameScene?.worldGenerator;
+    const ws = this.gameScene?.worldState;
+
+    for (let gy = 0; gy < gridCount; gy++) {
+      for (let gx = 0; gx < gridCount; gx++) {
+        const biomeId = gen ? gen.getBiome(gx, gy) : 'forest';
+        const biomeInfo = BIOMES[biomeId];
+        const color = biomeInfo?.color || 0x333333;
+
+        const explored = ws?.exploredChunks?.has(`${gx},${gy}`);
+        const alpha = explored ? 0.85 : 0.25;
+
+        g.fillStyle(color, alpha);
+        g.fillRect(ox + gx * cellSize, oy + gy * cellSize, cellSize - 1, cellSize - 1);
+      }
+    }
+
+    // 当前玩家所在 chunk 高亮边框
+    if (playerCx >= 0 && playerCx < gridCount && playerCy >= 0 && playerCy < gridCount) {
+      g.lineStyle(1, 0x00ff00, 0.9);
+      g.strokeRect(ox + playerCx * cellSize, oy + playerCy * cellSize, cellSize - 1, cellSize - 1);
+    }
   }
 
   createDebugButton() {

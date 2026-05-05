@@ -68,6 +68,23 @@
         "amount": 25
       }
     },
+    "mana_potion": {
+      "id": "mana_potion",
+      "name": "回蓝药水",
+      "type": "consumable",
+      "texture": "mana_potion",
+      "rarity": "common",
+      "stackable": true,
+      "maxStack": 99,
+      "level": 1,
+      "sellPrice": 5,
+      "value": 30,
+      "description": "恢复30点法力值",
+      "effect": {
+        "type": "restore_mana",
+        "amount": 30
+      }
+    },
     "heart": {
       "id": "heart",
       "name": "生命之心",

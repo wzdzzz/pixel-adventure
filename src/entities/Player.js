@@ -89,7 +89,7 @@ export class Player extends Actor {
     const skillModule = SKILL_MODULES[classType] || SKILL_MODULES.warrior;
     this._skillModule = skillModule; // exposed for UI panels
     this.skillSlots = [...skillModule.SKILL_SLOTS];
-    this.itemSlots = [null, null, null, null]; // F1-F4 物品快捷栏（存背包 slotIndex）
+    this.itemSlots = [null, null, null, null]; // F1-F4 物品快捷栏（存物品 id，如 'potion'）
     const SKILL_DEFS_KEY = { warrior: 'WARRIOR_SKILLS', archer: 'ARCHER_SKILLS', mage: 'MAGE_SKILLS' };
     const skillDefs = skillModule[SKILL_DEFS_KEY[classType]] || {};
     this.skillEngine = new SkillEngine(scene, this, skillDefs, skillModule.getSkillAtLevel);
@@ -1407,7 +1407,7 @@ export class Player extends Actor {
     const bodyCenterOffX = -this.sprite.displayWidth / 2 + body.offset.x * sx + bw / 2;
     const bodyCenterOffY = -this.sprite.displayHeight / 2 + body.offset.y * sy + bh / 2;
 
-    // 收集碰撞体
+    // 收集碰撞体（关卡制模式的静态 groups）
     const blockers = [];
     const addGroup = (g) => {
       if (!g) return;
@@ -1420,6 +1420,14 @@ export class Player extends Actor {
     if (scene.decorations) {
       for (const child of scene.decorations.getChildren()) {
         if (child.body) blockers.push(child.body);
+      }
+    }
+
+    // 收集开放世界 chunk 墙壁层（tilemap layers）
+    const wallLayers = [];
+    if (scene.useOpenWorld && scene.chunkManager) {
+      for (const [, cd] of scene.chunkManager.activeChunks) {
+        if (cd.wallLayer) wallLayers.push(cd.wallLayer);
       }
     }
 
@@ -1436,11 +1444,26 @@ export class Player extends Actor {
           bcy - halfH < wb.y || bcy + halfH > wb.y + wb.height) {
         return true;
       }
-      // AABB 碰撞
+      // AABB 碰撞（关卡制墙壁/障碍）
       for (const b of blockers) {
         if (bcx + halfW > b.x && bcx - halfW < b.x + b.width &&
             bcy + halfH > b.y && bcy - halfH < b.y + b.height) {
           return true;
+        }
+      }
+      // 开放世界 chunk 墙壁 tile 碰撞
+      for (const layer of wallLayers) {
+        // 检查身体四角 + 中心共 5 个采样点
+        const pts = [
+          [bcx, bcy],
+          [bcx - halfW, bcy - halfH],
+          [bcx + halfW, bcy - halfH],
+          [bcx - halfW, bcy + halfH],
+          [bcx + halfW, bcy + halfH],
+        ];
+        for (const [tx, ty] of pts) {
+          const tile = layer.getTileAtWorldXY(tx, ty);
+          if (tile && tile.collides) return true;
         }
       }
       return false;

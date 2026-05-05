@@ -55,6 +55,7 @@ src/
 │   ├── MainGameScene.js        # 主场景：关卡、碰撞、AI、事件路由、ESC 菜单
 │   ├── UIScene.js              # HUD：HP/体力/怒气、技能栏、buff 栏、tooltip
 │   ├── PanelScene.js           # 面板：角色/背包/技能/任务（4 标签）+ 双 tooltip 容器
+│   ├── WorldMapScene.js        # 大地图：16×16 chunk 概览 + 传送（M 键，开放世界）
 │   ├── GameOverScene.js        # 死亡画面
 │   └── VictoryScene.js         # 胜利画面
 ├── managers/

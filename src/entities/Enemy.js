@@ -75,6 +75,9 @@ export class Enemy extends Actor {
     // Back-reference so collision callbacks can find this Enemy instance
     this.sprite.enemyInstance = this;
 
+    // 销毁标记（防止 die() tween + chunk 卸载双重 destroy）
+    this._isDestroyed = false;
+
     // 头顶血条
     this.createHealthBar();
 
@@ -179,6 +182,7 @@ export class Enemy extends Actor {
 
   updateHealthBar() {
     if (!this.hbBg || !this.hbFill) return;
+    if (!this.sprite || !this.sprite.active) return;
     const topY = this.sprite.y - this.sprite.displayHeight / 2 - 6;
     this.hbBg.setPosition(this.sprite.x, topY);
     // 前景从背景左边缘起
@@ -329,6 +333,20 @@ export class Enemy extends Actor {
         break;
       case EnemyState.HURT:
         break;
+    }
+
+    // 活动栓绳 — 超出出生点最大距离时拉回（不重置血量）
+    if (this._leashRadius > 0) {
+      const dx = this.sprite.x - this.spawnX;
+      const dy = this.sprite.y - this.spawnY;
+      const dist2 = dx * dx + dy * dy;
+      const maxDist = this._leashRadius;
+      if (dist2 > maxDist * maxDist) {
+        // 超出栓绳：朝出生点走回去，但不脱战不回血
+        this.sprite.setVelocity(0, 0);
+        this.scene.physics.moveTo(this.sprite, this.spawnX, this.spawnY, this.getMoveSpeed());
+        this.playAnim('walk');
+      }
     }
   }
 
@@ -494,6 +512,7 @@ export class Enemy extends Actor {
   // ── Death ──────────────────────────────────────────────────────
 
   die() {
+    if (this._isDestroyed) return;
     this.setState(EnemyState.DEAD);
     this.sprite.body.enable = false;
     this.playAnim('die', false);
@@ -509,6 +528,7 @@ export class Enemy extends Actor {
       scaleY: 1.5,
       duration: 400,
       onComplete: () => {
+        if (this._isDestroyed) return;
         this.dropLoot();
         this.scene.events.emit('enemyDeath', this);
         this.destroyActor();
@@ -525,6 +545,8 @@ export class Enemy extends Actor {
   // ── Cleanup ────────────────────────────────────────────────────
 
   destroy() {
+    if (this._isDestroyed) return;
+    this._isDestroyed = true;
     if (this.moveTween) {
       this.moveTween.remove();
       this.moveTween = null;

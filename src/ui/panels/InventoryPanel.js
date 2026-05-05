@@ -38,8 +38,12 @@ function formatEquipTooltip(item, equippedSetCount) {
     const enhMult = 1 + 0.05 * (item.enhanceLevel || 0);
     const total = rarityMult * lvlMult * enhMult;
     lines.push('— 基础属性 —');
+    const baseMult = rarityMult * lvlMult;
     for (const [k, v] of Object.entries(item.baseStats)) {
-      lines.push(`  ${STAT_LABEL[k] || k} +${(v * total).toFixed(1)}`);
+      const baseVal = (v * baseMult).toFixed(1);
+      const enhBonus = v * baseMult * ((item.enhanceLevel || 0) * 0.05);
+      const enhText = enhBonus > 0 ? `(+${enhBonus.toFixed(1)})` : '';
+      lines.push(`  ${STAT_LABEL[k] || k} +${baseVal}${enhText}`);
     }
   }
   // 词条
@@ -474,7 +478,7 @@ export const InventoryPanel = {
 
     // Item name abbreviations for icon display
     const ITEM_ICONS = {
-      potion: '药', heart: '♥', key: '🔑', artifact: '✦',
+      potion: '药', mana_potion: '蓝', heart: '♥', key: '🔑', artifact: '✦',
       coin: '●'
     };
 
@@ -784,7 +788,7 @@ export const InventoryPanel = {
         addOption(`设为快捷栏 F${si + 1}`, '#88aa88', () => {
           const player = this.gameScene?.player;
           if (!player) return;
-          player.itemSlots[slotIdx] = actualSlot;
+          player.itemSlots[slotIdx] = item.id;
           this.gameScene.events.emit('itemSlotsChanged');
         });
       }

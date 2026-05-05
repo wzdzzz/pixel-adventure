@@ -22,12 +22,17 @@ import itemData from '../data/items.json';
 import { LevelBuilder } from '../managers/LevelBuilder.js';
 import { InteractionHandler } from '../managers/InteractionHandler.js';
 import { getLevelSuppression } from '../data/monsterScaling.js';
+import { TEXTURES } from '../assets/AssetManager.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
 import { ChunkManager } from '../world/ChunkManager.js';
 import { WorldStateManager } from '../world/WorldStateManager.js';
 import { EntityPool } from '../world/EntityPool.js';
 import { EntityManager } from '../world/EntityManager.js';
 import { BIOMES } from '../world/biomes/biomeConfig.js';
+import { Enemy, EnemyState } from '../entities/Enemy.js';
+import { NPC } from '../entities/NPC.js';
+import { getEnemyConfig } from '../data/enemyConfig.js';
+import { getLayoutOverride } from '../world/WorldLayout.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -173,6 +178,16 @@ export class MainGameScene extends Phaser.Scene {
       else this.scale.startFullscreen();
     });
 
+    // M：打开世界地图
+    this.mKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
+    this.mKey.on('down', () => {
+      if (this.dialoguing || this.gamePaused) return;
+      if (!this.useOpenWorld) return;
+      this.pauseGame();
+      this.scene.launch('WorldMapScene');
+      this.scene.bringToTop('WorldMapScene');
+    });
+
     // F1-F4：物品快捷栏
     const fKeys = [
       Phaser.Input.Keyboard.KeyCodes.F1,
@@ -223,6 +238,9 @@ export class MainGameScene extends Phaser.Scene {
     // 4. 创建 Chunk 管理器
     this.chunkManager = new ChunkManager(this, this.worldGenerator, this.worldState);
 
+    // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
+    this._chunkGameObjects = new Map();
+
     // 5. 设置物理世界边界（16×16 chunks × 32 tiles × 32px = 16384px）
     // 必须在创建玩家之前，因为 Actor 构造函数调用 setCollideWorldBounds(true)
     const worldSize = 16 * 32 * 32; // 16384
@@ -242,13 +260,19 @@ export class MainGameScene extends Phaser.Scene {
     this.cameras.main.setDeadzone(80, 60);
     // 不 setBounds — 世界由 Chunk 流式加载
 
-    // 7. 首次触发 Chunk 加载
-    this.chunkManager.update(spawnX, spawnY);
-
-    // 8. 注册 chunk 事件：新 chunk 加载时注册墙壁碰撞
+    // 7. 注册 chunk 事件（必须在首次 update 之前）
     this.events.on('chunk-loaded', (data) => {
       this._registerChunkCollisions(data.chunkX, data.chunkY);
+      this._spawnChunkEntities(data.chunkX, data.chunkY);
     });
+
+    // chunk 卸载时清理实体
+    this.events.on('chunk-unloaded', (data) => {
+      this._despawnChunkEntities(data.chunkX, data.chunkY);
+    });
+
+    // 8. 首次触发 Chunk 加载（会发射 chunk-loaded 事件）
+    this.chunkManager.update(spawnX, spawnY);
 
     // 9. 通知 UI
     const biome = this.worldGenerator.getBiome(8, 8);
@@ -304,6 +328,14 @@ export class MainGameScene extends Phaser.Scene {
     const playerCollider = this.physics.add.collider(this.player.sprite, wallLayer);
     chunkData.colliders.push(playerCollider);
 
+    // 所有已存在的敌人也需要与新 chunk 墙壁碰撞
+    for (const enemy of this.enemies) {
+      if (enemy.sprite?.active) {
+        const c = this.physics.add.collider(enemy.sprite, wallLayer);
+        chunkData.colliders.push(c);
+      }
+    }
+
     console.log(`[MainGameScene] 注册碰撞 chunk(${chunkX},${chunkY})`);
   }
 
@@ -317,6 +349,289 @@ export class MainGameScene extends Phaser.Scene {
     // 玩家 vs 静态障碍物（虽然开放世界不使用这些 groups，但保持兼容）
     this.physics.add.collider(this.player.sprite, this.walls);
     this.physics.add.collider(this.player.sprite, this.obstacles);
+  }
+
+  // ═════════���══════════════════════════════��══════════════════════
+  //  Chunk 实体生成 / 回收
+  // ═════════════════��═════════════════════════════════════════════
+
+  /**
+   * 将 chunk 的实体描述符实例化为真实 Phaser GameObjects
+   */
+  _spawnChunkEntities(chunkX, chunkY) {
+    const chunkData = this.chunkManager.getChunk(chunkX, chunkY);
+    if (!chunkData || !chunkData.entities) return;
+
+    const key = `${chunkX},${chunkY}`;
+    const worldOffsetX = chunkX * 1024;
+    const worldOffsetY = chunkY * 1024;
+
+    // 初始化 gameObjects 列表
+    const gameObjects = [];
+    this._chunkGameObjects.set(key, gameObjects);
+
+    for (const spawn of chunkData.entities) {
+      const wx = worldOffsetX + spawn.localX * 32 + 16;
+      const wy = worldOffsetY + spawn.localY * 32 + 16;
+
+      if (spawn.type === 'chest') {
+        this._spawnChest(wx, wy, spawn, gameObjects);
+      } else if (spawn.type === 'bonfire') {
+        this._spawnBonfire(wx, wy, spawn, gameObjects);
+      } else if (spawn.type === 'npc') {
+        this._spawnNPC(wx, wy, spawn, gameObjects);
+      } else {
+        // 敌人类型
+        this._spawnEnemy(wx, wy, spawn, gameObjects);
+      }
+    }
+
+    // 特殊地点首次发现通知
+    this._checkLocationDiscovery(chunkX, chunkY);
+
+    console.log(`[MainGameScene] 生成 chunk(${chunkX},${chunkY}) 实体: ${gameObjects.length} 个`);
+  }
+
+  /**
+   * 检查 chunk 是否为特殊地点，首次发现时通知玩家
+   */
+  _checkLocationDiscovery(chunkX, chunkY) {
+    const override = getLayoutOverride(chunkX, chunkY);
+    if (!override) return;
+
+    const flagKey = `discovered_${chunkX}_${chunkY}`;
+    if (this.worldState?.hasFlag(flagKey)) return;
+
+    // 首次发现，打标记
+    this.worldState?.setFlag(flagKey, true);
+
+    let msg = '';
+    if (override.template === 'town_center') {
+      msg = '发现城镇中心！传送点已解锁';
+    } else if (override.template === 'camp_small') {
+      msg = '发现营地！传送点已解锁';
+    } else if (override.template === 'boss_arena') {
+      msg = '发现 Boss 区域！传送点已解锁';
+    }
+
+    if (msg) {
+      this.events.emit('showMessage', msg);
+    }
+  }
+
+  /** 生成敌人 */
+  _spawnEnemy(x, y, spawn, gameObjects) {
+    const config = itemData.enemies?.[spawn.type];
+    if (!config) return;
+
+    const enemyCfg = getEnemyConfig(spawn.type);
+    const tier = spawn.isBoss ? 'boss' : (enemyCfg.tier || 'normal');
+    const finalLevel = spawn.level || 1;
+
+    const enemy = new Enemy(this, x, y, {
+      ...config,
+      finalLevel,
+      tier,
+    });
+    enemy.entityId = spawn.id;
+
+    // 标记 Boss
+    if (spawn.isBoss || enemyCfg.isBoss) {
+      enemy.isBoss = true;
+    }
+
+    // 栓绳半径 — 不超出出生点太远（约半个 chunk），防止走出已加载区域
+    enemy._leashRadius = 450;
+
+    this.enemies.push(enemy);
+    gameObjects.push({ ref: enemy, type: 'enemy', spawnId: spawn.id });
+
+    // 注册碰撞
+    this._registerEnemyCollisions(enemy);
+  }
+
+  /** 为单个敌人注册所有碰撞 */
+  _registerEnemyCollisions(enemy) {
+    if (!this.player?.sprite) return;
+
+    // 敌人 vs 墙壁 — 存入对应 chunk 的 colliders 数组，chunk 卸载时自动清理
+    for (const [, cd] of this.chunkManager.activeChunks) {
+      if (cd.wallLayer) {
+        if (!cd.colliders) cd.colliders = [];
+        const c = this.physics.add.collider(enemy.sprite, cd.wallLayer);
+        cd.colliders.push(c);
+      }
+    }
+
+    // 玩家 vs 敌人碰撞（阻挡 + 接触伤害判定）
+    this.physics.add.collider(
+      this.player.sprite, enemy.sprite,
+      () => this.handleEnemyContact(enemy),
+      (playerSprite, enemySprite) => {
+        if (this.player.state === PlayerState.SKILL_CASTING) {
+          const activeSkill = this.player.skillEngine.getActiveSkill();
+          if (activeSkill && activeSkill.effect.type === 'dash') {
+            return false;
+          }
+        }
+        enemySprite.body.pushable = false;
+        return true;
+      },
+      this
+    );
+
+    // 玩家普攻 hitbox vs 敌人
+    this.physics.add.overlap(this.player.attackHitbox, enemy.sprite,
+      () => this.handleAttackHit(enemy), null, this);
+
+    // 玩家技能 hitbox vs 敌人
+    this.physics.add.overlap(this.player.skillHitbox, enemy.sprite,
+      () => this.handleSkillHit(enemy), null, this);
+  }
+
+  /** 生成宝箱 */
+  _spawnChest(x, y, spawn, gameObjects) {
+    const locked = spawn.locked || false;
+    const sprite = this.physics.add.sprite(x, y,
+      locked ? TEXTURES.CHEST_LOCKED : TEXTURES.CHEST_CLOSED);
+    sprite.setOrigin(0.5, 0.5).setDepth(y);
+    sprite.setDisplaySize(32, 28);
+    sprite.body.setImmovable(true);
+    sprite.body.setAllowGravity(false);
+
+    const label = this.add.text(x, y - 24,
+      locked ? '需要钥匙' : '按 E 打开', {
+        fontSize: '10px', fill: locked ? '#ff6666' : '#aaaaaa',
+        fontFamily: 'Courier New'
+      }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
+
+    const chest = {
+      sprite, label, locked, opened: false,
+      reward: locked ? { score: 50, healAmount: 25 } : { score: 20, healAmount: 0 },
+      entityId: spawn.id
+    };
+
+    sprite.chestInstance = chest;
+    this.chests.push(chest);
+    gameObjects.push({ ref: chest, type: 'chest', spawnId: spawn.id });
+
+    // 玩家接近检测
+    this.physics.add.overlap(this.player.sprite, sprite,
+      () => this.handleChestProximity(chest), null, this);
+  }
+
+  /** 生成篝火 */
+  _spawnBonfire(x, y, spawn, gameObjects) {
+    const sprite = this.physics.add.sprite(x, y, 'campfire');
+    sprite.setOrigin(0.5, 0.5).setDepth(y);
+    sprite.setDisplaySize(28, 28);
+    sprite.body.setImmovable(true);
+    sprite.body.setAllowGravity(false);
+
+    // 标记为篝火（InteractionHandler 识别）
+    sprite.bonfireInstance = { id: spawn.id, x, y };
+
+    const label = this.add.text(x, y - 24, '按 E 休息', {
+      fontSize: '10px', fill: '#ffaa44', fontFamily: 'Courier New'
+    }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
+
+    // 火焰闪烁动画
+    this.tweens.add({
+      targets: sprite, alpha: 0.7,
+      duration: 400, yoyo: true, repeat: -1
+    });
+
+    const bonfire = { sprite, label, id: spawn.id };
+    gameObjects.push({ ref: bonfire, type: 'bonfire', spawnId: spawn.id });
+
+    // 玩家接近检测
+    this.physics.add.overlap(this.player.sprite, sprite, () => {
+      if (this.dialoguing) return;
+      this.player.setInteractTarget(sprite);
+      label.setVisible(true);
+    }, null, this);
+  }
+
+  /** 生�� NPC */
+  _spawnNPC(x, y, spawn, gameObjects) {
+    // 根据 subtype 决定 NPC 配置
+    const npcConfigs = {
+      shop:     { name: '商人',   dialogues: ['欢迎光临！', '需要买些什么？'] },
+      smith:    { name: '铁匠',   dialogues: ['需要打造装备吗？', '我这里有最好的锻造技术。'] },
+      quest:    { name: '冒险者公会', dialogues: ['有新任务可以接取。', '祝你冒险顺利！'] },
+      merchant: { name: '旅行商人',  dialogues: ['路过此地，带了些好东西。', '看看有没有需要的？'] },
+    };
+    const cfg = npcConfigs[spawn.subtype] || { name: 'NPC', dialogues: ['...'] };
+
+    const npc = new NPC(this, x, y, {
+      id: spawn.id,
+      name: cfg.name,
+      dialogues: cfg.dialogues,
+    });
+
+    this.npcs.push(npc);
+    gameObjects.push({ ref: npc, type: 'npc', spawnId: spawn.id });
+
+    // 玩家接近检测
+    this.physics.add.overlap(this.player.sprite, npc.sprite,
+      () => this.handleNPCProximity(npc), null, this);
+  }
+
+  /**
+   * 卸载 chunk 时销毁所有关联的 GameObjects
+   */
+  _despawnChunkEntities(chunkX, chunkY) {
+    const key = `${chunkX},${chunkY}`;
+    // chunkData 可能已被 destroyChunk 删除，用临时缓存
+    const objs = this._chunkGameObjects?.get(key);
+    if (!objs) return;
+
+    for (const entry of objs) {
+      if (entry.type === 'enemy') {
+        const enemy = entry.ref;
+        const idx = this.enemies.indexOf(enemy);
+        if (idx > -1) this.enemies.splice(idx, 1);
+        // destroy() 内部有 _isDestroyed 防重入
+        if (enemy.destroy) enemy.destroy();
+        // 确保血条一定被清理
+        if (enemy.destroyHealthBar) enemy.destroyHealthBar();
+      } else if (entry.type === 'chest') {
+        const chest = entry.ref;
+        const idx = this.chests.indexOf(chest);
+        if (idx > -1) this.chests.splice(idx, 1);
+        if (chest.sprite) chest.sprite.destroy();
+        if (chest.label) chest.label.destroy();
+      } else if (entry.type === 'bonfire') {
+        const bonfire = entry.ref;
+        if (bonfire.sprite) bonfire.sprite.destroy();
+        if (bonfire.label) bonfire.label.destroy();
+      } else if (entry.type === 'npc') {
+        const npc = entry.ref;
+        const idx = this.npcs.indexOf(npc);
+        if (idx > -1) this.npcs.splice(idx, 1);
+        if (npc.destroy) npc.destroy();
+        else if (npc.sprite) npc.sprite.destroy();
+      }
+    }
+
+    this._chunkGameObjects.delete(key);
+  }
+
+  /**
+   * 清理所有开放世界实体 GameObjects（篝火休息时调用）
+   */
+  _despawnAllWorldEntities() {
+    if (!this._chunkGameObjects) return;
+    const keys = [...this._chunkGameObjects.keys()];
+    for (const key of keys) {
+      const [cx, cy] = key.split(',').map(Number);
+      this._despawnChunkEntities(cx, cy);
+    }
+    // 确保数组也清空
+    this.enemies = [];
+    this.chests = [];
+    // 不清空 npcs — NPC 在篝火休息后仍应存在，但上面已经逐个销毁了
+    this.npcs = [];
   }
 
   loadLevel(levelIndex) {
@@ -957,11 +1272,50 @@ export class MainGameScene extends Phaser.Scene {
 
     if (this.player && this.player.sprite) {
       if (!this.useOpenWorld) {
-        // 关卡制模式：更新所有敌人（开放世界由 EntityManager 管理激活/休眠）
+        // 关卡制模式：更新所有敌人
         this.enemies.forEach(e => {
           e.update(this.player.sprite, delta);
           if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
         });
+      } else {
+        // 开放世界：只更新镜头附近的活跃敌人
+        const cam = this.cameras.main;
+        const camCX = cam.scrollX + cam.width / 2;
+        const camCY = cam.scrollY + cam.height / 2;
+        const activeRadius2 = 1200 * 1200; // 与 EntityManager.activeRadius 一致
+        const CHUNK_PX = 1024;
+
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+          const e = this.enemies[i];
+          if (!e.sprite?.active || e._isDestroyed) {
+            // 已死亡/已销毁：清理残留血条并移除
+            if (e._isDestroyed || !e.sprite?.active) {
+              e.destroyHealthBar();
+              this.enemies.splice(i, 1);
+            }
+            continue;
+          }
+          // 检测敌人是否走进了未加载的 chunk 区域
+          const ecx = Math.floor(e.sprite.x / CHUNK_PX);
+          const ecy = Math.floor(e.sprite.y / CHUNK_PX);
+          const chunkKey = `${ecx},${ecy}`;
+          if (!this.chunkManager.activeChunks.has(chunkKey)) {
+            // 敌人走出已加载区域，拉回出生点并重置巡逻
+            e.sprite.setPosition(e.spawnX, e.spawnY);
+            e.sprite.setVelocity(0, 0);
+            if (e.state !== EnemyState.DEAD) {
+              e.inCombat = false;
+              e.startPatrol();
+            }
+            continue;
+          }
+          const dx = e.sprite.x - camCX;
+          const dy = e.sprite.y - camCY;
+          if (dx * dx + dy * dy < activeRadius2) {
+            e.update(this.player.sprite, delta);
+          }
+          if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
+        }
       }
       this.npcs.forEach(n => {
         if (n.updateState) n.updateState(this.inventory.getItems());

@@ -108,9 +108,9 @@ export class ChunkManager {
       const key = `${chunkX},${chunkY}`;
       if (!this.activeChunks.has(key)) continue;
 
+      this.scene.events.emit('chunk-unloaded', { chunkX, chunkY });
       this._unloadChunkEntities(chunkX, chunkY);
       this.destroyChunk(chunkX, chunkY);
-      this.scene.events.emit('chunk-unloaded', { chunkX, chunkY });
     }
 
     // --- 加载：每帧处理 1 个 step ---
@@ -215,6 +215,52 @@ export class ChunkManager {
     }
 
     console.log('[ChunkManager] 所有活跃 Chunk 实体已重生');
+  }
+
+  /**
+   * 传送专用：销毁所有 chunk 并在新位置同步加载
+   * @param {number} destX - 目标世界 X 坐标（像素）
+   * @param {number} destY - 目标世界 Y 坐标（像素）
+   */
+  teleportReset(destX, destY) {
+    // 清空队列
+    this.loadQueue.length = 0;
+    this.unloadQueue.length = 0;
+
+    // 销毁所有活跃 chunk（仅 tilemap，实体已由 _despawnAllWorldEntities 清理）
+    for (const [key] of this.activeChunks) {
+      const [cx, cy] = key.split(',').map(Number);
+      // 不需要 emit chunk-unloaded，实体已经清理完了
+      this.destroyChunk(cx, cy);
+    }
+
+    // 重置位置缓存
+    this.lastPlayerChunkX = null;
+    this.lastPlayerChunkY = null;
+
+    // 在新位置同步加载所有需要的 chunk
+    const cx = Math.floor(destX / this.CHUNK_PX);
+    const cy = Math.floor(destY / this.CHUNK_PX);
+    for (let dy = -this.loadRadius; dy <= this.loadRadius; dy++) {
+      for (let dx = -this.loadRadius; dx <= this.loadRadius; dx++) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        // Step 0: 创建 tilemap
+        this.createChunk(nx, ny);
+        // Step 1: 加载实体描述
+        this._loadChunkEntities(nx, ny);
+        // 通知场景
+        const key = `${nx},${ny}`;
+        const chunkData = this.activeChunks.get(key);
+        this.scene.events.emit('chunk-loaded', { chunkX: nx, chunkY: ny, chunkData });
+      }
+    }
+
+    // 更新缓存为新位置
+    this.lastPlayerChunkX = cx;
+    this.lastPlayerChunkY = cy;
+
+    console.log(`[ChunkManager] 传送重置完成 → chunk(${cx},${cy})`);
   }
 
   // ═══════════════════════════════════════════════════════════

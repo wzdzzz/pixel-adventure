@@ -60,6 +60,11 @@ export const LOOT_TABLES = {
         items: [{ id: 'potion', weight: 100 }]
       },
       {
+        name: 'mana_consumable',
+        weight: 25,
+        items: [{ id: 'mana_potion', weight: 100 }]
+      },
+      {
         name: 'equipment',
         weight: 8,
         items: [
@@ -98,6 +103,11 @@ export const LOOT_TABLES = {
         items: [{ id: 'potion', weight: 100 }]
       },
       {
+        name: 'mana_consumable',
+        weight: 15,
+        items: [{ id: 'mana_potion', weight: 100 }]
+      },
+      {
         name: 'materials',
         weight: 18,
         items: [
@@ -122,6 +132,11 @@ export const LOOT_TABLES = {
         name: 'consumable',
         weight: 25,
         items: [{ id: 'potion', weight: 100 }]
+      },
+      {
+        name: 'mana_consumable',
+        weight: 20,
+        items: [{ id: 'mana_potion', weight: 100 }]
       },
       {
         name: 'equipment',
@@ -168,6 +183,11 @@ export const LOOT_TABLES = {
         ]
       },
       {
+        name: 'mana_consumable',
+        weight: 25,
+        items: [{ id: 'mana_potion', weight: 100 }]
+      },
+      {
         name: 'equipment',
         weight: 12,
         items: [
@@ -206,6 +226,11 @@ export const LOOT_TABLES = {
         name: 'consumable',
         weight: 30,
         items: [{ id: 'potion', weight: 100 }]
+      },
+      {
+        name: 'mana_consumable',
+        weight: 22,
+        items: [{ id: 'mana_potion', weight: 100 }]
       },
       {
         name: 'equipment',
@@ -250,6 +275,11 @@ export const LOOT_TABLES = {
           { id: 'potion', weight: 60 },
           { id: 'heart',  weight: 40 }
         ]
+      },
+      {
+        name: 'mana_consumable',
+        weight: 30,
+        items: [{ id: 'mana_potion', weight: 100 }]
       },
       {
         name: 'equipment',
@@ -297,6 +327,11 @@ export const LOOT_TABLES = {
           { id: 'heart',  weight: 60 },
           { id: 'potion', weight: 40 }
         ]
+      },
+      {
+        name: 'mana_consumable',
+        weight: 28,
+        items: [{ id: 'mana_potion', weight: 100 }]
       },
       {
         name: 'equipment',
@@ -347,6 +382,11 @@ export const LOOT_TABLES = {
         ]
       },
       {
+        name: 'mana_consumable',
+        weight: 35,
+        items: [{ id: 'mana_potion', weight: 100 }]
+      },
+      {
         name: 'equipment',
         weight: 30,
         items: [
@@ -392,6 +432,11 @@ export const LOOT_TABLES = {
         name: 'consumable',
         weight: 60,
         items: [{ id: 'heart', weight: 100 }]
+      },
+      {
+        name: 'mana_consumable',
+        weight: 40,
+        items: [{ id: 'mana_potion', weight: 100 }]
       },
       {
         name: 'equipment',
@@ -441,6 +486,11 @@ export const LOOT_TABLES = {
         name: 'consumable',
         weight: 25,
         items: [{ id: 'potion', weight: 100 }]
+      },
+      {
+        name: 'mana_consumable',
+        weight: 18,
+        items: [{ id: 'mana_potion', weight: 100 }]
       },
       {
         name: 'empty',

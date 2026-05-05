@@ -14,6 +14,7 @@ MainMenuScene (主菜单 + 角色选择)
 MainGameScene (主游戏)
   ├── UIScene (HUD 叠加层, 平行运行)
   ├── PanelScene (面板叠加层, 按 Tab/I 唤醒)
+  ├── WorldMapScene (大地图, 按 M 唤醒, 开放世界模式)
   └── SaveSelectScene (mode='save', ESC 菜单)
   │
   │ (死亡) → GameOverScene → MainMenuScene
@@ -124,10 +125,19 @@ this.questSystem     = new QuestSystem()
 | Debug 按钮 | 右上 | 🛠 +材料（点击加 9999 材料 + 99999 金币，测试用） |
 
 ### 物品快捷栏
-- `player.itemSlots = [null, null, null, null]` 存储背包格子索引
+- `player.itemSlots = [null, null, null, null]` 存储物品 id（如 `'potion'`）
 - 背包右键消耗品可"设为快捷栏 F1/F2/F3/F4"
 - 游戏内按 F1-F4 使用对应消耗品
+- UI 显示：按 id 遍历背包统计总数量，无库存时边框变红
 - 存档保存/读取 itemSlots
+
+### 小地图（UIScene 左上角）
+- 16×16 格子对应世界 chunk，biome 颜色填充
+- 已探索区域高亮（alpha 0.85），未探索暗淡（alpha 0.25）
+- 玩家位置绿色闪烁点（亚格精度）
+- 特殊地点标记：城镇（白方块）、营地（黄三角）、Boss（红菱形）
+- 底部显示当前 biome 名称 + 危险等级
+- 仅开放世界模式下启用
 
 ### Tooltip 集成
 - 共享 `Tooltip` 实例（500ms hover）
@@ -218,7 +228,30 @@ tip.attach(target, () => ({ title, body }));
 ## 操作总览（HUD 提示）
 
 ```
-WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板 | F:全屏
+WASD:移动 | 左键:攻击 | 1-4:技能 | E:交互 | TAB:面板 | M:地图 | F:全屏
 ```
 
 ESC：游戏内菜单（保存/退主菜单/继续）
+
+## WorldMapScene
+
+按 M 打开（仅开放世界模式），暂停游戏。
+
+### 功能
+| 功能 | 说明 |
+|------|------|
+| 全局地图 | 16×16 chunk 网格，biome 颜色 + 已探索/未探索 |
+| 传送系统 | 点击已探索区域传送 / 右侧快速传送按钮 |
+| 特殊地点 | 城镇/营地/Boss 图标标记 |
+| 探索进度 | 右侧面板显示已探索 chunk 数 + 百分比 |
+| 悬停信息 | 显示区域 biome、难度、特殊地点描述 |
+| 图例 | 底部 6 种 biome 颜色对照 |
+
+### 传送流程
+1. `_despawnAllWorldEntities()` — 清理所有已生成实体
+2. 设置玩家位置到目标 chunk 中心
+3. `chunkManager.teleportReset(destX, destY)` — 销毁旧 chunk + 同步加载新 chunk
+4. 通知 UI 更新区域名
+
+### 关闭
+M / ESC 键关闭，恢复游戏。
