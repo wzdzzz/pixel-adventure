@@ -9,6 +9,9 @@ import { PanelScene } from './scenes/PanelScene.js';
 import { MainMenuScene } from './scenes/MainMenuScene.js';
 import { SaveSelectScene } from './scenes/SaveSelectScene.js';
 import { WorldMapScene } from './scenes/WorldMapScene.js';
+import { RunSetupScene } from './scenes/RunSetupScene.js';
+import { MapScene } from './scenes/MapScene.js';
+import { RewardScene } from './scenes/RewardScene.js';
 
 /**
  * 游戏入口文件
@@ -16,17 +19,23 @@ import { WorldMapScene } from './scenes/WorldMapScene.js';
  * 场景顺序：
  * 1. BootScene - 启动场景，加载资源
  * 2. MainMenuScene - 主菜单 + 角色选择
- * 3. MainGameScene - 主游戏逻辑
- * 4. UIScene - HUD 界面层
- * 5. GameOverScene - 游戏失败画面
- * 6. VictoryScene - 胜利画面
+ * 3. RunSetupScene - 肉鸽模式职业选择
+ * 4. MapScene - 肉鸽模式节点地图
+ * 5. MainGameScene - 主游戏逻辑
+ * 6. RewardScene - 战斗奖励选择
+ * 7. UIScene - HUD 界面层
+ * 8. GameOverScene - 游戏失败画面
+ * 9. VictoryScene - 胜利画面
  */
 
 const scenes = [
   BootScene,
   MainMenuScene,
   SaveSelectScene,
+  RunSetupScene,
+  MapScene,
   MainGameScene,
+  RewardScene,
   UIScene,
   PanelScene,
   WorldMapScene,

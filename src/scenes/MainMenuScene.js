@@ -73,7 +73,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.menuContainer.add(sub);
 
     // --- Buttons ---
-    let btnY = cy - 20;
+    let btnY = cy - 40;
     const btnGap = 52;
 
     // 加载存档（始终显示，进入 SaveSelectScene）
@@ -82,6 +82,10 @@ export class MainMenuScene extends Phaser.Scene {
 
     // New Game
     this.addMenuButton(cx, btnY, '新建游戏', '#66aaff', () => this.showSelectPhase());
+    btnY += btnGap;
+
+    // 肉鸽模式
+    this.addMenuButton(cx, btnY, '远征模式', '#ffaa44', () => this.scene.start('RunSetupScene'));
     btnY += btnGap;
 
     // Exit

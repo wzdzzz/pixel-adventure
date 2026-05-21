@@ -28,6 +28,7 @@ import { ChunkManager } from '../world/ChunkManager.js';
 import { WorldStateManager } from '../world/WorldStateManager.js';
 import { EntityPool } from '../world/EntityPool.js';
 import { EntityManager } from '../world/EntityManager.js';
+import { runState } from '../systems/RunState.js';
 import { BIOMES } from '../world/biomes/biomeConfig.js';
 import { Enemy, EnemyState } from '../entities/Enemy.js';
 import { NPC } from '../entities/NPC.js';
@@ -66,9 +67,17 @@ export class MainGameScene extends Phaser.Scene {
     this.entityPool = null;
     this.entityManager = null;
     this.useOpenWorld = false;  // 标记是否使用开放世界模式
+
+    // 肉鸽房间模式
+    this.isRoguelikeRoom = false;
+    this.roomConfig = null;
   }
 
   create() {
+    // 检查是否从 MapScene 进入肉鸽房间模式
+    this.roomConfig = this.scene.settings.data;
+    this.isRoguelikeRoom = !!(this.roomConfig && this.roomConfig.roomType);
+
     this.inventory = new InventorySystem(this);
     this.uiManager = new UIManager(this);
     this.floatingText = new FloatingTextManager(this);
@@ -103,9 +112,17 @@ export class MainGameScene extends Phaser.Scene {
 
     const gs = this.registry.get('gameState');
 
-    // 使用开放世界模式
-    this.enterWorld();
-    this.tryLoadSave();
+    // 根据模式初始化
+    if (this.isRoguelikeRoom) {
+      // 肉鸽模式：从 RunState 读取职业信息
+      this.registry.set('classType', runState.classType);
+      this.initRoguelikeRoom();
+    } else {
+      // 使用开放世界模式
+      this.enterWorld();
+      this.tryLoadSave();
+    }
+
     this.setupEvents();
 
     // 延迟一帧触发全部 UI 刷新，确保 UIScene 已完成事件注册
@@ -208,6 +225,238 @@ export class MainGameScene extends Phaser.Scene {
       callback: () => SaveSystem.save(this),
       loop: true
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  肉鸽房间模式
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * 初始化肉鸽房间
+   * 创建一个封闭的战斗/事件房间
+   */
+  initRoguelikeRoom() {
+    const { roomType, layer, nodeId } = this.roomConfig;
+    console.log(`[肉鸽] 进入房间: ${roomType}, 层: ${layer}, 节点: ${nodeId}`);
+
+    // 创建物理组
+    this.walls = this.physics.add.staticGroup();
+    this.obstacles = this.physics.add.staticGroup();
+    this.decorations = this.add.group();
+    this.groundTiles = this.add.group();
+    this.enemies = [];
+    this.items = [];
+    this.npcs = [];
+    this.breakables = [];
+    this.triggerZones = [];
+    this.chests = [];
+    this.enemyProjectiles = [];
+    this.enemyHitboxes = [];
+
+    // 生成房间地图
+    this._generateRoguelikeRoom(roomType, layer);
+
+    // 设置摄像机
+    this.cameras.main.setBackgroundColor(0x1a1a2e);
+  }
+
+  /**
+   * 生成肉鸽房间布局
+   */
+  _generateRoguelikeRoom(roomType, layer) {
+    const width = 40;  // 房间宽度（格子数）
+    const height = 30; // 房间高度（格子数）
+    const tileSize = 32;
+
+    // 设置物理世界边界
+    this.physics.world.setBounds(0, 0, width * tileSize, height * tileSize);
+
+    // 生成地面和墙壁
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const wx = x * tileSize + tileSize / 2;
+        const wy = y * tileSize + tileSize / 2;
+
+        // 边缘墙壁
+        if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+          const wall = this.walls.create(wx, wy, 'wall');
+          wall.setOrigin(0.5).setDepth(wy).refreshBody();
+        } else {
+          // 地面
+          const ground = this.add.image(wx, wy, 'grass').setDepth(-1);
+          this.groundTiles.add(ground);
+        }
+      }
+    }
+
+    // 根据房间类型添加内容
+    const centerX = (width / 2) * tileSize;
+    const centerY = (height / 2) * tileSize;
+
+    // 创建玩家
+    this._createRoguelikePlayer(centerX, centerY);
+
+    // 根据房间类型生成敌人
+    if (roomType === 'combat' || roomType === 'elite' || roomType === 'boss') {
+      this._spawnRoomEnemies(roomType, layer, width, height, tileSize);
+    }
+
+    // 通知 UI 层级变化
+    this.events.emit('levelChanged', this._getRoomName(roomType), layer);
+  }
+
+  /**
+   * 创建肉鸽模式玩家
+   */
+  _createRoguelikePlayer(x, y) {
+    const dummyLevel = {
+      playerStart: { x, y }
+    };
+    this.mapData = [[0]];
+    this.createPlayer(dummyLevel);
+  }
+
+  /**
+   * 生成房间敌人
+   */
+  _spawnRoomEnemies(roomType, layer, width, height, tileSize) {
+    const enemyCount = this._getEnemyCount(roomType, layer);
+    const enemyTypes = this._getEnemyTypes(roomType, layer);
+
+    // 房间内可生成区域（避开边缘和玩家出生点）
+    const minX = 3;
+    const maxX = width - 3;
+    const minY = 3;
+    const maxY = height - 3;
+    const centerX = Math.floor(width / 2);
+    const centerY = Math.floor(height / 2);
+
+    for (let i = 0; i < enemyCount; i++) {
+      let x, y;
+      let attempts = 0;
+
+      // 随机位置，避开玩家出生点
+      do {
+        x = minX + Math.floor(Math.random() * (maxX - minX));
+        y = minY + Math.floor(Math.random() * (maxY - minY));
+        attempts++;
+      } while (
+        attempts < 50 &&
+        (Math.abs(x - centerX) < 3 && Math.abs(y - centerY) < 3)
+      );
+
+      const wx = x * tileSize + tileSize / 2;
+      const wy = y * tileSize + tileSize / 2;
+
+      // 随机选择敌人类型
+      const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+      this._spawnRoguelikeEnemy(wx, wy, enemyType, roomType, layer);
+    }
+  }
+
+  /**
+   * 生成单个敌人
+   */
+  _spawnRoguelikeEnemy(x, y, enemyType, roomType, layer) {
+    const config = itemData.enemies?.[enemyType];
+    if (!config) return;
+
+    const enemyCfg = getEnemyConfig(enemyType);
+    const tier = roomType === 'boss' ? 'boss' : (roomType === 'elite' ? 'elite' : 'normal');
+    const finalLevel = layer + 1;
+
+    const enemy = new Enemy(this, x, y, {
+      ...config,
+      ...enemyCfg,
+      id: enemyType,
+      level: finalLevel,
+      finalLevel,
+      tier
+    });
+
+    this.enemies.push(enemy);
+
+    // 注册碰撞
+    this._registerEnemyCollisions(enemy);
+  }
+
+  /**
+   * 获取敌人数量
+   */
+  _getEnemyCount(roomType, layer) {
+    switch (roomType) {
+      case 'combat':
+        return 3 + Math.floor(layer / 3);
+      case 'elite':
+        return 2 + Math.floor(layer / 4);
+      case 'boss':
+        return 1;
+      default:
+        return 3;
+    }
+  }
+
+  /**
+   * 获取敌人类型列表
+   */
+  _getEnemyTypes(roomType, layer) {
+    // 基础敌人
+    const basicEnemies = ['slime', 'skeleton', 'goblin'];
+
+    // 精英敌人
+    const eliteEnemies = ['orc', 'dark_mage', 'minotaur'];
+
+    // Boss
+    const bossEnemies = ['dragon', 'demon_lord'];
+
+    if (roomType === 'boss') {
+      return bossEnemies;
+    } else if (roomType === 'elite' || layer > 5) {
+      return [...basicEnemies, ...eliteEnemies];
+    } else {
+      return basicEnemies;
+    }
+  }
+
+  /**
+   * 获取房间名称
+   */
+  _getRoomName(roomType) {
+    const names = {
+      combat: '战斗房间',
+      elite: '精英挑战',
+      shop: '商店',
+      event: '神秘事件',
+      boss: 'Boss 战'
+    };
+    return names[roomType] || '未知房间';
+  }
+
+  /**
+   * 房间完成处理
+   */
+  completeRoom() {
+    console.log('[肉鸽] 房间完成');
+
+    // 发送完成事件
+    this.events.emit('roomCompleted', {
+      roomType: this.roomConfig.roomType,
+      layer: this.roomConfig.layer,
+      nodeId: this.roomConfig.nodeId
+    });
+
+    // 延迟跳转到奖励界面
+    this.time.delayedCall(1500, () => {
+      this.scene.start('RewardScene', this.roomConfig);
+    });
+  }
+
+  /**
+   * 返回地图场景
+   */
+  returnToMap() {
+    runState.advanceLayer();
+    this.scene.start('MapScene');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -454,12 +703,19 @@ export class MainGameScene extends Phaser.Scene {
   _registerEnemyCollisions(enemy) {
     if (!this.player?.sprite) return;
 
-    // 敌人 vs 墙壁 — 存入对应 chunk 的 colliders 数组，chunk 卸载时自动清理
-    for (const [, cd] of this.chunkManager.activeChunks) {
-      if (cd.wallLayer) {
-        if (!cd.colliders) cd.colliders = [];
-        const c = this.physics.add.collider(enemy.sprite, cd.wallLayer);
-        cd.colliders.push(c);
+    // 敌人 vs 墙壁
+    if (this.walls) {
+      this.physics.add.collider(enemy.sprite, this.walls);
+    }
+
+    // 开放世界模式下还需要注册 chunk 墙壁碰撞
+    if (this.useOpenWorld && this.chunkManager) {
+      for (const [, cd] of this.chunkManager.activeChunks) {
+        if (cd.wallLayer) {
+          if (!cd.colliders) cd.colliders = [];
+          const c = this.physics.add.collider(enemy.sprite, cd.wallLayer);
+          cd.colliders.push(c);
+        }
       }
     }
 
@@ -924,6 +1180,11 @@ export class MainGameScene extends Phaser.Scene {
           duration: 1200,
           onComplete: () => xpText.destroy()
         });
+      }
+
+      // 肉鸽模式：检查房间是否完成
+      if (this.isRoguelikeRoom && this.enemies.length === 0) {
+        this.completeRoom();
       }
     });
 
