@@ -19,11 +19,11 @@ export class Tooltip {
       .setScrollFactor(0).setVisible(false);
 
     this.title = scene.add.text(0, 0, '', {
-      fontSize: '12px', color: '#ffdd66', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '14px', color: '#ffdd66', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setDepth(9999).setScrollFactor(0).setVisible(false);
 
     this.body = scene.add.text(0, 0, '', {
-      fontSize: '10px', color: '#cccccc', fontFamily: 'Courier New',
+      fontSize: '13px', color: '#cccccc', fontFamily: 'Courier New',
       wordWrap: { width: this.maxWidth - 16 }
     }).setDepth(9999).setScrollFactor(0).setVisible(false);
 
@@ -37,9 +37,15 @@ export class Tooltip {
    * @param {() => ({title?: string, body?: string} | null)} getContent
    */
   attach(target, getContent) {
-    target.on('pointerover', () => this._scheduleShow(target, getContent));
-    target.on('pointerout', () => this._cancel(target));
-    target.on('pointerdown', () => this._cancel(target));
+    const onOver = () => this._scheduleShow(target, getContent);
+    const onOut = () => this._cancel(target);
+    const onDown = () => this._cancel(target);
+    target.on('pointerover', onOver);
+    target.on('pointerout', onOut);
+    target.on('pointerdown', onDown);
+    // 记录监听器以便 destroy 时解绑
+    if (!this._attachedTargets) this._attachedTargets = [];
+    this._attachedTargets.push({ target, onOver, onOut, onDown });
   }
 
   _scheduleShow(target, getContent) {
@@ -94,6 +100,17 @@ export class Tooltip {
 
   destroy() {
     this._cancel();
+    // 解绑所有已附加目标的事件监听
+    if (this._attachedTargets) {
+      for (const { target, onOver, onOut, onDown } of this._attachedTargets) {
+        if (target && !target.destroyed) {
+          target.off('pointerover', onOver);
+          target.off('pointerout', onOut);
+          target.off('pointerdown', onDown);
+        }
+      }
+      this._attachedTargets = [];
+    }
     this.bg.destroy();
     this.title.destroy();
     this.body.destroy();

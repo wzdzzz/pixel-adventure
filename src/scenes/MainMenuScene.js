@@ -68,7 +68,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Subtitle
     const sub = this.add.text(cx, cy - 90, 'Pixel Adventure', {
-      fontSize: '14px', fill: '#556677', fontFamily: 'Courier New'
+      fontSize: '16px', fill: '#556677', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     this.menuContainer.add(sub);
 
@@ -89,7 +89,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Version / footer
     const footer = this.add.text(cx, this.h - 20, 'v2.1  |  WASD移动  鼠标攻击  1-4技能', {
-      fontSize: '10px', fill: '#333344', fontFamily: 'Courier New'
+      fontSize: '13px', fill: '#333344', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     this.menuContainer.add(footer);
   }
@@ -141,7 +141,7 @@ export class MainMenuScene extends Phaser.Scene {
     // If window.close didn't work (most browsers block it)
     // Show a message
     const msg = this.add.text(this.w / 2, this.h - 50, '请直接关闭浏览器标签页', {
-      fontSize: '12px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffaa44', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     this.menuContainer.add(msg);
     this.tweens.add({ targets: msg, alpha: 0, delay: 2000, duration: 500 });
@@ -182,7 +182,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Gender selection
     const genderY = cardY + cardH / 2 + 40;
     const genderLabel = this.add.text(cx - 80, genderY, '性别:', {
-      fontSize: '14px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '16px', fill: '#aaaaaa', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5);
     this.selectContainer.add(genderLabel);
 
@@ -194,7 +194,7 @@ export class MainMenuScene extends Phaser.Scene {
         .setStrokeStyle(1, 0x555566)
         .setInteractive({ useHandCursor: true });
       const txt = this.add.text(gx, genderY, genderNames[g], {
-        fontSize: '13px', fill: '#aaaaaa', fontFamily: 'Courier New'
+        fontSize: '15px', fill: '#aaaaaa', fontFamily: 'Courier New'
       }).setOrigin(0.5);
 
       bg.on('pointerdown', () => this.selectGender(g));
@@ -221,7 +221,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setStrokeStyle(1, 0x666666)
       .setInteractive({ useHandCursor: true });
     const backTxt = this.add.text(70, 30, '← 返回', {
-      fontSize: '12px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#888888', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     backBg.on('pointerdown', () => this.showMenuPhase());
     this.selectContainer.add([backBg, backTxt]);
@@ -232,8 +232,6 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   buildClassCard(x, y, cls, w, h) {
-    const isStub = false; // all classes now have skills
-
     // Card BG
     const bg = this.add.rectangle(x, y, w, h, 0x14141e, 0.95)
       .setStrokeStyle(1, 0x3a3a5a)
@@ -251,13 +249,13 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Resource tag
     const resText = this.add.text(x, y - h / 2 + 48, resourceNames[cls.resource], {
-      fontSize: '11px', fill: resourceColors[cls.resource],
+      fontSize: '14px', fill: resourceColors[cls.resource],
       fontFamily: 'Courier New'
     }).setOrigin(0.5);
 
     // Description
     const descText = this.add.text(x, y - h / 2 + 74, cls.description, {
-      fontSize: '10px', fill: '#888899', fontFamily: 'Courier New',
+      fontSize: '13px', fill: '#888899', fontFamily: 'Courier New',
       wordWrap: { width: w - 24 }, align: 'center'
     }).setOrigin(0.5, 0);
 
@@ -271,37 +269,26 @@ export class MainMenuScene extends Phaser.Scene {
       const barColor = val >= 10 ? 0x44ff66 : val >= 7 ? 0xaacc44 : 0x666688;
 
       const label = this.add.text(x - w / 2 + 14, statY, statNames[key], {
-        fontSize: '9px', fill: '#777788', fontFamily: 'Courier New'
+        fontSize: '12px', fill: '#777788', fontFamily: 'Courier New'
       }).setOrigin(0, 0.5);
 
       const bar = this.add.rectangle(x - w / 2 + 52, statY, barW, 6, barColor)
         .setOrigin(0, 0.5);
 
       const valText = this.add.text(x - w / 2 + 56 + barW, statY, `${val}`, {
-        fontSize: '8px', fill: '#999999', fontFamily: 'Courier New'
+        fontSize: '11px', fill: '#999999', fontFamily: 'Courier New'
       }).setOrigin(0, 0.5);
 
       statTexts.push(label, bar, valText);
       statY += 16;
     }
 
-    // "Coming soon" overlay for stub classes
-    let overlay = null;
-    let comingSoonText = null;
-    if (isStub) {
-      overlay = this.add.rectangle(x, y, w, h, 0x000000, 0.4);
-      comingSoonText = this.add.text(x, y + h / 2 - 18, '技能开发中', {
-        fontSize: '10px', fill: '#ffaa44', fontFamily: 'Courier New'
-      }).setOrigin(0.5);
-    }
-
     const allElements = [bg, nameText, resText, descText, ...statTexts];
-    if (overlay) allElements.push(overlay, comingSoonText);
     this.selectContainer.add(allElements);
 
     bg.on('pointerdown', () => this.selectClass(cls.id));
 
-    return { bg, nameText, allElements, isStub };
+    return { bg, nameText, allElements };
   }
 
   selectClass(classId) {

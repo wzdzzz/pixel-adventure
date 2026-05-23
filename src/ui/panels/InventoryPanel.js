@@ -211,13 +211,13 @@ export const InventoryPanel = {
     this.invFilterButtons = [];
 
     const filterLabel = this.add.text(this.panelLeft + 20, filterY, '过滤:', {
-      fontSize: '11px', fill: '#888899', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#888899', fontFamily: 'Courier New'
     });
     container.add(filterLabel);
 
     filterTypes.forEach((ft, i) => {
       const btn = this.add.text(this.panelLeft + 65 + i * 55, filterY, `[${ft.label}]`, {
-        fontSize: '11px', fill: ft.key === 'all' ? '#ffffff' : '#777788', fontFamily: 'Courier New'
+        fontSize: '14px', fill: ft.key === 'all' ? '#ffffff' : '#777788', fontFamily: 'Courier New'
       }).setInteractive({ useHandCursor: true });
 
       btn.on('pointerdown', () => {
@@ -235,7 +235,7 @@ export const InventoryPanel = {
     // --- Sort buttons + Gold display ---
     const sortY = contentTop + 38;
     const sortLabel = this.add.text(this.panelLeft + 20, sortY, '排序:', {
-      fontSize: '11px', fill: '#888899', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#888899', fontFamily: 'Courier New'
     });
     container.add(sortLabel);
 
@@ -246,7 +246,7 @@ export const InventoryPanel = {
     ];
     sortTypes.forEach((st, i) => {
       const btn = this.add.text(this.panelLeft + 65 + i * 65, sortY, `[${st.label}]`, {
-        fontSize: '11px', fill: '#777788', fontFamily: 'Courier New'
+        fontSize: '14px', fill: '#777788', fontFamily: 'Courier New'
       }).setInteractive({ useHandCursor: true });
 
       btn.on('pointerdown', () => {
@@ -263,13 +263,13 @@ export const InventoryPanel = {
 
     // Gold display
     this.invGoldText = this.add.text(this.panelLeft + contentW - 10, sortY, '金币: 0', {
-      fontSize: '12px', fill: '#ffd700', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
     }).setOrigin(1, 0);
     container.add(this.invGoldText);
 
     // 批量拆解按钮（位于金币左侧）
     const bulkBtn = this.add.text(this.panelLeft + contentW - 90, filterY, '[🪓 批量拆解]', {
-      fontSize: '11px', fill: '#66ccff', fontFamily: 'Courier New',
+      fontSize: '14px', fill: '#66ccff', fontFamily: 'Courier New',
       backgroundColor: '#1a2a3a', padding: { x: 6, y: 3 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     bulkBtn.on('pointerdown', () => {
@@ -281,7 +281,7 @@ export const InventoryPanel = {
 
     // 制作按钮（bulkBtn 左侧，因 bulkBtn 是右锚定，需向左偏移）
     const craftBtn = this.add.text(bulkBtn.x - bulkBtn.width - 10, filterY, '[🛠 制作]', {
-      fontSize: '11px', fill: '#88ddaa', fontFamily: 'Courier New',
+      fontSize: '14px', fill: '#88ddaa', fontFamily: 'Courier New',
       backgroundColor: '#1a3a2a', padding: { x: 6, y: 3 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     craftBtn.on('pointerdown', () => this.openCraftModal?.());
@@ -291,7 +291,7 @@ export const InventoryPanel = {
 
     // 合成按钮（craftBtn 左侧）
     const fuseBtn = this.add.text(craftBtn.x - craftBtn.width - 10, filterY, '[💎 合成]', {
-      fontSize: '11px', fill: '#ffdd66', fontFamily: 'Courier New',
+      fontSize: '14px', fill: '#ffdd66', fontFamily: 'Courier New',
       backgroundColor: '#3a2a1a', padding: { x: 6, y: 3 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     fuseBtn.on('pointerdown', () => this.openGemFusionModal?.());
@@ -336,7 +336,7 @@ export const InventoryPanel = {
 
         // Quantity badge
         const countText = this.add.text(x + cellSize / 2 - 4, y + cellSize / 2 - 4, '', {
-          fontSize: '9px', fill: '#ffffff', fontFamily: 'Courier New',
+          fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New',
           backgroundColor: '#00000088', padding: { x: 2, y: 0 }
         }).setOrigin(1, 1).setVisible(false);
 
@@ -370,50 +370,50 @@ export const InventoryPanel = {
     container.add(detailBg);
 
     this.invDetailName = this.add.text(this.panelLeft + 30, detailY + 8, '', {
-      fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '16px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
     });
     container.add(this.invDetailName);
 
     this.invDetailRarity = this.add.text(this.panelLeft + 30, detailY + 28, '', {
-      fontSize: '10px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '13px', fill: '#888888', fontFamily: 'Courier New'
     });
     container.add(this.invDetailRarity);
 
     this.invDetailDesc = this.add.text(this.panelLeft + 30, detailY + 44, '', {
-      fontSize: '10px', fill: '#aaaaaa', fontFamily: 'Courier New',
+      fontSize: '13px', fill: '#aaaaaa', fontFamily: 'Courier New',
       wordWrap: { width: (contentW - 120) / 2 - 20 }, lineSpacing: 1
     });
     container.add(this.invDetailDesc);
 
     // 对比栏（右半边：显示当前装备信息 + 属性差异）
     this.invCompareText = this.add.text(this.panelX + 10, detailY + 8, '', {
-      fontSize: '10px', fill: '#88bbff', fontFamily: 'Courier New',
+      fontSize: '13px', fill: '#88bbff', fontFamily: 'Courier New',
       lineSpacing: 1, wordWrap: { width: (contentW - 120) / 2 - 20 }
     }).setVisible(false);
     container.add(this.invCompareText);
 
     // Action buttons
     this.invUseBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 12, '[使用]', {
-      fontSize: '12px', fill: '#44cc44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#44cc44', fontFamily: 'Courier New'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invUseBtn.on('pointerdown', () => this.useSelectedItem());
     container.add(this.invUseBtn);
 
     this.invDropBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 34, '[丢弃]', {
-      fontSize: '12px', fill: '#cc4444', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#cc4444', fontFamily: 'Courier New'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invDropBtn.on('pointerdown', () => this.dropSelectedItem());
     container.add(this.invDropBtn);
 
     this.invEquipBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 56, '[装备]', {
-      fontSize: '12px', fill: '#44ff44', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '14px', fill: '#44ff44', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invEquipBtn.on('pointerdown', () => this.equipSelectedItem());
     container.add(this.invEquipBtn);
 
     // 强化按钮（仅装备显示）
     this.invEnhanceBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 78, '[🔨 强化]', {
-      fontSize: '12px', fill: '#ffdd66', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffdd66', fontFamily: 'Courier New'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invEnhanceBtn.on('pointerdown', () => {
       if (this.invSelectedSlot < 0) return;
@@ -424,7 +424,7 @@ export const InventoryPanel = {
 
     // 分解按钮（仅装备显示）
     this.invDecomposeBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 100, '[🪓 分解]', {
-      fontSize: '12px', fill: '#ff8866', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ff8866', fontFamily: 'Courier New'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invDecomposeBtn.on('pointerdown', () => {
       if (this.invSelectedSlot < 0) return;
@@ -435,7 +435,7 @@ export const InventoryPanel = {
 
     // 镶嵌按钮（仅有孔位装备显示）
     this.invSocketBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 122, '[💎 镶嵌]', {
-      fontSize: '12px', fill: '#aa88ff', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#aa88ff', fontFamily: 'Courier New'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invSocketBtn.on('pointerdown', () => {
       if (this.invSelectedSlot < 0) return;
@@ -636,7 +636,7 @@ export const InventoryPanel = {
     const success = equip.equipFromInventory(actualSlot);
     if (success) {
       this.refreshInventoryTab();
-      this.refreshCharacterTab();
+      this.events.emit('panel:refresh', 'character');
       this.selectInventoryItem(this.invSelectedSlot);
     }
   },
@@ -768,7 +768,7 @@ export const InventoryPanel = {
     let optionY = 4;
     const addOption = (label, color, callback) => {
       const opt = this.add.text(8, optionY, label, {
-        fontSize: '11px', fill: color, fontFamily: 'Courier New'
+        fontSize: '14px', fill: color, fontFamily: 'Courier New'
       }).setInteractive({ useHandCursor: true });
       opt.on('pointerdown', () => {
         callback();
@@ -801,7 +801,7 @@ export const InventoryPanel = {
         const success = equip.equipFromInventory(actualSlot);
         if (success) {
           this.refreshInventoryTab();
-          this.refreshCharacterTab?.();
+          this.events.emit('panel:refresh', 'character');
         }
       });
       addOption('🔨 强化', '#ffdd66', () => this.openEnhanceModal?.(actualSlot));

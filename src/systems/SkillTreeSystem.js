@@ -6,12 +6,18 @@
  *   skill_enhance  — 强化技能参数 { skill, param, value }
  *   passive_unlock — 解锁被动技能 { passive }
  */
+import SystemRegistry from '../core/SystemRegistry.js';
+
 export class SkillTreeSystem {
   constructor(scene, classType = 'warrior') {
     this.scene = scene;
     this.classType = classType;
     this.nodes = [];
     this.unlockedNodes = new Set();
+    /** 技能增强表：{ skillId: { param: totalValue } } */
+    this.skillEnhancements = {};
+    /** 已解锁被动集合 */
+    this.passives = new Set();
     this.initTree(classType);
   }
 
@@ -132,7 +138,7 @@ export class SkillTreeSystem {
 
       { id: 'shr_3', name: '致命弱点', branch: 'sharpshooter', tier: 2, x: -2, y: 3,
         prerequisites: ['shr_2'], requiredLevel: 5, cost: 1, maxRank: 3, currentRank: 0,
-        effects: [{ type: 'stat_bonus', stat: 'critDamage', value: 10 }],
+        effects: [{ type: 'stat_bonus', stat: 'critDmg', value: 0.1 }],
         description: '暴击伤害+10%（每级）' },
 
       { id: 'shr_4', name: '穿透强化', branch: 'sharpshooter', tier: 2, x: -1.5, y: 4,
@@ -210,8 +216,8 @@ export class SkillTreeSystem {
       // ─── 火焰分支 (Fire / DPS) ───
       { id: 'fir_1', name: '灼热火焰', branch: 'fire', tier: 1, x: -2, y: 1,
         prerequisites: ['root'], requiredLevel: 2, cost: 1, maxRank: 3, currentRank: 0,
-        effects: [{ type: 'stat_bonus', stat: 'spellDamage', value: 5 }],
-        description: '法术伤害+5%（每级）' },
+        effects: [{ type: 'stat_bonus', stat: 'spellPower', value: 5 }],
+        description: '法术强度+5（每级）' },
 
       { id: 'fir_2', name: '火球强化', branch: 'fire', tier: 1, x: -2.5, y: 2,
         prerequisites: ['fir_1'], requiredLevel: 3, cost: 1, maxRank: 3, currentRank: 0,
@@ -236,7 +242,7 @@ export class SkillTreeSystem {
       // ─── 冰霜分支 (Ice / Control) ───
       { id: 'ice_1', name: '寒冰之力', branch: 'ice', tier: 1, x: 0, y: 1,
         prerequisites: ['root'], requiredLevel: 2, cost: 1, maxRank: 3, currentRank: 0,
-        effects: [{ type: 'stat_bonus', stat: 'maxMana', value: 15 }],
+        effects: [{ type: 'stat_bonus', stat: 'maxMp', value: 15 }],
         description: '最大法力+15（每级）' },
 
       { id: 'ice_2', name: '冰箭强化', branch: 'ice', tier: 1, x: 0, y: 2,
@@ -291,7 +297,7 @@ export class SkillTreeSystem {
   canUnlock(nodeId) {
     const node = this.getNode(nodeId);
     if (!node || node.currentRank >= node.maxRank) return false;
-    const levelSystem = this.scene.registry.get('levelSystem');
+    const levelSystem = SystemRegistry.get('levelSystem');
     if (!levelSystem || levelSystem.level < node.requiredLevel) return false;
     if (levelSystem.skillPoints < node.cost) return false;
     return node.prerequisites.every(p => this.unlockedNodes.has(p));
@@ -300,12 +306,65 @@ export class SkillTreeSystem {
   unlock(nodeId) {
     if (!this.canUnlock(nodeId)) return false;
     const node = this.getNode(nodeId);
-    const levelSystem = this.scene.registry.get('levelSystem');
+    const levelSystem = SystemRegistry.get('levelSystem');
     levelSystem.skillPoints -= node.cost;
     node.currentRank++;
     if (node.currentRank >= 1) this.unlockedNodes.add(nodeId);
+    // 应用该等级的效果
+    this._applyNodeEffects(node, 1);
     this.scene.events.emit('skillUnlocked', nodeId, node);
     return true;
+  }
+
+  /** 应用单个节点的效果（增量，rankDelta 通常为 1） */
+  _applyNodeEffects(node, rankDelta) {
+    for (const eff of node.effects) {
+      if (eff.type === 'stat_bonus') {
+        // stat_bonus 由 EquipmentSystem.applyBonuses 统一收集，此处不直接写 Stats
+      } else if (eff.type === 'skill_enhance') {
+        if (!this.skillEnhancements[eff.skill]) this.skillEnhancements[eff.skill] = {};
+        const entry = this.skillEnhancements[eff.skill];
+        entry[eff.param] = (entry[eff.param] || 0) + eff.value * rankDelta;
+      } else if (eff.type === 'passive_unlock') {
+        this.passives.add(eff.passive);
+      }
+    }
+    // 触发装备系统重算（会包含技能树 stat_bonus）
+    const eqSys = SystemRegistry.get('equipmentSystem');
+    if (eqSys) eqSys.applyBonuses();
+  }
+
+  /** 重放所有已解锁节点的效果（存档加载后调用） */
+  applyAllEffects() {
+    this.skillEnhancements = {};
+    this.passives = new Set();
+    for (const node of this.nodes) {
+      if (node.currentRank > 0) {
+        // 直接构建表，不逐个触发 applyBonuses
+        for (const eff of node.effects) {
+          if (eff.type === 'skill_enhance') {
+            if (!this.skillEnhancements[eff.skill]) this.skillEnhancements[eff.skill] = {};
+            const entry = this.skillEnhancements[eff.skill];
+            entry[eff.param] = (entry[eff.param] || 0) + eff.value * node.currentRank;
+          } else if (eff.type === 'passive_unlock') {
+            this.passives.add(eff.passive);
+          }
+        }
+      }
+    }
+    // stat_bonus 统一由 EquipmentSystem.applyBonuses 收集
+    const eqSys = SystemRegistry.get('equipmentSystem');
+    if (eqSys) eqSys.applyBonuses();
+  }
+
+  /** 查询技能增强值 */
+  getSkillEnhancement(skillId, param) {
+    return this.skillEnhancements[skillId]?.[param] || 0;
+  }
+
+  /** 检查被动是否已解锁 */
+  hasPassive(passiveId) {
+    return this.passives.has(passiveId);
   }
 
   getNode(id) {
@@ -352,5 +411,7 @@ export class SkillTreeSystem {
         if (node) node.currentRank = saved.currentRank;
       });
     }
+    // 重放所有已解锁节点的效果到 Stats / SkillEngine
+    this.applyAllEffects();
   }
 }

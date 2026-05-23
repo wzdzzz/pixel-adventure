@@ -22,7 +22,7 @@ export const SETS = {
   archer_legacy: {
     id: 'archer_legacy',
     name: '远征游侠套装',
-    pieces: ['rusty_dagger', 'cloth_robe', 'leather_cap', 'swift_boots', 'shadow_dagger', 'bone_necklace'],
+    pieces: ['rusty_dagger', 'ranger_vest', 'leather_cap', 'swift_boots', 'hunter_ring', 'fang_necklace'],
     bonuses: {
       2: { stat: 'critRate',  value: 5,    isFlat: true,  label: '暴击率 +5%' },
       4: { stat: 'attackSpeed', value: 0.10, isFlat: false, label: '攻速 +10%' },
@@ -32,7 +32,7 @@ export const SETS = {
   mage_legacy: {
     id: 'mage_legacy',
     name: '远征贤者套装',
-    pieces: ['apprentice_staff', 'cloth_robe', 'leather_cap', 'worn_boots', 'copper_ring', 'flame_staff'],
+    pieces: ['apprentice_staff', 'cloth_robe', 'mage_hat', 'arcane_slippers', 'crystal_ring', 'flame_staff'],
     bonuses: {
       2: { stat: 'spellPower', value: 8,   isFlat: true,  label: '法术强度 +8' },
       4: { stat: 'cdr',        value: 10,  isFlat: true,  label: '冷却缩减 +10%' },
@@ -42,7 +42,7 @@ export const SETS = {
   guardian_set: {
     id: 'guardian_set',
     name: '守护者全装',
-    pieces: ['wooden_shield', 'chain_mail', 'iron_helm', 'worn_boots', 'copper_ring', 'bone_necklace'],
+    pieces: ['wooden_shield', 'chain_mail', 'guardian_helm', 'guardian_greaves', 'guardian_signet', 'guardian_amulet'],
     bonuses: {
       2: { stat: 'defense',  value: 0.10, isFlat: false, label: '防御 +10%' },
       4: { stat: 'maxHp',    value: 50,   isFlat: true,  label: '生命值 +50' },

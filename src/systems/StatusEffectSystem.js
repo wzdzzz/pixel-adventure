@@ -1,3 +1,5 @@
+import { getEffectTemplate } from '../data/statusEffects.js';
+
 /**
  * StatusEffectSystem — Buff/Debuff 引擎
  *
@@ -188,7 +190,24 @@ export class StatusEffectSystem {
   }
 
   fromJSON(data) {
-    // 效果需要在加载后由技能系统重新施加
-    // 简单效果可通过 id 恢复
+    if (!Array.isArray(data)) return;
+    // 从 statusEffects 模板表恢复 buff/debuff（回调不可恢复，仅恢复 modifiers/flatMods 类效果）
+    for (const saved of data) {
+      const template = getEffectTemplate(saved.id);
+      if (!template) continue;
+      // 跳过 DoT（需要 onTick 回调，无法从模板恢复）
+      if (template.type === 'dot') continue;
+      // 仅恢复有 modifiers/flatMods 的 buff/debuff
+      if (!template.modifiers && !template.flatMods) continue;
+      this.apply(saved.id, {
+        ...template,
+        duration: saved.remaining || template.duration
+      });
+      // 恢复层数
+      const existing = this.active.find(e => e.id === saved.id);
+      if (existing && saved.stacks > 1) {
+        existing.stacks = Math.min(saved.stacks, template.maxStacks || 1);
+      }
+    }
   }
 }

@@ -8,6 +8,7 @@ import { levelData, LEVEL_TILE } from '../data/levels.js';
 import itemData from '../data/items.json';
 import { rollTierOffset } from '../data/monsterScaling.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 const TILE = LEVEL_TILE;
 
@@ -253,6 +254,7 @@ export const LevelBuilder = {
     const classType = savedData?.classType || this.registry.get('classType') || 'warrior';
     const gender = savedData?.gender || this.registry.get('gender') || 'male';
     this.player = new Player(this, startX, startY, classType, gender);
+    SystemRegistry.register('player', this.player);
     if (savedData?.hp) {
       this.player.hp = Math.min(savedData.hp, this.player.maxHp);
     }

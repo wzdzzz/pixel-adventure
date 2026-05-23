@@ -1,5 +1,6 @@
 import { AFFIXES, AFFIX_COUNTS, rollAffixes } from '../data/affixes.js';
 import itemData from '../data/items.json';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 const REFORGE_COSTS = {
   0: { matId:'chaos_essence', count: 2, gold: 1000, lockedExtras: [] },
@@ -45,7 +46,7 @@ export class ReforgeSystem {
     if (lockCount > 2) return { ok:false, reason:'too_many_locks' };
 
     const cost = this.getCost(lockCount);
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     if (this._countMat(cost.matId) < cost.count) return { ok:false, reason:'no_material', cost, divine };
     if ((inv.gold || 0) < cost.gold) return { ok:false, reason:'no_gold', cost, divine };
     for (const extra of cost.lockedExtras) {
@@ -62,7 +63,7 @@ export class ReforgeSystem {
     const check = this.canReforge(eq, lockedAffixIds, divine);
     if (!check.ok) return { result:'invalid', reason: check.reason };
 
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     const cost = check.cost;
     this._consumeMat(cost.matId, cost.count);
     cost.lockedExtras.forEach(e => this._consumeMat(e.matId, e.count));
@@ -127,7 +128,7 @@ export class ReforgeSystem {
     eq.affixes = [...locked, ...newAffixes];
     eq.reforgePity = gotT1 ? 0 : (pity + 1);
 
-    this.scene.equipmentSystem._applyBonuses();
+    SystemRegistry.get('equipmentSystem').applyBonuses();
     this.scene.events.emit('inventoryUpdated', inv.slots);
     this.scene.events.emit('showMessage',
       gotT1 ? (divine ? '神圣洗练成功！触发 T1 词条' : '洗练完成 — T1 觉醒')
@@ -137,12 +138,12 @@ export class ReforgeSystem {
   }
 
   _countMat(matId) {
-    return this.scene.inventory.slots.reduce((sum, s) =>
+    return SystemRegistry.get('inventory').slots.reduce((sum, s) =>
       s && s.id === matId ? sum + (s.quantity || 0) : sum, 0);
   }
 
   _consumeMat(matId, count) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     let remaining = count;
     for (let i = 0; i < inv.slots.length && remaining > 0; i++) {
       const s = inv.slots[i];

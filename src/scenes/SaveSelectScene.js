@@ -43,7 +43,7 @@ export class SaveSelectScene extends Phaser.Scene {
       ? '点击槽位保存当前进度'
       : '点击有数据的槽位继续游戏，点击空槽位开始新游戏';
     this.add.text(this.w / 2, 100, hint, {
-      fontSize: '12px', color: '#999999', fontFamily: 'Courier New'
+      fontSize: '14px', color: '#999999', fontFamily: 'Courier New'
     }).setOrigin(0.5).setScrollFactor(0);
 
     // 3 槽位卡片
@@ -84,7 +84,7 @@ export class SaveSelectScene extends Phaser.Scene {
 
     // 槽位标签
     const slotLabel = this.add.text(x, y - h / 2 + 18, `槽位 ${slotId}${isActive ? '  (当前)' : ''}`, {
-      fontSize: '14px', color: isActive ? '#ffdd44' : '#bbbbcc',
+      fontSize: '16px', color: isActive ? '#ffdd44' : '#bbbbcc',
       fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -95,7 +95,7 @@ export class SaveSelectScene extends Phaser.Scene {
         fontSize: '20px', color: '#666677', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       const hint = this.add.text(x, y + 30, this.mode === 'save' ? '点击保存到此槽位' : '点击开始新游戏', {
-        fontSize: '11px', color: '#888899', fontFamily: 'Courier New'
+        fontSize: '14px', color: '#888899', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       detailObjs.push(emptyText, hint);
     } else {
@@ -118,30 +118,30 @@ export class SaveSelectScene extends Phaser.Scene {
 
       // 等级
       const levelText = this.add.text(x, y - h / 2 + 158, `Lv. ${info.level}`, {
-        fontSize: '14px', color: '#ffdd66', fontFamily: 'Courier New'
+        fontSize: '16px', color: '#ffdd66', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       detailObjs.push(levelText);
 
       // 关卡 + 分数
       const stageText = this.add.text(x, y - h / 2 + 184, info.levelName || `第 ${info.currentLevel + 1} 关`, {
-        fontSize: '12px', color: '#aaccff', fontFamily: 'Courier New'
+        fontSize: '14px', color: '#aaccff', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       detailObjs.push(stageText);
 
       const scoreText = this.add.text(x, y - h / 2 + 204, `分数: ${info.score}`, {
-        fontSize: '11px', color: '#aaaaaa', fontFamily: 'Courier New'
+        fontSize: '14px', color: '#aaaaaa', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       detailObjs.push(scoreText);
 
       // 时间
       const timeText = this.add.text(x, y - h / 2 + 234, info.dateText, {
-        fontSize: '10px', color: '#888899', fontFamily: 'Courier New'
+        fontSize: '13px', color: '#888899', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       detailObjs.push(timeText);
 
       // 删除按钮
       const delBtn = this.add.text(x, y + h / 2 - 38, '✕ 删除', {
-        fontSize: '11px', color: '#ff8866', fontFamily: 'Courier New',
+        fontSize: '14px', color: '#ff8866', fontFamily: 'Courier New',
         backgroundColor: '#2a1a1a', padding: { x: 8, y: 4 }
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -159,7 +159,7 @@ export class SaveSelectScene extends Phaser.Scene {
       ? (this.mode === 'save' ? '保存' : '新游戏')
       : (this.mode === 'save' ? '覆盖保存' : '加载');
     const actionLabel = this.add.text(x, y + h / 2 - 18, `▶ ${actionText}`, {
-      fontSize: '13px', color: isEmpty ? '#88ff88' : '#66aaff',
+      fontSize: '15px', color: isEmpty ? '#88ff88' : '#66aaff',
       fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
     detailObjs.push(actionLabel);
@@ -230,7 +230,7 @@ export class SaveSelectScene extends Phaser.Scene {
       fontSize: '16px', color: '#ff8866', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(102);
     const hint = this.add.text(this.w / 2, this.h / 2 - 12, '此操作不可恢复', {
-      fontSize: '11px', color: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '14px', color: '#aaaaaa', fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(102);
 
     const closeAll = () => {
@@ -241,14 +241,14 @@ export class SaveSelectScene extends Phaser.Scene {
     const cancelBg = this.add.rectangle(this.w / 2 - 70, this.h / 2 + 30, 110, 32, 0x2a2a3a)
       .setStrokeStyle(1, 0x6666aa).setInteractive({ useHandCursor: true }).setDepth(102);
     const cancelTxt = this.add.text(this.w / 2 - 70, this.h / 2 + 30, '取消', {
-      fontSize: '13px', color: '#ffffff', fontFamily: 'Courier New'
+      fontSize: '15px', color: '#ffffff', fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(103);
     cancelBg.on('pointerdown', closeAll);
 
     const confirmBg = this.add.rectangle(this.w / 2 + 70, this.h / 2 + 30, 110, 32, 0x3a1a1a)
       .setStrokeStyle(1, 0xff6666).setInteractive({ useHandCursor: true }).setDepth(102);
     const confirmTxt = this.add.text(this.w / 2 + 70, this.h / 2 + 30, '删除', {
-      fontSize: '13px', color: '#ff8866', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '15px', color: '#ff8866', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(103);
     confirmBg.on('pointerdown', () => {
       SaveSystem.deleteSave(slotId);
@@ -260,7 +260,7 @@ export class SaveSelectScene extends Phaser.Scene {
 
   _showToast(text) {
     const t = this.add.text(this.w / 2, this.h - 90, text, {
-      fontSize: '14px', color: '#ffdd66',
+      fontSize: '16px', color: '#ffdd66',
       fontFamily: 'Courier New', fontStyle: 'bold',
       backgroundColor: '#1a1a2e', padding: { x: 10, y: 6 }
     }).setOrigin(0.5).setDepth(200);
@@ -276,7 +276,7 @@ export class SaveSelectScene extends Phaser.Scene {
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(color).color)
       .setInteractive({ useHandCursor: true });
     const txt = this.add.text(x, y, label, {
-      fontSize: '14px', color, fontFamily: 'Courier New'
+      fontSize: '16px', color, fontFamily: 'Courier New'
     }).setOrigin(0.5);
     bg.on('pointerover', () => bg.setFillStyle(0x2a2a3e));
     bg.on('pointerout', () => bg.setFillStyle(0x1a1a2e));

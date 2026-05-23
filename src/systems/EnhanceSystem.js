@@ -3,6 +3,7 @@ import {
   getEnhanceCost, getEnhanceSuccessRate, getEnhanceFailureBehavior
 } from '../data/materials.js';
 import itemData from '../data/items.json';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 /**
  * 强化与分解系统（纯函数 + 副作用集中）
@@ -31,7 +32,7 @@ export class EnhanceSystem {
     const cost = this.getCost(equipInstance.enhanceLevel || 0);
     if (!cost) return { ok: false, reason: 'maxed' };
 
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     const matCount = this._countMaterial(cost.matId);
     if (matCount < cost.count) return { ok: false, reason: 'no_material', need: cost };
     if ((inv.gold || 0) < cost.gold) return { ok: false, reason: 'no_gold', need: cost };
@@ -43,7 +44,7 @@ export class EnhanceSystem {
    * @returns {{result: 'success'|'fail_stay'|'fail_downgrade'|'invalid', newLevel?: number, reason?: string}}
    */
   enhance(target) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     let eq;
     if (typeof target === 'number') {
       eq = inv.slots[target];
@@ -64,7 +65,7 @@ export class EnhanceSystem {
 
     if (success) {
       eq.enhanceLevel = cur + 1;
-      this.scene.equipmentSystem._applyBonuses();
+      SystemRegistry.get('equipmentSystem').applyBonuses();
       this.scene.events.emit('inventoryUpdated', inv.slots);
       this.scene.events.emit('showMessage', `强化成功！+${eq.enhanceLevel}`, '#66ff88');
       return { result: 'success', newLevel: eq.enhanceLevel };
@@ -74,7 +75,7 @@ export class EnhanceSystem {
     const behavior = getEnhanceFailureBehavior(cur);
     if (behavior === 'downgrade' && cur > 0) {
       eq.enhanceLevel = cur - 1;
-      this.scene.equipmentSystem._applyBonuses();
+      SystemRegistry.get('equipmentSystem').applyBonuses();
       this.scene.events.emit('inventoryUpdated', inv.slots);
       this.scene.events.emit('showMessage', `强化失败，等级 -1`, '#ff8866');
       return { result: 'fail_downgrade', newLevel: eq.enhanceLevel };
@@ -88,7 +89,7 @@ export class EnhanceSystem {
    * @returns {{result: 'success', drops: Array<{matId, count}>}|{result:'invalid'}}
    */
   decompose(slotIndex) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     const eq = inv.slots[slotIndex];
     if (!eq || eq.type !== 'equipment') return { result: 'invalid' };
 
@@ -121,7 +122,7 @@ export class EnhanceSystem {
   // ── 内部辅助 ─────────────────────────
 
   _countMaterial(matId) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     return inv.slots.reduce((sum, s) => {
       if (s && s.id === matId) return sum + (s.quantity || 0);
       return sum;
@@ -129,7 +130,7 @@ export class EnhanceSystem {
   }
 
   _consumeMaterial(matId, count) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     let remaining = count;
     for (let i = 0; i < inv.slots.length && remaining > 0; i++) {
       const s = inv.slots[i];

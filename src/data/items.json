@@ -455,6 +455,224 @@
       },
       "affixPools": ["armor_common"]
     },
+    "ranger_vest": {
+      "id": "ranger_vest",
+      "name": "游侠皮甲",
+      "type": "equipment",
+      "slot": "armor",
+      "texture": "armor_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 10,
+      "description": "轻便的皮革甲胄，适合灵活作战",
+      "setId": "archer_legacy",
+      "baseStats": {
+        "defense": 1,
+        "attackSpeed": 0.02
+      },
+      "statBonuses": {
+        "agi": 1
+      },
+      "affixPools": ["armor_common"]
+    },
+    "hunter_ring": {
+      "id": "hunter_ring",
+      "name": "猎人之戒",
+      "type": "equipment",
+      "slot": "ring1",
+      "texture": "ring_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 5,
+      "description": "猎人传承的戒指，提升精准度",
+      "setId": "archer_legacy",
+      "baseStats": {
+        "critRate": 0.5
+      },
+      "statBonuses": {
+        "per": 1
+      },
+      "affixPools": ["accessory"]
+    },
+    "fang_necklace": {
+      "id": "fang_necklace",
+      "name": "兽牙项链",
+      "type": "equipment",
+      "slot": "necklace",
+      "texture": "necklace_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 8,
+      "description": "以猛兽獠牙串成的项链，增强敏捷",
+      "setId": "archer_legacy",
+      "baseStats": {
+        "attack": 1,
+        "attackSpeed": 0.02
+      },
+      "statBonuses": {
+        "agi": 1
+      },
+      "affixPools": ["accessory"]
+    },
+    "mage_hat": {
+      "id": "mage_hat",
+      "name": "法师尖帽",
+      "type": "equipment",
+      "slot": "helmet",
+      "texture": "helmet_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 8,
+      "description": "法师的标志性尖帽，增强魔力",
+      "setId": "mage_legacy",
+      "baseStats": {
+        "spellPower": 2
+      },
+      "statBonuses": {
+        "int": 1
+      },
+      "affixPools": ["armor_common"]
+    },
+    "arcane_slippers": {
+      "id": "arcane_slippers",
+      "name": "奥术便鞋",
+      "type": "equipment",
+      "slot": "boots",
+      "texture": "boots_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 6,
+      "description": "注入微弱魔力的便鞋，轻便舒适",
+      "setId": "mage_legacy",
+      "baseStats": {
+        "moveSpeed": 5,
+        "spellPower": 1
+      },
+      "statBonuses": {
+        "int": 1
+      },
+      "affixPools": ["armor_common"]
+    },
+    "crystal_ring": {
+      "id": "crystal_ring",
+      "name": "水晶指环",
+      "type": "equipment",
+      "slot": "ring1",
+      "texture": "ring_icon",
+      "rarity": "common",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 1,
+      "sellPrice": 5,
+      "description": "嵌有微型水晶的指环，增幅法力",
+      "setId": "mage_legacy",
+      "baseStats": {
+        "spellPower": 1
+      },
+      "statBonuses": {
+        "int": 1
+      },
+      "affixPools": ["accessory"]
+    },
+    "guardian_helm": {
+      "id": "guardian_helm",
+      "name": "守护头盔",
+      "type": "equipment",
+      "slot": "helmet",
+      "texture": "helmet_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 25,
+      "description": "守护者部队配发的头盔，厚实可靠",
+      "setId": "guardian_set",
+      "baseStats": {
+        "defense": 4,
+        "maxHp": 5
+      },
+      "statBonuses": {
+        "con": 2
+      },
+      "affixPools": ["armor_common"]
+    },
+    "guardian_greaves": {
+      "id": "guardian_greaves",
+      "name": "守护胫甲",
+      "type": "equipment",
+      "slot": "boots",
+      "texture": "boots_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 20,
+      "description": "沉重的铁质胫甲，牢牢保护小腿",
+      "setId": "guardian_set",
+      "baseStats": {
+        "defense": 3,
+        "moveSpeed": 3
+      },
+      "statBonuses": {
+        "con": 1
+      },
+      "affixPools": ["armor_common"]
+    },
+    "guardian_signet": {
+      "id": "guardian_signet",
+      "name": "守护印戒",
+      "type": "equipment",
+      "slot": "ring1",
+      "texture": "ring_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 15,
+      "description": "刻有守护者徽记的印戒，坚固异常",
+      "setId": "guardian_set",
+      "baseStats": {
+        "defense": 1,
+        "maxHp": 8
+      },
+      "statBonuses": {
+        "con": 1
+      },
+      "affixPools": ["accessory"]
+    },
+    "guardian_amulet": {
+      "id": "guardian_amulet",
+      "name": "守护护符",
+      "type": "equipment",
+      "slot": "necklace",
+      "texture": "necklace_icon",
+      "rarity": "uncommon",
+      "stackable": false,
+      "maxStack": 1,
+      "level": 3,
+      "sellPrice": 18,
+      "description": "守护者的信物，蕴含坚韧之力",
+      "setId": "guardian_set",
+      "baseStats": {
+        "defense": 2,
+        "maxHp": 10
+      },
+      "statBonuses": {
+        "con": 1,
+        "str": 1
+      },
+      "affixPools": ["accessory"]
+    },
     "skull_king_crown": {
       "id": "skull_king_crown",
       "name": "骷髅王冠",

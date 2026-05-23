@@ -36,7 +36,8 @@ export class Stats {
       moveSpeed: 0, attackSpeed: 0, hpRegen: 0, critDmg: 0,
       tenacity: 0, defense: 0,
       critRate: 0, armorPen: 0, dropBonus: 0, cdr: 0, encumbrance: 0,
-      lifesteal: 0      // 吸血百分比（0.05 = 5%），由战斗逻辑直接读取
+      lifesteal: 0,     // 吸血百分比（0.05 = 5%），由战斗逻辑直接读取
+      slowDuration: 0   // 减速效果额外持续时间(ms)，由技能树等提供
     };
 
     // 百分比加成（来自装备词条、buff 等）— 应用于 derived 派生值

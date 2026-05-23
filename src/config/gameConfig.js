@@ -57,11 +57,12 @@ export function createPhaserConfig(scenes) {
     },
     scene: scenes,
     scale: {
-      // 固定 1280×720 不缩放；窗口比画布大时居中显示，周围留黑
-      mode: Phaser.Scale.NONE,
+      mode: Phaser.Scale.FIT,
       width: GAME_CONFIG.WIDTH,
       height: GAME_CONFIG.HEIGHT,
-      autoCenter: Phaser.Scale.CENTER_BOTH
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      min: { width: 640, height: 360 },
+      max: { width: 1920, height: 1080 }
     }
   };
 }

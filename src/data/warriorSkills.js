@@ -484,6 +484,14 @@ export function getSkillAtLevel(skillId, level) {
         result.effect.modifiers[stat] = val + (lv - 1) * (val * 0.1);
       }
     }
+  } else if (eff.type === 'leap_slam') {
+    result.effect.damageMultiplier = eff.baseDamageMultiplier + (lv - 1) * 0.2;
+    if (eff.groundDot) {
+      result.effect.groundDot = {
+        ...eff.groundDot,
+        damageMultiplier: eff.groundDot.damageMultiplier + (lv - 1) * 0.05
+      };
+    }
   } else if (eff.type === 'taunt') {
     result.effect.duration = eff.baseDuration + (lv - 1) * 200;
   }

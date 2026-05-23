@@ -1,5 +1,6 @@
 import { GEMS, getGemValue, makeGemInstance, MAX_GEM_LEVEL } from '../data/gems.js';
 import itemData from '../data/items.json';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 /**
  * 宝石系统：镶嵌 / 拆卸 / 合成
@@ -19,7 +20,7 @@ export class GemSystem {
       return { ok:false, reason:'invalid_socket' };
     if (equipInstance.sockets[socketIdx].gemId) return { ok:false, reason:'socket_occupied' };
 
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     const gem = inv.slots[gemSlotIndex];
     if (!gem || gem.type !== 'gem') return { ok:false, reason:'not_gem' };
 
@@ -28,7 +29,7 @@ export class GemSystem {
     else inv.slots[gemSlotIndex] = null;
 
     equipInstance.sockets[socketIdx] = { gemId: gem.id, gemLevel: gem.level };
-    this.scene.equipmentSystem._applyBonuses();
+    SystemRegistry.get('equipmentSystem').applyBonuses();
     this.scene.events.emit('inventoryUpdated', inv.slots);
     this.scene.events.emit('showMessage', `已镶嵌 ${gem.name}`, '#66ccff');
     return { ok:true };
@@ -40,14 +41,14 @@ export class GemSystem {
     const slot = equipInstance.sockets[socketIdx];
     if (!slot || !slot.gemId) return { ok:false, reason:'empty_socket' };
 
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     const gemTpl = makeGemInstance(slot.gemId, slot.gemLevel);
     if (!gemTpl) return { ok:false, reason:'invalid_gem' };
 
     if (!inv.addItem(gemTpl, 1)) return { ok:false, reason:'inv_full' };
 
     equipInstance.sockets[socketIdx] = { gemId: null, gemLevel: 0 };
-    this.scene.equipmentSystem._applyBonuses();
+    SystemRegistry.get('equipmentSystem').applyBonuses();
     this.scene.events.emit('inventoryUpdated', inv.slots);
     this.scene.events.emit('showMessage', `已拆卸 ${gemTpl.name}`, '#aaccff');
     return { ok:true };
@@ -58,7 +59,7 @@ export class GemSystem {
     if (!Array.isArray(gemSlotIndices) || gemSlotIndices.length !== 3)
       return { ok:false, reason:'need_3' };
 
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     const gems = gemSlotIndices.map(i => inv.slots[i]);
     if (gems.some(g => !g || g.type !== 'gem')) return { ok:false, reason:'not_gem' };
 

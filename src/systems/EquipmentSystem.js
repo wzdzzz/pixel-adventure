@@ -9,6 +9,7 @@ import { AFFIXES } from '../data/affixes.js';
 import { RARITY_MULTIPLIERS } from '../data/lootTables.js';
 import { GEMS } from '../data/gems.js';
 import { SetSystem } from './SetSystem.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 export const EQUIP_SLOTS = ['helmet', 'armor', 'weapon', 'offhand', 'necklace', 'ring1', 'ring2', 'boots'];
 
@@ -21,7 +22,7 @@ export class EquipmentSystem {
     this.setSystem = new SetSystem(scene);
 
     // Auto-recalculate stats when equipment changes
-    this.scene.events.on('equipmentChanged', () => this._applyBonuses());
+    this.scene.events.on('equipmentChanged', () => this.applyBonuses());
   }
 
   /** 暴露给 UI：当前所有激活套装的渲染信息 */
@@ -33,7 +34,7 @@ export class EquipmentSystem {
     if (!EQUIP_SLOTS.includes(slotName)) return null;
 
     // Level check
-    const levelSystem = this.scene.registry.get('levelSystem');
+    const levelSystem = SystemRegistry.get('levelSystem');
     if (item.level && levelSystem && levelSystem.level < item.level) {
       console.log(`[Equipment] 等级不足: 需要 Lv.${item.level}`);
       return null;
@@ -58,7 +59,7 @@ export class EquipmentSystem {
    * Rings: auto-selects ring1 if empty, else ring2.
    */
   equipFromInventory(invSlotIndex) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     if (!inv) return false;
 
     const item = inv.getSlot(invSlotIndex);
@@ -71,7 +72,7 @@ export class EquipmentSystem {
     }
 
     // Level check
-    const levelSystem = this.scene.registry.get('levelSystem');
+    const levelSystem = SystemRegistry.get('levelSystem');
     if (item.level && levelSystem && levelSystem.level < item.level) {
       this.scene.events.emit('showMessage', `等级不足 (需要 Lv.${item.level})`);
       return false;
@@ -79,7 +80,7 @@ export class EquipmentSystem {
 
     // 职业类型检查（武器：weaponType heavy=warrior / light=archer / magic=mage）
     if (item.weaponType) {
-      const playerClass = this.scene.player?.classType;
+      const playerClass = SystemRegistry.get('player')?.classType;
       const wt = item.weaponType;
       const allowed =
         (wt === 'heavy' && playerClass === 'warrior') ||
@@ -119,7 +120,7 @@ export class EquipmentSystem {
    * Unequip to inventory. Returns true on success.
    */
   unequipToInventory(slotName) {
-    const inv = this.scene.inventory;
+    const inv = SystemRegistry.get('inventory');
     if (!inv) return false;
 
     const item = this.slots[slotName];
@@ -237,8 +238,8 @@ export class EquipmentSystem {
    * 完整覆盖三类通道（bonuses / flatBonuses / bonusPct），避免脱装备残留。
    * level-based maxHp 加成在这里合并进 flatBonuses.maxHp。
    */
-  _applyBonuses() {
-    const player = this.scene.player;
+  applyBonuses() {
+    const player = SystemRegistry.get('player');
     if (!player) return;
 
     const { bonuses, flatBonuses, bonusPct } = this.getStatBonuses();
@@ -249,22 +250,44 @@ export class EquipmentSystem {
     }
 
     // 2) flatBonuses — 完整覆盖；maxHp 合并 level HP 加成
-    const levelSystem = this.scene.registry.get('levelSystem');
+    const levelSystem = SystemRegistry.get('levelSystem');
     const levelHpBonus = levelSystem ? (levelSystem.level - 1) * 5 : 0;
+
+    // 收集技能树 stat_bonus 加成
+    const tree = SystemRegistry.get('skillTreeSystem');
+    const treeFlatBonuses = {};
+    const treeBonusPct = {};
+    if (tree) {
+      for (const node of tree.nodes) {
+        if (node.currentRank <= 0) continue;
+        for (const eff of node.effects) {
+          if (eff.type !== 'stat_bonus') continue;
+          const delta = eff.value * node.currentRank;
+          if (eff.stat in player.stats.flatBonuses) {
+            treeFlatBonuses[eff.stat] = (treeFlatBonuses[eff.stat] || 0) + delta;
+          } else if (eff.stat in player.stats.bonusPct) {
+            treeBonusPct[eff.stat] = (treeBonusPct[eff.stat] || 0) + delta;
+          }
+        }
+      }
+    }
 
     const fb = player.stats.flatBonuses;
     for (const key of Object.keys(fb)) {
       if (key === 'maxHp') {
-        fb[key] = levelHpBonus + (flatBonuses[key] || 0);
+        fb[key] = levelHpBonus + (flatBonuses[key] || 0) + (treeFlatBonuses[key] || 0);
       } else {
-        fb[key] = flatBonuses[key] || 0;
+        fb[key] = (flatBonuses[key] || 0) + (treeFlatBonuses[key] || 0);
       }
     }
 
-    // 3) bonusPct — 完整覆盖（含 0 值），避免脱装备残留
+    // 3) bonusPct — 完整覆盖（含 0 值），避免脱装备残留；叠加技能树加成
     const fullPct = { ...player.stats.bonusPct };
     for (const k in fullPct) fullPct[k] = 0;
     Object.assign(fullPct, bonusPct);
+    for (const [k, v] of Object.entries(treeBonusPct)) {
+      fullPct[k] = (fullPct[k] || 0) + v;
+    }
     player.stats.setBonusPct(fullPct);
 
     player.stats.invalidate();

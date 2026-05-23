@@ -33,6 +33,7 @@ import { Enemy, EnemyState } from '../entities/Enemy.js';
 import { NPC } from '../entities/NPC.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -69,21 +70,40 @@ export class MainGameScene extends Phaser.Scene {
   }
 
   create() {
+    // 清除上一次的注册
+    SystemRegistry.clear();
+
     this.inventory = new InventorySystem(this);
     this.uiManager = new UIManager(this);
     this.floatingText = new FloatingTextManager(this);
     this.levelSystem = new LevelSystem(this);
-    this.registry.set('levelSystem', this.levelSystem);
     this.equipmentSystem = new EquipmentSystem(this);
-    this.registry.set('equipmentSystem', this.equipmentSystem);
     this.enhanceSystem = new EnhanceSystem(this);
     this.gemSystem = new GemSystem(this);
     this.reforgeSystem = new ReforgeSystem(this);
     this.craftingSystem = new CraftingSystem(this);
     this.triggerSystem = new TriggerSystem(this);
     this.skillTreeSystem = new SkillTreeSystem(this);
-    this.registry.set('skillTreeSystem', this.skillTreeSystem);
     this.questSystem = new QuestSystem(this);
+
+    // 统一注册到 SystemRegistry
+    SystemRegistry.register('inventory', this.inventory);
+    SystemRegistry.register('uiManager', this.uiManager);
+    SystemRegistry.register('floatingText', this.floatingText);
+    SystemRegistry.register('levelSystem', this.levelSystem);
+    SystemRegistry.register('equipmentSystem', this.equipmentSystem);
+    SystemRegistry.register('enhanceSystem', this.enhanceSystem);
+    SystemRegistry.register('gemSystem', this.gemSystem);
+    SystemRegistry.register('reforgeSystem', this.reforgeSystem);
+    SystemRegistry.register('craftingSystem', this.craftingSystem);
+    SystemRegistry.register('triggerSystem', this.triggerSystem);
+    SystemRegistry.register('skillTreeSystem', this.skillTreeSystem);
+    SystemRegistry.register('questSystem', this.questSystem);
+
+    // 兼容：保留 Phaser registry 供现有 UI 面板使用
+    this.registry.set('levelSystem', this.levelSystem);
+    this.registry.set('equipmentSystem', this.equipmentSystem);
+    this.registry.set('skillTreeSystem', this.skillTreeSystem);
     this.registry.set('questSystem', this.questSystem);
 
     // 若有待加载存档：先读 meta 决定职业/性别/当前关卡，确保 createPlayer 用正确的职业
@@ -899,7 +919,7 @@ export class MainGameScene extends Phaser.Scene {
         this.worldState.markEntityKilled(enemy.entityId);
         // Boss 永久击杀标记
         if (enemy.isBoss) {
-          this.worldState.setFlag(`boss_${enemy.entityId}_defeated`, true);
+          this.worldState.setFlag(`${enemy.entityId}_defeated`, true);
         }
       }
 
@@ -1050,13 +1070,13 @@ export class MainGameScene extends Phaser.Scene {
       if (this.player) {
         this.player.stats.setFlatBonus('maxHp', (level - 1) * 5);
         // 重算装备加成（让装备 maxHp 重新合并到 flatBonuses，避免被上一行覆盖）
-        if (this.equipmentSystem) this.equipmentSystem._applyBonuses();
+        if (this.equipmentSystem) this.equipmentSystem.applyBonuses();
         this.player.stats.invalidate();
         this.player.refreshStats();
 
         // Full HP/MP restore
         this.player.hp = this.player.maxHp;
-        this.player.mp = this.player.maxMp;
+        this.player.mana = this.player.maxMana;
         this.player.onHpChanged();
       }
 

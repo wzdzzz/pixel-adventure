@@ -169,7 +169,7 @@ export const InteractionHandler = {
 
           // 3) 重新计算装备加成（装备系统在 scene 级别持久，只需重算）
           if (this.equipmentSystem) {
-            this.equipmentSystem._applyBonuses();
+            this.equipmentSystem.applyBonuses();
           }
 
           // 4) 刷新属性缓存
@@ -264,7 +264,7 @@ export const InteractionHandler = {
     if (this.player.attackHitRegistered) return;
     if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
     const baseDmg = this.player.getAttack();
-    const playerLevel = this.player.levelSystem?.level || 1;
+    const playerLevel = this.levelSystem?.level || 1;
     const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
     const finalDmg = Math.round(baseDmg * suppressMult);
     enemy.takeDamage(finalDmg, this.player.sprite.x, this.player.sprite.y);
@@ -302,7 +302,7 @@ export const InteractionHandler = {
       // 蓄力技能：按蓄力比例缩放伤害
       const chargeRatio = (skill.effect.chargeable && this.player._chargeRatio) ? this.player._chargeRatio : 1.0;
       let damage = Math.floor(this.player.getAttack() * damageMultiplier * chargeRatio);
-      const playerLevel = this.player.levelSystem?.level || 1;
+      const playerLevel = this.levelSystem?.level || 1;
       const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
       damage = Math.round(damage * suppressMult);
 
@@ -363,7 +363,7 @@ export const InteractionHandler = {
     // ─── Multi-hit: spin ───
     else if (effectType === 'spin') {
       let damage = Math.floor(this.player.getAttack() * skill.effect.damageMultiplier);
-      const playerLevel = this.player.levelSystem?.level || 1;
+      const playerLevel = this.levelSystem?.level || 1;
       const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
       damage = Math.round(damage * suppressMult);
 

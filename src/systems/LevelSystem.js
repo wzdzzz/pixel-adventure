@@ -7,6 +7,7 @@
  * 击杀高等级敌人获得额外经验，低等级敌人经验递减
  */
 import { SCALING_CONFIG, TIER } from '../data/monsterScaling.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 export class LevelSystem {
   constructor(scene) {
@@ -49,7 +50,12 @@ export class LevelSystem {
 
   allocateStat(statName) {
     if (this.statPoints <= 0) return false;
+    const player = SystemRegistry.get('player');
+    if (!player) return false;
     this.statPoints--;
+    player.stats.addBase(statName, 1);
+    player.stats.invalidate();
+    player.refreshStats();
     this.scene.events.emit('statPointsChanged', this.statPoints);
     return true;
   }

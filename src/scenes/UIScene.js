@@ -70,7 +70,7 @@ export class UIScene extends Phaser.Scene {
 
     // Level display
     this.playerLevelText = this.add.text(baseX, baseY, 'LV.1', {
-      fontSize: '13px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '15px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setDepth(3);
 
     // HP - 红色
@@ -80,7 +80,7 @@ export class UIScene extends Phaser.Scene {
     this.hpGhost = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, 0xffffff, 0.4).setOrigin(0, 0.5).setDepth(2.5);
     this.hpBar = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, 0xcc3333).setOrigin(0, 0.5).setDepth(3);
     this.hpText = this.add.text(baseX + 215, baseY + 24, '100/100', {
-      fontSize: '11px', fill: '#ffffff', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
     // Stamina bar - 蓝色
@@ -88,7 +88,7 @@ export class UIScene extends Phaser.Scene {
     this.staminaBarBg.setStrokeStyle(1, 0x333344);
     this.staminaBar = this.add.rectangle(baseX + 31, baseY + 44, 178, 8, 0x3388dd).setOrigin(0, 0.5).setDepth(3);
     this.staminaText = this.add.text(baseX + 215, baseY + 44, '140/140', {
-      fontSize: '10px', fill: '#5599ee', fontFamily: 'Courier New'
+      fontSize: '13px', fill: '#5599ee', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
     // Rage bar - 橙色
@@ -96,7 +96,7 @@ export class UIScene extends Phaser.Scene {
     this.rageBarBg.setStrokeStyle(1, 0x443322);
     this.rageBar = this.add.rectangle(baseX + 31, baseY + 60, 0, 6, 0xff8822).setOrigin(0, 0.5).setDepth(3);
     this.rageText = this.add.text(baseX + 215, baseY + 60, '0/100', {
-      fontSize: '9px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '12px', fill: '#ffaa44', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
     // XP bar
@@ -104,32 +104,27 @@ export class UIScene extends Phaser.Scene {
     this.xpBarBg.setStrokeStyle(1, 0x333344);
     this.xpBar = this.add.rectangle(baseX + 31, baseY + 76, 0, 4, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
     this.xpText = this.add.text(baseX + 215, baseY + 76, 'XP: 0/40', {
-      fontSize: '9px', fill: '#9988cc', fontFamily: 'Courier New'
+      fontSize: '12px', fill: '#9988cc', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
     // Key + Gold below XP
     this.keyIcon = this.add.image(baseX + 30, baseY + 95, TEXTURES.KEY).setScale(0.7).setDepth(2);
     this.keyText = this.add.text(baseX + 45, baseY + 95, 'x0', {
-      fontSize: '11px', fill: '#ff69b4', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ff69b4', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(2);
     this.goldText = this.add.text(baseX + 100, baseY + 95, '💰 0', {
-      fontSize: '11px', fill: '#ffd700', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(2);
   }
 
-  createKeyDisplay() {
-    // 已整合到 createHealthBar 左下角
-  }
-
-  createGoldDisplay() {
-    // 已整合到 createHealthBar 左下角
-  }
+  createKeyDisplay() {}
+  createGoldDisplay() {}
 
   createLevelDisplay() {
     // 右上角仅保留关卡名
     const width = this._uiW;
     this.levelText = this.add.text(width - 15, 15, '第一关', {
-      fontSize: '12px', fill: '#7c4dff', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#7c4dff', fontFamily: 'Courier New'
     }).setOrigin(1, 0).setDepth(2);
   }
 
@@ -162,18 +157,18 @@ export class UIScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(5);
 
       const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `${i + 1}`, {
-        fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New'
+        fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New'
       }).setDepth(6);
 
       const cdOverlay = this.add.rectangle(x, slotY, slotSize - 2, 0, 0x000000, 0.6)
         .setOrigin(0.5, 1).setDepth(5.5);
 
       const cdText = this.add.text(x, slotY + 2, '', {
-        fontSize: '11px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(6).setVisible(false);
 
       const lvText = this.add.text(x + slotSize / 2 - 2, slotY + slotSize / 2 - 2, '', {
-        fontSize: '8px', fill: '#aaccff', fontFamily: 'Courier New'
+        fontSize: '11px', fill: '#aaccff', fontFamily: 'Courier New'
       }).setOrigin(1, 1).setDepth(6);
 
       this.skillSlots.push({ bg, icon, keyLabel, cdOverlay, cdText, lvText, skillId, x, y: slotY, size: slotSize });
@@ -207,11 +202,11 @@ export class UIScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(5);
 
       const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `F${i + 1}`, {
-        fontSize: '8px', fill: '#88aa88', fontFamily: 'Courier New'
+        fontSize: '11px', fill: '#88aa88', fontFamily: 'Courier New'
       }).setDepth(6);
 
       const countText = this.add.text(x + slotSize / 2 - 3, slotY + slotSize / 2 - 3, '', {
-        fontSize: '9px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold',
+        fontSize: '12px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2
       }).setOrigin(1, 1).setDepth(6);
 
@@ -362,11 +357,11 @@ export class UIScene extends Phaser.Scene {
         fontSize: '16px', fontFamily: 'Courier New'
       }).setOrigin(0.5).setDepth(5).setVisible(false);
       const time = this.add.text(0, 0, '', {
-        fontSize: '9px', color: '#ffffff', fontFamily: 'Courier New',
+        fontSize: '12px', color: '#ffffff', fontFamily: 'Courier New',
         fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
       }).setOrigin(0.5, 0.5).setDepth(6).setVisible(false);
       const stacks = this.add.text(0, 0, '', {
-        fontSize: '9px', color: '#ffdd44', fontFamily: 'Courier New',
+        fontSize: '12px', color: '#ffdd44', fontFamily: 'Courier New',
         fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
       }).setOrigin(1, 0).setDepth(6).setVisible(false);
       this.buffSlots.push({ bg, icon, time, stacks });
@@ -568,15 +563,15 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(1, 1).setStrokeStyle(1, 0x333355).setDepth(1);
 
     this.questTrackerTitle = this.add.text(width - 205, height - 145, '', {
-      fontSize: '10px', fill: '#ffaa44', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '13px', fill: '#ffaa44', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setDepth(2);
 
     this.questTrackerObj1 = this.add.text(width - 205, height - 130, '', {
-      fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New'
     }).setDepth(2);
 
     this.questTrackerObj2 = this.add.text(width - 205, height - 115, '', {
-      fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New'
     }).setDepth(2);
   }
 
@@ -683,13 +678,13 @@ export class UIScene extends Phaser.Scene {
 
     // 信息文字（地图下方）
     this._mmInfoText = this.add.text(mapX, mapY + mapSize + 10, '', {
-      fontSize: '10px', fill: '#cccccc', fontFamily: 'Courier New',
+      fontSize: '13px', fill: '#cccccc', fontFamily: 'Courier New',
       lineSpacing: 2
     }).setDepth(8);
 
     // 坐标文字
     this._mmCoordText = this.add.text(mapX + mapSize + 4, mapY + mapSize + 10, '', {
-      fontSize: '10px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '13px', fill: '#888888', fontFamily: 'Courier New'
     }).setOrigin(1, 0).setDepth(8);
 
     // 缓存上次玩家所在 chunk 以减少重绘
@@ -812,8 +807,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   createDebugButton() {
+    if (!import.meta.env.DEV) return;
     const btn = this.add.text(this._uiW - 10, 40, '🛠 +材料', {
-      fontSize: '12px', fill: '#ff6666', fontFamily: 'Courier New',
+      fontSize: '14px', fill: '#ff6666', fontFamily: 'Courier New',
       backgroundColor: '#1a1a2e', padding: { x: 6, y: 4 }
     }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
 
@@ -840,7 +836,7 @@ export class UIScene extends Phaser.Scene {
 
       // 提示
       const msg = this.add.text(this._uiW / 2, 80, '已添加全部材料 ×9999 + 金币 ×99999', {
-        fontSize: '14px', color: '#44ff44', fontFamily: 'Courier New',
+        fontSize: '16px', color: '#44ff44', fontFamily: 'Courier New',
         fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(9999);
       this.tweens.add({

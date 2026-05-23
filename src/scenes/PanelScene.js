@@ -63,7 +63,7 @@ export class PanelScene extends Phaser.Scene {
     this.tooltipBg = this.add.rectangle(0, 0, 200, 80, 0x1a1a2e, 0.95)
       .setStrokeStyle(1, 0x6666aa).setOrigin(0, 0);
     this.tooltipText = this.add.text(8, 8, '', {
-      fontSize: '10px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
+      fontSize: '13px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
     });
     this.tooltipContainer.add([this.tooltipBg, this.tooltipText]);
 
@@ -72,7 +72,7 @@ export class PanelScene extends Phaser.Scene {
     this.tooltipBg2 = this.add.rectangle(0, 0, 200, 80, 0x1a1a2e, 0.95)
       .setStrokeStyle(1, 0x6666aa).setOrigin(0, 0);
     this.tooltipText2 = this.add.text(8, 8, '', {
-      fontSize: '10px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
+      fontSize: '13px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
     });
     this.tooltipContainer2.add([this.tooltipBg2, this.tooltipText2]);
 
@@ -134,6 +134,14 @@ export class PanelScene extends Phaser.Scene {
       this._closeSmithyModal?.();
     });
 
+    // 统一面板间刷新事件
+    this.events.on('panel:refresh', (tabName) => {
+      if (tabName === 'character') this.refreshCharacterTab();
+      else if (tabName === 'inventory') this.refreshInventoryTab();
+      else if (tabName === 'skillTree') this.refreshSkillTreeTab();
+      else if (tabName === 'questLog') this.refreshQuestLogTab();
+    });
+
     this.playOpenAnimation();
     this.refreshCharacterTab();
     this.refreshInventoryTab();
@@ -152,12 +160,12 @@ export class PanelScene extends Phaser.Scene {
         .setStrokeStyle(1, 0x5a5a8a).setDepth(2);
 
       const label = this.add.text(tabX, tabY, `${TAB_ICONS[i]} ${TAB_LABELS[i]}`, {
-        fontSize: '14px', fill: '#aaaacc', fontFamily: 'Courier New'
+        fontSize: '16px', fill: '#aaaacc', fontFamily: 'Courier New'
       }).setOrigin(0.5).setDepth(3);
 
       const hintChar = TAB_KEYS[i] || '';
       const hint = this.add.text(tabX + tabW / 2 - 14, tabY - tabH / 2 + 4, hintChar, {
-        fontSize: '9px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '12px', fill: '#666688', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0).setDepth(3);
 
       bg.setInteractive({ useHandCursor: true });
@@ -227,7 +235,7 @@ export class PanelScene extends Phaser.Scene {
   _showPanelToast(text, color) {
     const w = this._uiW || this.cameras.main.width;
     const msg = this.add.text(w / 2, 60, text, {
-      fontSize: '14px', color: color || '#ffaa44', fontFamily: 'Courier New',
+      fontSize: '16px', color: color || '#ffaa44', fontFamily: 'Courier New',
       fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
       backgroundColor: '#1a1a2e', padding: { x: 10, y: 6 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);
@@ -297,17 +305,17 @@ export class PanelScene extends Phaser.Scene {
     bindings.forEach((pair, i) => {
       const y = topY + 40 + i * 28;
       const action = this.add.text(leftX + 10, y, pair[0], {
-        fontSize: '13px', fill: '#ccccdd', fontFamily: 'Courier New'
+        fontSize: '15px', fill: '#ccccdd', fontFamily: 'Courier New'
       });
       const key = this.add.text(leftX + 220, y, pair[1], {
-        fontSize: '13px', fill: '#88ccff', fontFamily: 'Courier New'
+        fontSize: '15px', fill: '#88ccff', fontFamily: 'Courier New'
       });
       container.add([action, key]);
     });
 
     const note = this.add.text(leftX + 10, topY + 40 + bindings.length * 28 + 20,
       '（快捷键暂不支持自定义）', {
-        fontSize: '11px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '14px', fill: '#666688', fontFamily: 'Courier New'
       });
     container.add(note);
   }

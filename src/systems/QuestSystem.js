@@ -1,4 +1,5 @@
 import { questData } from '../data/quests.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 export class QuestSystem {
   constructor(scene) {
@@ -8,6 +9,7 @@ export class QuestSystem {
       status: 'locked',
       objectives: q.objectives.map(o => ({ ...o, current: 0 }))
     }));
+    this._trackedQuestId = null;
     this.setupEventListeners();
   }
 
@@ -25,7 +27,7 @@ export class QuestSystem {
     // Item pickup tracking (for potions, artifacts, etc.)
     this.scene.events.on('inventoryUpdated', () => {
       // Check potion collection
-      const inv = this.scene.inventory;
+      const inv = SystemRegistry.get('inventory');
       if (inv) {
         const potionSlot = inv.slots.find(s => s && s.id === 'potion');
         const potionCount = potionSlot ? potionSlot.quantity : 0;
@@ -100,19 +102,31 @@ export class QuestSystem {
       this.scene.events.emit('questCompleted', quest);
       // Award rewards
       if (quest.rewards.xp) {
-        const ls = this.scene.registry.get('levelSystem');
+        const ls = SystemRegistry.get('levelSystem');
         if (ls) ls.addXp(quest.rewards.xp);
       }
-      if (quest.rewards.gold && this.scene.inventory) {
-        this.scene.inventory.gold += quest.rewards.gold;
-        this.scene.events.emit('goldChanged', this.scene.inventory.gold);
+      const inv = SystemRegistry.get('inventory');
+      if (quest.rewards.gold && inv) {
+        inv.gold += quest.rewards.gold;
+        this.scene.events.emit('goldChanged', inv.gold);
       }
     }
   }
 
   getActiveQuests() { return this.quests.filter(q => q.status === 'active'); }
   getCompletedQuests() { return this.quests.filter(q => q.status === 'completed'); }
-  getTrackedQuest() { return this.getActiveQuests()[0] || null; }
+  getTrackedQuest() {
+    if (this._trackedQuestId) {
+      const q = this.quests.find(q => q.id === this._trackedQuestId && q.status === 'active');
+      if (q) return q;
+    }
+    return this.getActiveQuests()[0] || null;
+  }
+
+  setTrackedQuest(questId) {
+    this._trackedQuestId = questId;
+    this.scene.events.emit('questTrackChanged', questId);
+  }
 
   toJSON() {
     return this.quests.map(q => ({

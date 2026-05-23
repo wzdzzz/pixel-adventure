@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ENEMY_SKILLS, getEnemySkill } from '../data/enemySkills.js';
 import { EnemyProjectile } from '../entities/EnemyProjectile.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 /**
  * EnemySkillSystem — 敌人技能管理（每个 Enemy 实例持有一份）
@@ -89,7 +90,7 @@ export class EnemySkillSystem {
       this._activeIndicator = ring;
     } else if (skill.type === 'charge_attack') {
       // 显示朝玩家的方向箭头线
-      const player = this.scene.player?.sprite;
+      const player = SystemRegistry.get('player')?.sprite;
       if (player) {
         const angle = Math.atan2(player.y - sprite.y, player.x - sprite.x);
         const len = skill.range * 0.5;

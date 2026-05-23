@@ -327,7 +327,14 @@ export class Player extends Actor {
     const primary = this.stats.getEffective(primaryStat);
     const flatAttack = this.stats.flatBonuses?.attack || 0;
     const pctAttack = this.stats.bonusPct?.attack || 0;
-    const baseAttack = (primary * 2 + flatAttack) * (1 + pctAttack);
+    let baseAttack = (primary * 2 + flatAttack) * (1 + pctAttack);
+    // 职业专属伤害加成
+    const attackType = this.classConfig?.attackType;
+    if (attackType === 'ranged') {
+      baseAttack *= 1 + (this.stats.bonusPct?.rangedDmg || 0);
+    } else if (attackType === 'magic') {
+      baseAttack *= 1 + (this.stats.bonusPct?.spellDmg || 0);
+    }
     const mod = this.statusEffects?.getModifiers().attack ?? 1;
     return Math.round(baseAttack * mod);
   }

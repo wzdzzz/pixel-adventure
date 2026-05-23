@@ -124,7 +124,7 @@ export class InventorySystem {
 
   sortBy(criteria = 'level') {
     const items = this.slots.filter(s => s !== null);
-    const rarityOrder = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
+    const rarityOrder = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 
     items.sort((a, b) => {
       switch (criteria) {

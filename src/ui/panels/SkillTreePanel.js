@@ -18,7 +18,7 @@ export const SkillTreePanel = {
 
     // Skill points display
     this.skillPointsText = this.add.text(this.panelLeft + 20, contentTop + 10, '技能点: 0', {
-      fontSize: '13px', fill: '#00ccff', fontFamily: 'Courier New'
+      fontSize: '15px', fill: '#00ccff', fontFamily: 'Courier New'
     });
     container.add(this.skillPointsText);
 
@@ -113,7 +113,7 @@ export const SkillTreePanel = {
           .setStrokeStyle(1, 0x4a4a6a)
           .setInteractive({ useHandCursor: true });
         const stx = this.add.text(sx, sbY, `${s + 1}`, {
-          fontSize: '10px', fill: '#aaaacc', fontFamily: 'Courier New'
+          fontSize: '13px', fill: '#aaaacc', fontFamily: 'Courier New'
         }).setOrigin(0.5);
         cardsContainer.add(sbg);
         cardsContainer.add(stx);
@@ -135,26 +135,26 @@ export const SkillTreePanel = {
 
       // Skill name
       const nameText = this.add.text(textLeft, cy - 28, base.name, {
-        fontSize: '13px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '15px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
       });
       cardsContainer.add(nameText);
 
       // Level text — 紧跟名字
       const lvText = this.add.text(textLeft, cy - 12, 'Lv.1/5', {
-        fontSize: '10px', fill: '#aaccff', fontFamily: 'Courier New'
+        fontSize: '13px', fill: '#aaccff', fontFamily: 'Courier New'
       });
       cardsContainer.add(lvText);
 
       // Description（限制宽度避免覆盖按钮）
       const descText = this.add.text(textLeft, cy + 2, '', {
-        fontSize: '9px', fill: '#aaaaaa', fontFamily: 'Courier New',
+        fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New',
         wordWrap: { width: textW }
       });
       cardsContainer.add(descText);
 
       // Stats line
       const statsText = this.add.text(textLeft, cy + cardH / 2 - 14, '', {
-        fontSize: '9px', fill: '#888899', fontFamily: 'Courier New'
+        fontSize: '12px', fill: '#888899', fontFamily: 'Courier New'
       });
       cardsContainer.add(statsText);
 
@@ -168,13 +168,13 @@ export const SkillTreePanel = {
       cardsContainer.add(btnBg);
 
       const btnText = this.add.text(btnX, btnY, '升级', {
-        fontSize: '10px', fill: '#44bb44', fontFamily: 'Courier New'
+        fontSize: '13px', fill: '#44bb44', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       cardsContainer.add(btnText);
 
       // Next level preview — 升级按钮左侧小提示
       const nextLvText = this.add.text(btnX - btnW / 2 - 4, btnY, '', {
-        fontSize: '8px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '11px', fill: '#666688', fontFamily: 'Courier New'
       }).setOrigin(1, 0.5);
       cardsContainer.add(nextLvText);
 
@@ -193,7 +193,7 @@ export const SkillTreePanel = {
 
     // Bottom hint（固定，不随滚动）
     this.skillHintText = this.add.text(this.panelX, viewBottom + 4, '每3级获得1个技能点 · 滚轮可滚动', {
-      fontSize: '10px', fill: '#555566', fontFamily: 'Courier New'
+      fontSize: '13px', fill: '#555566', fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
     container.add(this.skillHintText);
 
@@ -313,9 +313,10 @@ export const SkillTreePanel = {
         card.btnBg.setStrokeStyle(1, 0x44bb44);
         card.btnBg.setFillStyle(0x2a3a2a);
         card.btnBg.setInteractive({ useHandCursor: true });
-        // Next level preview
-        const nextScaled = engine.getScaledSkill(skillId);
-        const nextDmg = nextScaled.effect?.damageMultiplier ? Math.round(nextScaled.effect.damageMultiplier * 100) : 0;
+        // Next level preview — 使用 getAtLevel 获取下一级数值
+        const nextLevel = (engine.skillLevels[skillId] || 1) + 1;
+        const nextScaled = engine.getAtLevel(skillId, nextLevel);
+        const nextDmg = nextScaled?.effect?.damageMultiplier ? Math.round(nextScaled.effect.damageMultiplier * 100) : 0;
         card.nextLvText.setText(nextDmg ? `下级: ${nextDmg}%伤害` : '');
         card.nextLvText.setColor('#558855');
       } else {
@@ -350,7 +351,7 @@ export const SkillTreePanel = {
         });
       }
       this.refreshSkillTreeTab();
-      this.refreshCharacterTab();
+      this.events.emit('panel:refresh', 'character');
     }
   }
 };

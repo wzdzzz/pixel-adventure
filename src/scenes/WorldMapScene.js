@@ -191,7 +191,7 @@ export class WorldMapScene extends Phaser.Scene {
       mapX + fracX * mapSize,
       mapY + fracY * mapSize - 12,
       '▼ 你', {
-        fontSize: '9px', fill: '#00ff00', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '12px', fill: '#00ff00', fontFamily: 'Courier New', fontStyle: 'bold'
       }
     ).setOrigin(0.5).setDepth(3);
   }

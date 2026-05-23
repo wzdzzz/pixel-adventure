@@ -1,3 +1,5 @@
+import SystemRegistry from '../core/SystemRegistry.js';
+
 /**
  * SkillEngine — 管理技能冷却、资源检查、等级和阶段执行。
  *
@@ -64,10 +66,23 @@ export class SkillEngine {
     return this.skillLevels[skillId] || 0;
   }
 
-  /** Get scaled skill data for current level */
+  /** Get scaled skill data for current level, with skill tree enhancements */
   getScaledSkill(skillId) {
     const level = this.skillLevels[skillId] || 1;
-    return this.getAtLevel(skillId, level);
+    const skill = this.getAtLevel(skillId, level);
+    if (!skill) return skill;
+
+    // 叠加技能树增强
+    const tree = SystemRegistry.get('skillTreeSystem');
+    if (tree && tree.skillEnhancements[skillId]) {
+      const enhancements = tree.skillEnhancements[skillId];
+      for (const [param, value] of Object.entries(enhancements)) {
+        if (skill.effect && param in skill.effect) {
+          skill.effect[param] += value;
+        }
+      }
+    }
+    return skill;
   }
 
   /**

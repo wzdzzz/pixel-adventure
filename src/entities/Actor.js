@@ -120,10 +120,11 @@ export class Actor {
     return int * 10 + 50;
   }
 
-  /** Mana regen rate per second based on INT (脱战回复) */
+  /** Mana regen rate per second based on INT (脱战回复), scaled by bonusPct.manaRegen */
   getManaRegenRate() {
     const int = this.stats.getEffective('int');
-    return int * 0.05;
+    const manaRegenMult = 1 + (this.stats?.bonusPct?.manaRegen || 0);
+    return int * 0.05 * manaRegenMult;
   }
 
   /** Use mana. Returns true if enough, false otherwise. */
@@ -149,9 +150,10 @@ export class Actor {
     return true;
   }
 
-  /** Add rage (clamped to 0-100) */
+  /** Add rage (clamped to 0-100), scaled by bonusPct.rageGain */
   addRage(amount) {
-    this.rage = Math.min(this.maxRage, this.rage + amount);
+    const rageGainMult = 1 + (this.stats?.bonusPct?.rageGain || 0);
+    this.rage = Math.min(this.maxRage, this.rage + Math.round(amount * rageGainMult));
     this.rageCombatTimer = 0;
     this.onResourceChanged();
   }

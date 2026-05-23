@@ -1,4 +1,5 @@
 import { formatEquipTooltip, getSetCount } from './InventoryPanel.js';
+import SystemRegistry from '../../core/SystemRegistry.js';
 
 export const CharacterPanel = {
   createCharacterTab() {
@@ -23,7 +24,7 @@ export const CharacterPanel = {
 
     // --- LEFT: Paper Doll (加大区域) ---
     const leftTitle = this.add.text(leftX, topY, '-- 角色装备 --', {
-      fontSize: '13px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '15px', fill: '#8888aa', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     container.add(leftTitle);
 
@@ -63,11 +64,11 @@ export const CharacterPanel = {
         fontSize: '18px', fontFamily: 'Courier New'
       }).setOrigin(0.5).setVisible(false);
       const label = this.add.text(sx, sy + 24, def.label, {
-        fontSize: '9px', fill: '#555566', fontFamily: 'Courier New'
+        fontSize: '12px', fill: '#555566', fontFamily: 'Courier New'
       }).setOrigin(0.5);
 
       cell.on('pointerdown', (pointer) => {
-        const equip = this.gameScene?.equipmentSystem;
+        const equip = SystemRegistry.get('equipmentSystem');
         if (!equip) return;
         const equipped = equip.getSlot(def.slot);
         if (!equipped) return;
@@ -80,13 +81,13 @@ export const CharacterPanel = {
         // 左键 → 卸下
         equip.unequipToInventory(def.slot);
         this.refreshCharacterTab();
-        this.refreshInventoryTab();
+        this.events.emit('panel:refresh', 'inventory');
       });
 
       // 备用右键监听（某些 Phaser 版本 pointerdown 不传 button=2）
       cell.on('pointerup', (pointer) => {
         if (pointer.button === 2 || pointer.rightButtonDown()) {
-          const equip = this.gameScene?.equipmentSystem;
+          const equip = SystemRegistry.get('equipmentSystem');
           if (!equip) return;
           const equipped = equip.getSlot(def.slot);
           if (!equipped) return;
@@ -95,7 +96,7 @@ export const CharacterPanel = {
       });
 
       cell.on('pointerover', () => {
-        const equip = this.gameScene?.equipmentSystem;
+        const equip = SystemRegistry.get('equipmentSystem');
         if (!equip) return;
         const equipped = equip.getSlot(def.slot);
         if (equipped) {
@@ -113,7 +114,7 @@ export const CharacterPanel = {
 
     const xpBarY = previewY + 180;
     this.charLevelText = this.add.text(leftX - 80, xpBarY, 'LV.1', {
-      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '16px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
     });
     container.add(this.charLevelText);
 
@@ -126,13 +127,13 @@ export const CharacterPanel = {
     container.add(this.charXpBar);
 
     this.charXpText = this.add.text(leftX - 10 + 70, xpBarY + 7, '0/40', {
-      fontSize: '9px', fill: '#aaaacc', fontFamily: 'Courier New'
+      fontSize: '12px', fill: '#aaaacc', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     container.add(this.charXpText);
 
     // --- RIGHT: Base Stats ---
     const statsTitle = this.add.text(rightX, topY, '-- 基础属性 --', {
-      fontSize: '12px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#8888aa', fontFamily: 'Courier New'
     });
     container.add(statsTitle);
 
@@ -145,16 +146,16 @@ export const CharacterPanel = {
       const y = topY + 30 + i * 32;
 
       const nameText = this.add.text(rightX, y, statNames[i], {
-        fontSize: '13px', fill: '#ccccdd', fontFamily: 'Courier New'
+        fontSize: '15px', fill: '#ccccdd', fontFamily: 'Courier New'
       });
 
       const valueText = this.add.text(rightX + 140, y, '0', {
-        fontSize: '13px', fill: '#ffffff', fontFamily: 'Courier New'
+        fontSize: '15px', fill: '#ffffff', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       this.charStatValues[stat] = valueText;
 
       const plusBtn = this.add.text(rightX + 175, y, '[+]', {
-        fontSize: '13px', fill: '#444444', fontFamily: 'Courier New'
+        fontSize: '15px', fill: '#444444', fontFamily: 'Courier New'
       }).setInteractive({ useHandCursor: true });
       this.charStatPlusButtons[stat] = plusBtn;
 
@@ -173,7 +174,7 @@ export const CharacterPanel = {
     });
 
     this.charStatPointsText = this.add.text(rightX, topY + 30 + 6 * 32 + 10, '可用属性点: 0', {
-      fontSize: '12px', fill: '#ffd700', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
     });
     container.add(this.charStatPointsText);
 
@@ -182,7 +183,7 @@ export const CharacterPanel = {
     this.derivedExpanded = true;
 
     const derivedToggle = this.add.text(rightX, derivedY, '▼ 衍生属性', {
-      fontSize: '12px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#8888aa', fontFamily: 'Courier New'
     }).setInteractive({ useHandCursor: true });
     container.add(derivedToggle);
 
@@ -205,10 +206,10 @@ export const CharacterPanel = {
     derivedStats.forEach((ds, i) => {
       const y = derivedY + 22 + i * 20;
       const label = this.add.text(rightX + 10, y, `${ds.label}:`, {
-        fontSize: '11px', fill: '#999999', fontFamily: 'Courier New'
+        fontSize: '14px', fill: '#999999', fontFamily: 'Courier New'
       });
       const value = this.add.text(rightX + 120, y, '-', {
-        fontSize: '11px', fill: '#cccccc', fontFamily: 'Courier New'
+        fontSize: '14px', fill: '#cccccc', fontFamily: 'Courier New'
       });
       this.charDerivedTexts[ds.key] = value;
       this.derivedContainer.add([label, value]);
@@ -223,7 +224,7 @@ export const CharacterPanel = {
     // --- 已激活套装区 ---
     const setsY = derivedY + 22 + derivedStats.length * 20 + 14;
     this.charSetsTitle = this.add.text(rightX, setsY, '🛡 已激活套装', {
-      fontSize: '12px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: '#ffaa44', fontFamily: 'Courier New'
     });
     container.add(this.charSetsTitle);
     this.charSetsContainer = this.add.container(0, 0);
@@ -235,7 +236,7 @@ export const CharacterPanel = {
   refreshActiveSets() {
     if (!this.charSetsContainer) return;
     this.charSetsContainer.removeAll(true);
-    const equip = this.gameScene?.equipmentSystem;
+    const equip = SystemRegistry.get('equipmentSystem');
     if (!equip || !equip.getActiveSets) return;
     const activeSets = equip.getActiveSets();
 
@@ -244,7 +245,7 @@ export const CharacterPanel = {
 
     if (!activeSets.length) {
       const t = this.add.text(rightX + 10, baseY, '（未装备任何套装）', {
-        fontSize: '10px', fill: '#666677', fontFamily: 'Courier New'
+        fontSize: '13px', fill: '#666677', fontFamily: 'Courier New'
       });
       this.charSetsContainer.add(t);
       return;
@@ -253,7 +254,7 @@ export const CharacterPanel = {
     let y = baseY;
     for (const setInfo of activeSets) {
       const head = this.add.text(rightX + 10, y, `${setInfo.name}  ${setInfo.count}/${setInfo.total}`, {
-        fontSize: '11px', fill: '#ffd566', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: '#ffd566', fontFamily: 'Courier New', fontStyle: 'bold'
       });
       this.charSetsContainer.add(head);
       y += 16;
@@ -261,7 +262,7 @@ export const CharacterPanel = {
         const mark = tier.active ? '✓' : '✗';
         const color = tier.active ? '#88ff88' : '#666677';
         const t = this.add.text(rightX + 18, y, `${mark} ${tier.tier}件: ${tier.label}`, {
-          fontSize: '10px', fill: color, fontFamily: 'Courier New'
+          fontSize: '13px', fill: color, fontFamily: 'Courier New'
         });
         this.charSetsContainer.add(t);
         y += 14;
@@ -307,7 +308,7 @@ export const CharacterPanel = {
     this.charDerivedTexts.dropBonus.setText(`${derived.dropBonus.toFixed(1)}%`);
 
     // Update equipment slot visuals
-    const equip = this.gameScene?.equipmentSystem;
+    const equip = SystemRegistry.get('equipmentSystem');
     if (equip && this.equipSlotUI) {
       const SLOT_ICONS = {
         weapon: '⚔', offhand: '🛡', helmet: '⛑', armor: '🛡',
@@ -346,15 +347,12 @@ export const CharacterPanel = {
 
     // Allocate
     if (levelSystem.allocateStat(statName)) {
-      player.stats.addBase(statName, 1);
-      player.stats.invalidate();
-      player.refreshStats();
       player.onHpChanged();
 
       // Show "+1" floating effect
       const valueText = this.charStatValues[statName];
       const floatText = this.add.text(valueText.x, valueText.y, '+1', {
-        fontSize: '12px', fill: '#00ff00', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: '#00ff00', fontFamily: 'Courier New', fontStyle: 'bold'
       }).setOrigin(0.5, 1).setDepth(25);
 
       this.tweens.add({
@@ -433,7 +431,7 @@ export const CharacterPanel = {
     let optY = 4;
     const addOpt = (label, color, cb) => {
       const t = this.add.text(8, optY, label, {
-        fontSize:'11px', fill:color, fontFamily:'Courier New'
+        fontSize:'14px', fill:color, fontFamily:'Courier New'
       }).setInteractive({ useHandCursor: true });
       t.on('pointerdown', () => { cb(); this.charContextMenu.setVisible(false); });
       t.on('pointerover', () => t.setColor('#ffffff'));
@@ -455,10 +453,10 @@ export const CharacterPanel = {
 
     // 卸下
     addOpt('📥 卸下', '#aaccff', () => {
-      const equip = this.gameScene.equipmentSystem;
+      const equip = SystemRegistry.get('equipmentSystem');
       equip.unequipToInventory(slotName);
       this.refreshCharacterTab();
-      this.refreshInventoryTab();
+      this.events.emit('panel:refresh', 'inventory');
     });
 
     bg.setSize(120, optY + 4);
@@ -479,7 +477,7 @@ export const CharacterPanel = {
   showEquipTooltip(item, x, y) {
     if (!this.tooltipContainer) return;
 
-    const sc = getSetCount(this.gameScene?.equipmentSystem, item);
+    const sc = getSetCount(SystemRegistry.get('equipmentSystem'), item);
     const text = formatEquipTooltip(item, sc) + '\n\n左键卸下 | 右键菜单';
     this.tooltipText.setText(text);
 

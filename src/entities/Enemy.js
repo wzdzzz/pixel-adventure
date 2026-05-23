@@ -174,7 +174,7 @@ export class Enemy extends Actor {
     this.hbLevelText = this.scene.add.text(
       this.sprite.x, this.sprite.y,
       `Lv.${this.finalLevel}`,
-      { fontSize: '8px', fill: '#ffffff', fontFamily: 'Courier New' }
+      { fontSize: '11px', fill: '#ffffff', fontFamily: 'Courier New' }
     ).setOrigin(1, 0.5).setDepth(902);
 
     this.updateHealthBar();

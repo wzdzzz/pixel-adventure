@@ -175,7 +175,7 @@ export class SaveSystem {
 
       if (scene.equipmentSystem && saveData.equipment) {
         scene.equipmentSystem.fromJSON(saveData.equipment);
-        scene.equipmentSystem._applyBonuses();
+        scene.equipmentSystem.applyBonuses();
       }
 
       // 兼容老存档：装备 instance 字段补全（Task 4 之前的存档没有 instanceId/affixes/enhanceLevel）
@@ -193,8 +193,8 @@ export class SaveSystem {
           if (typeof it.reforgePity !== 'number') it.reforgePity = 0;
         }
         // 重算装备贡献以反映补全字段（虽然空 affixes/0 enhance 不改变结果，但保险）
-        if (typeof scene.equipmentSystem._applyBonuses === 'function') {
-          scene.equipmentSystem._applyBonuses();
+        if (typeof scene.equipmentSystem.applyBonuses === 'function') {
+          scene.equipmentSystem.applyBonuses();
         }
       }
 
@@ -242,7 +242,7 @@ export class SaveSystem {
       }
 
       if (scene.equipmentSystem) {
-        scene.equipmentSystem._applyBonuses();
+        scene.equipmentSystem.applyBonuses();
       }
 
       if (scene.player?.statusEffects && saveData.player?.statusEffects) {

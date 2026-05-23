@@ -1,4 +1,5 @@
 import { AFFIXES } from '../data/affixes.js';
+import SystemRegistry from '../core/SystemRegistry.js';
 
 const TRIGGER_EFFECTS = {
   spawn_fireball: (player, ctx, power) => {
@@ -37,7 +38,7 @@ export class TriggerSystem {
 
   _collectTriggers() {
     const triggers = [];
-    const eqSys = this.scene.equipmentSystem;
+    const eqSys = SystemRegistry.get('equipmentSystem');
     if (!eqSys?.slots) return triggers;
     for (const k in eqSys.slots) {
       const it = eqSys.slots[k];
@@ -52,7 +53,7 @@ export class TriggerSystem {
 
   fire(event, ctx = {}) {
     const triggers = this._collectTriggers();
-    const player = this.scene.player;
+    const player = SystemRegistry.get('player');
     if (!player) return;
     for (const t of triggers) {
       if (t.event !== event) continue;
