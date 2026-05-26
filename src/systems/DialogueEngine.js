@@ -57,6 +57,8 @@ export class DialogueEngine {
     const stage = npc.getActiveStage?.() || 'greet';
     let tree = stages[stage];
 
+    console.log(`[DialogueEngine] start: npcId=${npc.id}, stage=${stage}, hasTree=${!!tree}`);
+
     // 兜底：__surrendered__ stage 用通用文本
     if (!tree && stage === '__surrendered__') {
       tree = {
@@ -98,7 +100,10 @@ export class DialogueEngine {
   // ===== 节点执行 =====
 
   _runNode(nodeId) {
-    if (!this.currentTree) return;
+    if (!this.currentTree) {
+      console.warn('[DialogueEngine] _runNode: currentTree is null');
+      return;
+    }
     const node = this.currentTree[nodeId];
     if (!node) {
       console.warn(`[DialogueEngine] node "${nodeId}" not found, ending`);
@@ -118,6 +123,7 @@ export class DialogueEngine {
     const speaker = node.speaker || this.activeNpc?.name || '???';
     const text = node.text ? this._interpolate(node.text) : '';
     const options = this._buildOptions(node);
+    console.log(`[DialogueEngine] _runNode(${nodeId}): speaker=${speaker}, text=${text}, options=${options.length}`);
     this.scene?.events?.emit('dialogueNodeEntered', {
       npc: this.activeNpc, node, nodeId, speaker, text, options,
       isEnd: !!node.end

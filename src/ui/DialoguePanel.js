@@ -98,7 +98,10 @@ export class DialoguePanel {
   }
 
   _listen() {
-    this.scene.events.on('dialogueStarted', () => this.show());
+    this.scene.events.on('dialogueStarted', (data) => {
+      console.log('[DialoguePanel] dialogueStarted event received', data);
+      this.show();
+    });
     this.scene.events.on('dialogueEnded', () => this.hide());
     this.scene.events.on('dialogueNodeEntered', (data) => this.renderNode(data));
   }
@@ -117,6 +120,7 @@ export class DialoguePanel {
 
   renderNode(data) {
     if (!data) return;
+    console.log(`[DialoguePanel] renderNode: speaker=${data.speaker}, text=${data.text}, options=${data.options?.length}`);
     this.nameText.setText(data.speaker || '???');
     this._isEnd = !!data.isEnd;
     this._options = data.options || [];
