@@ -59,6 +59,32 @@ export const NPCS = {
     trainerId: 'warrior_trainer'
   },
 
+  // ─── 测试同伴：游侠艾琳（招募 500 金） ───
+  companion_rogue: {
+    id: 'companion_rogue',
+    name: '游侠艾琳',
+    sprite: 'npc',
+    faction: 'ally',
+    essential: true,
+    persistent: false,
+    spawn: { chunkX: 8, chunkY: 8, localX: 18, localY: 16 },
+    initialStage: 'recruitable',
+    dialogueModule: 'companion_rogue',
+    movement: 'stand',
+    combatStats: {
+      level: 3,
+      hp: 80,
+      skills: ['basic_melee'],
+      detectionRange: 250,
+      aggroDelay: 200,
+      primaryAttackStat: 'agility'
+    },
+    recruitCost: { gold: 500 },
+    transitions: [
+      { from: 'recruitable', to: 'recruited', on: 'flag:companion_rogue:recruited' }
+    ]
+  },
+
   // ─── 测试卫兵：戳一下守卫就翻脸（faction = town_guard） ───
   town_guard_01: {
     id: 'town_guard_01',

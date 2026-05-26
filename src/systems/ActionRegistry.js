@@ -261,9 +261,42 @@ export class ActionRegistry {
     // === Phase 3+ 实现 ===
     this.register('trigger_combat', stub('trigger_combat'));
 
-    // === Phase 6+ 实现 ===
-    this.register('recruit_companion', stub('recruit_companion'));
-    this.register('dismiss_companion', stub('dismiss_companion'));
+    // === Phase 6 实现 ===
+    // recruit_companion[:companionId] — 默认招募当前对话 NPC
+    this.register('recruit_companion', (args, ctx) => {
+      const npc = ctx?.npc;
+      if (!npc) {
+        scene?.events?.emit('showMessage', '未找到目标 NPC', '#ff8888');
+        return;
+      }
+      const mgr = scene?.companionManager;
+      if (!mgr) return;
+      // 招募代价
+      const cost = npc.config?.recruitCost?.gold || 0;
+      const inv = scene.inventory;
+      if (cost > 0) {
+        if ((inv?.gold || 0) < cost) {
+          scene.events.emit('showMessage', `招募需要 ${cost} 金币`, '#ff8888');
+          return;
+        }
+        inv.gold -= cost;
+        scene.events.emit('goldChanged', inv.gold);
+      }
+      ctx?.dialogueEngine?.stop();
+      const ok = mgr.recruit(npc);
+      if (ok && npc.npcMemory && npc.id) {
+        scene.npcMemory?.setFlag(npc.id, 'recruited', true);
+      } else if (!ok && cost > 0) {
+        // 回滚
+        inv.gold += cost;
+        scene.events.emit('goldChanged', inv.gold);
+      }
+    });
+
+    this.register('dismiss_companion', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      scene?.companionManager?.dismiss();
+    });
 
     // === Phase 7+ 实现 ===
     this.register('gift_item', stub('gift_item'));

@@ -4,6 +4,7 @@ import { Actor } from './Actor.js';
 import { EnemySkillSystem } from '../systems/EnemySkillSystem.js';
 import { CombatAI, CombatState } from '../systems/CombatAI.js';
 import { NPCState } from './NPC.js';
+import { installNpcTransitions } from '../systems/NpcTransitions.js';
 import { scaleBaseStats, applyDerivedScaling } from '../data/monsterScaling.js';
 import { EnemyState } from './Enemy.js';
 
@@ -114,6 +115,9 @@ export class CombatNPC extends Actor {
     // AI 写自己的 state，本类的 .state 通过 getter delegate（解决兼容 handleSkillHit/EnemyState 用法）
     // 实现方式：每帧从 ai.state 映射到 this.state
     this._refreshIndicator();
+
+    // Stage 自动转换（同 NPC 机制）
+    this._uninstallTransitions = installNpcTransitions(this, this.config.transitions);
   }
 
   _applyLevelScaling(level, tier) {
@@ -350,6 +354,7 @@ export class CombatNPC extends Actor {
   destroy() {
     if (this._isDestroyed) return;
     this._isDestroyed = true;
+    if (this._uninstallTransitions) { this._uninstallTransitions(); this._uninstallTransitions = null; }
     if (this.skillSystem) this.skillSystem.cancel();
     this._destroyHealthBar();
     if (this.nameText) { this.nameText.destroy(); this.nameText = null; }

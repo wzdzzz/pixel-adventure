@@ -41,6 +41,7 @@ import { ShopService } from '../systems/ShopService.js';
 import { ShopPanel } from '../ui/ShopPanel.js';
 import { TrainerService } from '../systems/TrainerService.js';
 import { TrainerPanel } from '../ui/TrainerPanel.js';
+import { CompanionManager } from '../systems/CompanionManager.js';
 import { getDialogueModule } from '../data/dialogues/index.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
@@ -298,6 +299,10 @@ export class MainGameScene extends Phaser.Scene {
     this.trainerService = new TrainerService(this);
     this.trainerPanel = new TrainerPanel(this, this.trainerService);
     SystemRegistry.register('trainerService', this.trainerService);
+
+    // 4.5 同伴系统
+    this.companionManager = new CompanionManager(this);
+    SystemRegistry.register('companionManager', this.companionManager);
 
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();
@@ -1282,6 +1287,9 @@ export class MainGameScene extends Phaser.Scene {
 
     // NPC 注册表逐帧更新（位置同步、巡逻、可视化）
     if (this.npcRegistry) this.npcRegistry.update(delta);
+
+    // 同伴跟随更新
+    if (this.companionManager) this.companionManager.update(delta);
 
     // Reset enemy pushable each frame (player-enemy collider sets it false,
     // but enemies need to stay pushable for enemy-enemy collisions)

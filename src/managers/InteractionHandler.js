@@ -560,6 +560,9 @@ export const InteractionHandler = {
     // 刷新所有商店库存
     if (this.shopService) this.shopService.refreshAll();
 
+    // 复活同伴
+    if (this.companionManager) this.companionManager.reviveAtBonfire();
+
     // 回满 HP/MP/体力
     const player = this.player;
     if (player) {
