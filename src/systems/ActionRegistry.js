@@ -298,7 +298,47 @@ export class ActionRegistry {
       scene?.companionManager?.dismiss();
     });
 
-    // === Phase 7+ 实现 ===
-    this.register('gift_item', stub('gift_item'));
+    // === Phase 7 实现 ===
+    // gift_item:itemId[:count] — 从背包扣物品送给当前 NPC
+    this.register('gift_item', (args, ctx) => {
+      const npc = ctx?.npc;
+      if (!npc) {
+        scene?.events?.emit('showMessage', '没有目标 NPC', '#ff8888');
+        return;
+      }
+      const [itemId, countStr] = args;
+      const count = parseInt(countStr) || 1;
+      if (!itemId) return;
+      const inv = scene?.inventory;
+      const slots = inv?.getItems?.() || [];
+      // 找 slot
+      let slotIdx = -1;
+      for (let i = 0; i < slots.length; i++) {
+        if (slots[i] && slots[i].id === itemId && (slots[i].quantity || 1) >= count) {
+          slotIdx = i; break;
+        }
+      }
+      if (slotIdx < 0) {
+        scene.events.emit('showMessage', `没有 ${itemId} ×${count}`, '#ff8888');
+        return;
+      }
+      const prefs = npc.giftPreferences || { loved: [], liked: [], hated: [] };
+      let action;
+      if (prefs.loved?.includes(itemId)) action = 'gift_loved';
+      else if (prefs.liked?.includes(itemId)) action = 'gift_liked';
+      else if (prefs.hated?.includes(itemId)) action = 'gift_hated';
+      else action = 'gift_neutral';
+      inv.removeItem(slotIdx, count);
+      scene.factionSystem?.applyDelta(npc.faction, action, `gift:${itemId}->${npc.id}`);
+      // 反馈文本
+      const fbMap = {
+        gift_loved: { msg: `${npc.name} 非常喜欢这件礼物！`, color: '#ff66cc' },
+        gift_liked: { msg: `${npc.name} 收下了礼物`, color: '#66ff88' },
+        gift_neutral: { msg: `${npc.name} 收下了礼物，但似乎不感兴趣`, color: '#cccccc' },
+        gift_hated: { msg: `${npc.name} 厌恶这件东西！`, color: '#ff4444' }
+      };
+      const fb = fbMap[action];
+      scene.events.emit('showMessage', fb.msg, fb.color);
+    });
   }
 }

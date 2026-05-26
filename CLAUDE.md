@@ -28,6 +28,12 @@ npx vite --force  # 清除 Vite 缓存启动
   - 洗练（chaos_essence + 锁定 1-2 条）+ 神圣洗练（divine_heart，T1 ×3 + 5 次保底）
   - 孔位 + 4 色 × 10 级宝石（3 同合 1 高级）+ 触发型词条（onHit/onKill/onSkillCast/onCrit）
   - 装备制作（recipes.js）+ 4 套装系统（2/4/6 件触发）+ 神器配方（mythic, world_core）
+- **NPC 系统**（已完成 Phase 1~7，见 `docs/modules/npc-system.md`）：
+  - 数据驱动 `data/npcs.js` + `dialogues/*` + `shops.js` + `trainers.js`
+  - NPCMemoryStore（每 NPC stage/flag/var/dead）+ FactionSystem（5 级关系 + reputation -100~+100）
+  - DialogueEngine（节点树）+ ActionRegistry（21+ action）+ NpcTransitions（事件驱动 stage 切换）
+  - ShopService/Panel（折扣 + 篝火刷新）+ TrainerService/Panel（教技能 + 重置天赋）
+  - CombatAI（通用战斗状态机）+ CombatNPC + CompanionManager（招募 / 跟随 / 复活）
 
 ## 关键约定
 - 中文注释和 UI 文本

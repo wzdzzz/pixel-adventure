@@ -59,6 +59,14 @@ export class NPCRegistry {
     if (config.combatStats) {
       this._registerCombatOverlap(instance);
     }
+
+    // 存档加载后：自动重新招募同伴
+    const pending = this.scene.registry?.get?.('pendingCompanionId');
+    if (pending && pending === npcId && this.scene.companionManager && !this.scene.companionManager.getCurrent()) {
+      this.scene.companionManager.recruit(instance);
+      this.scene.registry.set('pendingCompanionId', null);
+    }
+
     return instance;
   }
 

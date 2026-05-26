@@ -1218,12 +1218,25 @@ export class MainGameScene extends Phaser.Scene {
       if (SaveSystem.hasSave(pending)) {
         SaveSystem.load(this, pending);
       }
+      this._restoreCompanionIfReady();
       return;
     }
     // 否则按当前活跃槽（兜底：找第一个有数据的槽）
     const active = this.registry.get('activeSaveSlot') || 1;
     if (SaveSystem.hasSave(active)) {
       SaveSystem.load(this, active);
+    }
+    this._restoreCompanionIfReady();
+  }
+
+  /** 存档加载后：若同伴 NPC 已 spawn 则立即重新招募 */
+  _restoreCompanionIfReady() {
+    const pendingId = this.registry.get('pendingCompanionId');
+    if (!pendingId || !this.companionManager) return;
+    const npc = this.npcRegistry?.instances?.get(pendingId);
+    if (npc && !this.companionManager.getCurrent()) {
+      this.companionManager.recruit(npc);
+      this.registry.set('pendingCompanionId', null);
     }
   }
 

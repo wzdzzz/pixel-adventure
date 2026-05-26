@@ -109,7 +109,12 @@ export class SaveSystem {
         skillTree: scene.skillTreeSystem ? scene.skillTreeSystem.toJSON() : null,
         skillEngine: scene.player?.skillEngine ? scene.player.skillEngine.toJSON() : null,
         quests: scene.questSystem ? scene.questSystem.toJSON() : null,
-        worldState: scene.worldState?.serialize() || null
+        worldState: scene.worldState?.serialize() || null,
+        // ── NPC 系统 ──
+        npcMemory: scene.npcMemory?.serialize() || null,
+        factionData: scene.factionSystem?.serialize() || null,
+        shopData: scene.shopService?.serialize() || null,
+        companion: scene.companionManager?.serialize() || null
       };
 
       localStorage.setItem(SaveSystem._key(slotId), JSON.stringify(saveData));
@@ -223,6 +228,35 @@ export class SaveSystem {
 
       if (scene.questSystem && saveData.quests) {
         scene.questSystem.fromJSON(saveData.quests);
+      }
+
+      // ── NPC 系统数据 ──
+      if (scene.npcMemory && saveData.npcMemory) {
+        for (const [npcId, entry] of Object.entries(saveData.npcMemory)) {
+          if (!entry) continue;
+          if (entry.stage != null) scene.npcMemory.setStage(npcId, entry.stage);
+          if (entry.flags) for (const [k, v] of Object.entries(entry.flags)) scene.npcMemory.setFlag(npcId, k, v);
+          if (entry.vars) for (const [k, v] of Object.entries(entry.vars)) scene.npcMemory.setVar(npcId, k, v);
+          if (entry.dead) scene.npcMemory.markDead(npcId);
+        }
+      }
+
+      if (scene.factionSystem && saveData.factionData?.reputation) {
+        for (const [faction, value] of Object.entries(saveData.factionData.reputation)) {
+          scene.factionSystem.setReputation(faction, value);
+        }
+      }
+
+      if (scene.shopService && saveData.shopData?.stocks) {
+        for (const [shopId, stock] of Object.entries(saveData.shopData.stocks)) {
+          scene.shopService.stocks.set(shopId, stock.map(s => ({ ...s })));
+        }
+      }
+
+      // companion 复活：标记 npcMemory.flag 后由对话/spawn 流程触发，
+      // 这里只记录 id；实际 recruit 由 NPCRegistry.spawnChunk 完成
+      if (saveData.companion?.companionId) {
+        scene.registry.set('pendingCompanionId', saveData.companion.companionId);
       }
 
       // 恢复世界状态
