@@ -557,6 +557,9 @@ export const InteractionHandler = {
     // 篝火休息：重置世界状态（魂系重生）
     this.worldState.restAtBonfire();
 
+    // 刷新所有商店库存
+    if (this.shopService) this.shopService.refreshAll();
+
     // 回满 HP/MP/体力
     const player = this.player;
     if (player) {

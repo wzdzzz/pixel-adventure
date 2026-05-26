@@ -76,11 +76,47 @@ export class ActionRegistry {
     // play_sound（暂时桩）
     this.register('play_sound', stub('play_sound'));
 
-    // === Phase 4+ 实现 ===
-    this.register('open_shop', stub('open_shop'));
-    this.register('open_enhance', stub('open_enhance'));
-    this.register('open_reforge', stub('open_reforge'));
-    this.register('open_gem_inlay', stub('open_gem_inlay'));
+    // === Phase 4 实现 ===
+    this.register('open_shop', (args, ctx) => {
+      // open_shop:shop_id 或 open_shop（用 npc.shopId）
+      const shopId = args[0] || ctx?.npc?.shopId;
+      if (!shopId) {
+        scene?.events?.emit('showMessage', '没有商店 ID', '#ff8888');
+        return;
+      }
+      const svc = scene?.shopService;
+      if (!svc) {
+        scene?.events?.emit('showMessage', '商店服务未初始化', '#ff8888');
+        return;
+      }
+      // 先关掉对话再开商店
+      ctx?.dialogueEngine?.stop();
+      svc.open(shopId, ctx?.npc);
+    });
+
+    // 强化/洗练/镶嵌：调既有 PanelScene（如果存在），否则提示
+    const openPanelTab = (tab) => () => {
+      if (scene.scene.isActive('PanelScene')) {
+        scene.events.emit('switchPanelTab', tab);
+      } else {
+        scene.scene.launch('PanelScene', { tab });
+      }
+    };
+    this.register('open_enhance', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      scene?.events?.emit('showMessage', '从背包右键装备 → 强化（铁匠界面 Phase 5）', '#ffaa44');
+      openPanelTab('inventory')();
+    });
+    this.register('open_reforge', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      scene?.events?.emit('showMessage', '洗练（Phase 5）', '#ffaa44');
+      openPanelTab('inventory')();
+    });
+    this.register('open_gem_inlay', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      scene?.events?.emit('showMessage', '镶嵌（Phase 5）', '#ffaa44');
+      openPanelTab('inventory')();
+    });
 
     // === Phase 5+ 实现 ===
     this.register('open_trainer', stub('open_trainer'));

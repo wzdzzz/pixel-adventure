@@ -37,6 +37,8 @@ import { FactionSystem } from '../systems/FactionSystem.js';
 import { ActionRegistry } from '../systems/ActionRegistry.js';
 import { DialogueEngine } from '../systems/DialogueEngine.js';
 import { DialoguePanel } from '../ui/DialoguePanel.js';
+import { ShopService } from '../systems/ShopService.js';
+import { ShopPanel } from '../ui/ShopPanel.js';
 import { getDialogueModule } from '../data/dialogues/index.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
@@ -284,6 +286,11 @@ export class MainGameScene extends Phaser.Scene {
     this.dialoguePanel = new DialoguePanel(this, this.dialogueEngine);
     SystemRegistry.register('actionRegistry', this.actionRegistry);
     SystemRegistry.register('dialogueEngine', this.dialogueEngine);
+
+    // 4.3 商店系统（ShopService + ShopPanel）
+    this.shopService = ShopService.deserialize(this, saveData?.shopData);
+    this.shopPanel = new ShopPanel(this, this.shopService);
+    SystemRegistry.register('shopService', this.shopService);
 
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();
