@@ -42,6 +42,27 @@ export const NPCS = {
     transitions: [
       { from: 'awaiting_ore', to: 'trusted', on: 'quest:tom_intro:completed' }
     ]
+  },
+
+  // ─── 测试卫兵：戳一下守卫就翻脸（faction = town_guard） ───
+  town_guard_01: {
+    id: 'town_guard_01',
+    name: '城镇卫兵',
+    sprite: 'npc',
+    faction: 'town_guard',
+    essential: false,
+    spawn: { chunkX: 8, chunkY: 8, localX: 5, localY: 10 },
+    initialStage: 'patrol',
+    dialogueModule: 'town_guard',
+    movement: { type: 'patrol', radius: 96 },
+    combatStats: {
+      level: 5,
+      hp: 200,
+      skills: ['basic_melee'],
+      detectionRange: 220,
+      aggroDelay: 250,
+      primaryAttackStat: 'strength'
+    }
   }
 };
 

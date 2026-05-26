@@ -4,9 +4,11 @@
  * 调用 getDialogueModule('blacksmith_tom') 返回该模块的 stages 对象。
  */
 import blacksmith_tom from './blacksmith_tom.js';
+import town_guard from './town_guard.js';
 
 const MODULES = {
-  blacksmith_tom
+  blacksmith_tom,
+  town_guard
 };
 
 export function getDialogueModule(name) {

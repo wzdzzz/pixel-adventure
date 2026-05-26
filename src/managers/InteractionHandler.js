@@ -6,6 +6,7 @@ import { levelData } from '../data/levels.js';
 import itemData from '../data/items.json';
 import { getEffectTemplate } from '../data/statusEffects.js';
 import { getLevelSuppression } from '../data/monsterScaling.js';
+import { ACCIDENTAL_HIT_AGGRO_THRESHOLD } from '../data/factions.js';
 
 export const InteractionHandler = {
   handleChestProximity(chest) {
@@ -259,6 +260,30 @@ export const InteractionHandler = {
     // 接触不再造成伤害（敌人改用技能造伤），仅保留物理碰撞推开
   },
 
+  /**
+   * 检测玩家命中是否为「误伤友好/中立 NPC」。
+   * 若是 → 扣 reputation + 累计 hitCount + 超阈值则触发整阵营敌对。
+   */
+  _checkAccidentalHit(target) {
+    if (!target || !target.faction) return;
+    const fs = this.factionSystem;
+    const memory = this.npcMemory;
+    if (!fs) return;
+    // 已敌对就不算误伤
+    if (fs.isHostile('player', target.faction) || fs.isHostile(target.faction, 'player')) return;
+
+    fs.applyDelta(target.faction, 'accidental_hit', `hit:${target.id}`);
+
+    if (memory && target.id) {
+      const hits = memory.addVar(target.id, 'hitCount', 1);
+      if (hits >= ACCIDENTAL_HIT_AGGRO_THRESHOLD) {
+        // 阈值触达：整个阵营对玩家敌对
+        fs.triggerHostility(target.faction, `accidental_hits:${target.id}`);
+        this.events.emit('showMessage', `[${target.name || '友方'}]：你竟敢攻击我！`);
+      }
+    }
+  },
+
   handleAttackHit(enemy) {
     if (!this.player.attackHitbox.body.enable) return;
     if (this.player.attackHitRegistered) return;
@@ -272,6 +297,8 @@ export const InteractionHandler = {
       this.triggerSystem.fire('onHit', { enemy, damage: finalDmg });
       if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
     }
+    // 误伤友方 NPC 判定
+    this._checkAccidentalHit(enemy);
     this.player.onAttackHit();
     // Disable hitbox immediately after hit to prevent same-frame duplicates
     this.player.attackHitbox.body.enable = false;
@@ -323,6 +350,8 @@ export const InteractionHandler = {
         this.triggerSystem.fire('onHit', { enemy, damage });
         if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
       }
+      // 误伤友方 NPC 判定
+      this._checkAccidentalHit(enemy);
 
       // Apply status effects from skill (bleed, armorBreak, slow, etc.)
       if (skill.effect.applyEffects) {
@@ -377,6 +406,8 @@ export const InteractionHandler = {
         this.triggerSystem.fire('onHit', { enemy, damage });
         if (enemy.hp <= 0) this.triggerSystem.fire('onKill', { enemy });
       }
+      // 误伤友方 NPC 判定
+      this._checkAccidentalHit(enemy);
 
       this.events.emit('screenShake', 2, 50);
       this.player.addRage(4);

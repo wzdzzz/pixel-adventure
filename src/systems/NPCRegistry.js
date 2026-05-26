@@ -1,4 +1,5 @@
 import { NPC } from '../entities/NPC.js';
+import { CombatNPC } from '../entities/CombatNPC.js';
 import { NPCS, getNpcConfig } from '../data/npcs.js';
 
 /**
@@ -36,8 +37,11 @@ export class NPCRegistry {
     const wy = (config.spawn.chunkY * 32 + config.spawn.localY) * 32 + 16;
 
     let instance;
-    if (config.combatStats && this._combatNpcFactory) {
-      instance = this._combatNpcFactory(this.scene, wx, wy, config);
+    if (config.combatStats) {
+      // 战斗 NPC 默认走 CombatNPC（不再依赖外部 factory 注入）
+      instance = this._combatNpcFactory
+        ? this._combatNpcFactory(this.scene, wx, wy, config)
+        : new CombatNPC(this.scene, wx, wy, config);
     } else {
       instance = new NPC(this.scene, wx, wy, config);
     }
@@ -50,6 +54,11 @@ export class NPCRegistry {
 
     // 把交互重叠注册到玩家
     this._registerInteractOverlap(instance);
+
+    // 战斗 NPC：注册玩家攻击命中（与 Enemy 走同一条路径）
+    if (config.combatStats) {
+      this._registerCombatOverlap(instance);
+    }
     return instance;
   }
 
@@ -66,6 +75,16 @@ export class NPCRegistry {
         }
       }
     );
+  }
+
+  _registerCombatOverlap(npc) {
+    const scene = this.scene;
+    const player = scene?.player;
+    if (!player?.attackHitbox || !player?.skillHitbox || !npc?.sprite) return;
+    scene.physics.add.overlap(player.attackHitbox, npc.sprite,
+      () => scene.handleAttackHit && scene.handleAttackHit(npc), null, scene);
+    scene.physics.add.overlap(player.skillHitbox, npc.sprite,
+      () => scene.handleSkillHit && scene.handleSkillHit(npc), null, scene);
   }
 
   despawn(npcId) {
