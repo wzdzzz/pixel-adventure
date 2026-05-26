@@ -31,6 +31,9 @@ import { EntityManager } from '../world/EntityManager.js';
 import { BIOMES } from '../world/biomes/biomeConfig.js';
 import { Enemy, EnemyState } from '../entities/Enemy.js';
 import { NPC } from '../entities/NPC.js';
+import { NPCRegistry } from '../systems/NPCRegistry.js';
+import { NPCMemoryStore } from '../systems/NPCMemoryStore.js';
+import { FactionSystem } from '../systems/FactionSystem.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
 import SystemRegistry from '../core/SystemRegistry.js';
@@ -258,6 +261,14 @@ export class MainGameScene extends Phaser.Scene {
     // 4. 创建 Chunk 管理器
     this.chunkManager = new ChunkManager(this, this.worldGenerator, this.worldState);
 
+    // 4.1 NPC 系统三件套（FactionSystem / NPCMemoryStore / NPCRegistry）
+    this.factionSystem = FactionSystem.deserialize(this, saveData?.factionData);
+    this.npcMemory = NPCMemoryStore.deserialize(this, saveData?.npcMemory);
+    this.npcRegistry = new NPCRegistry(this);
+    SystemRegistry.register('factionSystem', this.factionSystem);
+    SystemRegistry.register('npcMemory', this.npcMemory);
+    SystemRegistry.register('npcRegistry', this.npcRegistry);
+
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();
 
@@ -284,11 +295,15 @@ export class MainGameScene extends Phaser.Scene {
     this.events.on('chunk-loaded', (data) => {
       this._registerChunkCollisions(data.chunkX, data.chunkY);
       this._spawnChunkEntities(data.chunkX, data.chunkY);
+      // NPC: chunk 加载时生成该 chunk 配置的 NPC
+      if (this.npcRegistry) this.npcRegistry.spawnChunk(data.chunkX, data.chunkY);
     });
 
     // chunk 卸载时清理实体
     this.events.on('chunk-unloaded', (data) => {
       this._despawnChunkEntities(data.chunkX, data.chunkY);
+      // NPC: chunk 卸载时销毁非 persistent NPC
+      if (this.npcRegistry) this.npcRegistry.despawnChunk(`${data.chunkX},${data.chunkY}`);
     });
 
     // 8. 首次触发 Chunk 加载（会发射 chunk-loaded 事件）
@@ -1234,6 +1249,9 @@ export class MainGameScene extends Phaser.Scene {
         this.entityManager.update(camCenterX, camCenterY, this.chunkManager.activeChunks);
       }
     }
+
+    // NPC 注册表逐帧更新（位置同步、巡逻、可视化）
+    if (this.npcRegistry) this.npcRegistry.update(delta);
 
     // Reset enemy pushable each frame (player-enemy collider sets it false,
     // but enemies need to stay pushable for enemy-enemy collisions)
