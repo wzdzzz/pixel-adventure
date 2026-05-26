@@ -1,3 +1,5 @@
+import itemData from '../data/items.json';
+
 /**
  * ActionRegistry — 对话/事件统一 action 派发器
  *
@@ -118,17 +120,143 @@ export class ActionRegistry {
       openPanelTab('inventory')();
     });
 
-    // === Phase 5+ 实现 ===
-    this.register('open_trainer', stub('open_trainer'));
-    this.register('accept_quest', stub('accept_quest'));
-    this.register('turn_in_quest', stub('turn_in_quest'));
-    this.register('give_item', stub('give_item'));
-    this.register('take_item', stub('take_item'));
-    this.register('give_gold', stub('give_gold'));
-    this.register('take_gold', stub('take_gold'));
-    this.register('heal_player', stub('heal_player'));
-    this.register('learn_skill', stub('learn_skill'));
-    this.register('teleport_player', stub('teleport_player'));
+    // === Phase 5 实现 ===
+    this.register('open_trainer', (args, ctx) => {
+      const trainerId = args[0] || ctx?.npc?.trainerId;
+      if (!trainerId) {
+        scene?.events?.emit('showMessage', '没有训练师 ID', '#ff8888');
+        return;
+      }
+      const svc = scene?.trainerService;
+      if (!svc) {
+        scene?.events?.emit('showMessage', '训练师服务未初始化', '#ff8888');
+        return;
+      }
+      ctx?.dialogueEngine?.stop();
+      svc.open(trainerId, ctx?.npc);
+    });
+
+    // accept_quest:questId — 把 quest 状态改成 active
+    this.register('accept_quest', (args, _ctx) => {
+      const questId = args[0];
+      const qs = scene?.questSystem;
+      if (!questId || !qs) return;
+      const q = qs.quests.find(x => x.id === questId);
+      if (!q) return;
+      if (q.status === 'locked') {
+        q.status = 'active';
+        scene.events.emit('questActivated', q);
+        scene.events.emit('showMessage', `接受任务：${q.name || q.id}`, '#44ff88');
+      }
+    });
+
+    // turn_in_quest:questId — 强制完成（用于无目标式任务）
+    this.register('turn_in_quest', (args, _ctx) => {
+      const questId = args[0];
+      const qs = scene?.questSystem;
+      if (!questId || !qs) return;
+      const q = qs.quests.find(x => x.id === questId);
+      if (!q || q.status === 'completed') return;
+      // 完成所有 objective
+      for (const o of q.objectives) o.current = o.required;
+      qs.checkQuestCompletion(q);
+    });
+
+    // give_item:itemId:count — 给玩家物品
+    this.register('give_item', (args, _ctx) => {
+      const [itemId, countStr] = args;
+      const count = parseInt(countStr) || 1;
+      const inv = scene?.inventory;
+      const def = itemData.items?.[itemId];
+      if (!inv || !def) {
+        scene?.events?.emit('showMessage', `物品不存在：${itemId}`, '#ff8888');
+        return;
+      }
+      inv.addItem({ ...def, id: itemId }, count);
+      scene.events.emit('showMessage', `获得 ${def.name || itemId} ×${count}`, '#44ff88');
+    });
+
+    // take_item:itemId:count — 从玩家背包扣物品（按 id 找第一个匹配槽）
+    this.register('take_item', (args, _ctx) => {
+      const [itemId, countStr] = args;
+      let need = parseInt(countStr) || 1;
+      const inv = scene?.inventory;
+      if (!inv) return;
+      const slots = inv.getItems();
+      for (let i = 0; i < slots.length && need > 0; i++) {
+        const s = slots[i];
+        if (!s || s.id !== itemId) continue;
+        const take = Math.min(need, s.quantity || 1);
+        inv.removeItem(i, take);
+        need -= take;
+      }
+      if (need > 0) {
+        scene.events.emit('showMessage', `物品不足：${itemId}`, '#ff8888');
+      }
+    });
+
+    // give_gold:amount
+    this.register('give_gold', (args, _ctx) => {
+      const amt = parseInt(args[0]) || 0;
+      const inv = scene?.inventory;
+      if (!inv || amt <= 0) return;
+      inv.gold = (inv.gold || 0) + amt;
+      scene.events.emit('goldChanged', inv.gold);
+      scene.events.emit('showMessage', `获得 ${amt} 金币`, '#ffdd44');
+    });
+
+    // take_gold:amount
+    this.register('take_gold', (args, _ctx) => {
+      const amt = parseInt(args[0]) || 0;
+      const inv = scene?.inventory;
+      if (!inv || amt <= 0) return;
+      if ((inv.gold || 0) < amt) {
+        scene.events.emit('showMessage', '金币不足', '#ff8888');
+        return false;
+      }
+      inv.gold -= amt;
+      scene.events.emit('goldChanged', inv.gold);
+    });
+
+    // heal_player:amount  (amount 缺省 = 满血)
+    this.register('heal_player', (args, _ctx) => {
+      const player = scene?.player;
+      if (!player) return;
+      const amount = args[0] ? parseInt(args[0]) : player.maxHp;
+      player.heal(amount);
+      scene.events.emit('showMessage', `恢复 ${amount} 生命`, '#44ff88');
+    });
+
+    // learn_skill:nodeId — 免费解锁某技能节点
+    this.register('learn_skill', (args, _ctx) => {
+      const nodeId = args[0];
+      const tree = scene?.skillTreeSystem;
+      if (!nodeId || !tree) return;
+      const node = tree.getNode(nodeId);
+      if (!node) return;
+      if (node.currentRank >= node.maxRank) {
+        scene.events.emit('showMessage', `${node.name} 已学满`, '#ffaa44');
+        return;
+      }
+      // 直接解锁（绕过 cost 检查）
+      node.currentRank++;
+      tree.unlockedNodes.add(nodeId);
+      tree.applyAllEffects();
+      scene.events.emit('skillUnlocked', nodeId, node);
+      scene.events.emit('showMessage', `学会：${node.name}`, '#44ff88');
+    });
+
+    // teleport_player:x:y — 把玩家瞬移到世界坐标
+    this.register('teleport_player', (args, ctx) => {
+      const player = scene?.player;
+      if (!player) return;
+      const x = parseFloat(args[0]);
+      const y = parseFloat(args[1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      ctx?.dialogueEngine?.stop();
+      player.sprite.setPosition(x, y);
+      scene.events.emit('showMessage', '瞬移完成', '#88ccff');
+    });
 
     // === Phase 3+ 实现 ===
     this.register('trigger_combat', stub('trigger_combat'));

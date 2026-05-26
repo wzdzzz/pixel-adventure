@@ -87,6 +87,62 @@ export class NPC {
 
     // 初始关系图标
     this._refreshIndicator();
+
+    // Stage 自动转换：监听 transitions 配置的事件
+    this._transitionListeners = [];
+    this._installTransitions();
+  }
+
+  _installTransitions() {
+    const transitions = this.config.transitions;
+    if (!Array.isArray(transitions) || !transitions.length) return;
+    const memory = this.scene?.npcMemory;
+    if (!memory || !this.scene?.events) return;
+
+    // 把 transitions 按事件名分组
+    const byEvent = new Map();
+    for (const t of transitions) {
+      if (!t || !t.on) continue;
+      if (!byEvent.has(t.on)) byEvent.set(t.on, []);
+      byEvent.get(t.on).push(t);
+    }
+
+    for (const [eventStr, rules] of byEvent.entries()) {
+      // 支持两种格式：
+      //   'quest:questId:completed'  → 监听 questCompleted，匹配 questId
+      //   'event_name'               → 直接监听 scene event
+      const parts = eventStr.split(':');
+      let eventName, matcher;
+      if (parts[0] === 'quest' && parts[2] === 'completed') {
+        eventName = 'questCompleted';
+        const targetQuestId = parts[1];
+        matcher = (q) => q?.id === targetQuestId;
+      } else if (parts[0] === 'quest' && parts[2] === 'accepted') {
+        eventName = 'questActivated';
+        const targetQuestId = parts[1];
+        matcher = (q) => q?.id === targetQuestId;
+      } else if (parts[0] === 'flag') {
+        eventName = 'npcFlagChanged';
+        const [, npcId, key] = parts;
+        matcher = (p) => p?.npcId === npcId && p?.key === key && !!p?.value;
+      } else {
+        eventName = eventStr;
+        matcher = () => true;
+      }
+
+      const handler = (payload) => {
+        if (!matcher(payload)) return;
+        const currentStage = memory.getStage(this.id, this.config.initialStage || 'greet');
+        for (const r of rules) {
+          if (r.from && r.from !== currentStage) continue;
+          if (!r.to) continue;
+          memory.setStage(this.id, r.to);
+          break;
+        }
+      };
+      this.scene.events.on(eventName, handler);
+      this._transitionListeners.push({ event: eventName, handler });
+    }
   }
 
   // ===== Stage 查询 =====
@@ -196,6 +252,12 @@ export class NPC {
 
   destroy() {
     if (this._float) this._float.stop();
+    if (this._transitionListeners) {
+      for (const { event, handler } of this._transitionListeners) {
+        this.scene?.events?.off(event, handler);
+      }
+      this._transitionListeners = null;
+    }
     if (this.sprite) this.sprite.destroy();
     if (this.nameText) this.nameText.destroy();
     if (this.stateIndicator) this.stateIndicator.destroy();

@@ -5,10 +5,12 @@
  */
 import blacksmith_tom from './blacksmith_tom.js';
 import town_guard from './town_guard.js';
+import trainer_warrior from './trainer_warrior.js';
 
 const MODULES = {
   blacksmith_tom,
-  town_guard
+  town_guard,
+  trainer_warrior
 };
 
 export function getDialogueModule(name) {

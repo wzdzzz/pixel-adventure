@@ -39,6 +39,8 @@ import { DialogueEngine } from '../systems/DialogueEngine.js';
 import { DialoguePanel } from '../ui/DialoguePanel.js';
 import { ShopService } from '../systems/ShopService.js';
 import { ShopPanel } from '../ui/ShopPanel.js';
+import { TrainerService } from '../systems/TrainerService.js';
+import { TrainerPanel } from '../ui/TrainerPanel.js';
 import { getDialogueModule } from '../data/dialogues/index.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
@@ -291,6 +293,11 @@ export class MainGameScene extends Phaser.Scene {
     this.shopService = ShopService.deserialize(this, saveData?.shopData);
     this.shopPanel = new ShopPanel(this, this.shopService);
     SystemRegistry.register('shopService', this.shopService);
+
+    // 4.4 训练师系统（TrainerService + TrainerPanel）
+    this.trainerService = new TrainerService(this);
+    this.trainerPanel = new TrainerPanel(this, this.trainerService);
+    SystemRegistry.register('trainerService', this.trainerService);
 
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();

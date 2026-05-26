@@ -44,6 +44,21 @@ export const NPCS = {
     ]
   },
 
+  // ─── 训练师：教技能 + 重置天赋 ───
+  warrior_trainer_npc: {
+    id: 'warrior_trainer_npc',
+    name: '战士导师·铁拳',
+    sprite: 'npc',
+    faction: 'townfolk',
+    essential: true,
+    spawn: { chunkX: 8, chunkY: 8, localX: 18, localY: 14 },
+    initialStage: 'greet',
+    dialogueModule: 'trainer_warrior',
+    movement: 'stand',
+    services: ['trainer'],
+    trainerId: 'warrior_trainer'
+  },
+
   // ─── 测试卫兵：戳一下守卫就翻脸（faction = town_guard） ───
   town_guard_01: {
     id: 'town_guard_01',
