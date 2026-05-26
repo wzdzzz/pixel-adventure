@@ -460,7 +460,30 @@ export const InteractionHandler = {
     if (this.dialoguing) return;
     if (npc.isDialoguing) return;
 
-    // Get all dialogues for pagination
+    // 新版：使用 DialogueEngine（NPC 有 dialogueModule）
+    if (npc.dialogueModule && this.dialogueEngine) {
+      this.dialoguing = true;
+      this.activeDialogueNpc = npc;
+
+      const onEnded = (data) => {
+        if (data?.npc?.id !== npc.id) return;
+        this.dialoguing = false;
+        this.activeDialogueNpc = null;
+        this.events.off('dialogueEnded', onEnded);
+      };
+      this.events.on('dialogueEnded', onEnded);
+
+      const started = this.dialogueEngine.start(npc);
+      if (!started) {
+        // 启动失败兜底
+        this.dialoguing = false;
+        this.activeDialogueNpc = null;
+        this.events.off('dialogueEnded', onEnded);
+      }
+      return;
+    }
+
+    // 旧版兼容：dialogues 数组的翻页式
     const dialogues = npc.dialogues || [npc.getNextDialogue()];
     if (npc.setTalking) npc.setTalking(true);
     this.dialoguing = true;
@@ -470,7 +493,6 @@ export const InteractionHandler = {
     this.activeDialogueWindow = windowObj;
 
     this.uiManager.openWindow(windowObj, npc.name || '???', dialogues, () => {
-      // All pages read - auto close
       if (npc.setTalking) npc.setTalking(false);
       this.dialoguing = false;
       this.activeDialogueWindow = null;

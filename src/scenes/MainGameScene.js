@@ -34,6 +34,10 @@ import { NPC } from '../entities/NPC.js';
 import { NPCRegistry } from '../systems/NPCRegistry.js';
 import { NPCMemoryStore } from '../systems/NPCMemoryStore.js';
 import { FactionSystem } from '../systems/FactionSystem.js';
+import { ActionRegistry } from '../systems/ActionRegistry.js';
+import { DialogueEngine } from '../systems/DialogueEngine.js';
+import { DialoguePanel } from '../ui/DialoguePanel.js';
+import { getDialogueModule } from '../data/dialogues/index.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
 import SystemRegistry from '../core/SystemRegistry.js';
@@ -268,6 +272,18 @@ export class MainGameScene extends Phaser.Scene {
     SystemRegistry.register('factionSystem', this.factionSystem);
     SystemRegistry.register('npcMemory', this.npcMemory);
     SystemRegistry.register('npcRegistry', this.npcRegistry);
+
+    // 4.2 对话系统（ActionRegistry + DialogueEngine + DialoguePanel）
+    this.actionRegistry = new ActionRegistry(this);
+    this.dialogueEngine = new DialogueEngine(this, {
+      memory: this.npcMemory,
+      factions: this.factionSystem,
+      actionRegistry: this.actionRegistry,
+      dialogueLoader: getDialogueModule
+    });
+    this.dialoguePanel = new DialoguePanel(this, this.dialogueEngine);
+    SystemRegistry.register('actionRegistry', this.actionRegistry);
+    SystemRegistry.register('dialogueEngine', this.dialogueEngine);
 
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();
