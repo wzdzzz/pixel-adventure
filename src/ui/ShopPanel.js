@@ -15,8 +15,9 @@ import itemData from '../data/items.json';
  *   - ESC 关闭
  */
 export class ShopPanel {
-  constructor(scene, shopService) {
+  constructor(scene, shopService, displayScene = null) {
     this.scene = scene;
+    this.displayScene = displayScene || scene;
     this.service = shopService;
     this.visible = false;
     this.shopId = null;
@@ -29,48 +30,48 @@ export class ShopPanel {
   _build() {
     const W = 1100, H = 660;
     const cx = 1920 / 2, cy = 1080 / 2;
-    this.container = this.scene.add.container(cx, cy)
+    this.container = this.displayScene.add.container(cx, cy)
       .setDepth(9991).setScrollFactor(0).setVisible(false);
 
-    this.bg = this.scene.add.rectangle(0, 0, W, H, 0x141420, 0.97)
+    this.bg = this.displayScene.add.rectangle(0, 0, W, H, 0x141420, 0.97)
       .setStrokeStyle(2, 0xffaa44);
-    this.border = this.scene.add.rectangle(0, 0, W + 6, H + 6, 0, 0)
+    this.border = this.displayScene.add.rectangle(0, 0, W + 6, H + 6, 0, 0)
       .setStrokeStyle(1, 0xffaa44, 0.3);
 
     // Title
-    this.titleText = this.scene.add.text(0, -H / 2 + 24, '商店', {
+    this.titleText = this.displayScene.add.text(0, -H / 2 + 24, '商店', {
       fontSize: '24px',
       fill: '#ffcc66',
       fontFamily: 'Courier New',
       fontStyle: 'bold'
     }).setOrigin(0.5, 0);
 
-    this.relationText = this.scene.add.text(W / 2 - 24, -H / 2 + 24, '', {
+    this.relationText = this.displayScene.add.text(W / 2 - 24, -H / 2 + 24, '', {
       fontSize: '14px',
       fill: '#aaaaaa',
       fontFamily: 'Courier New'
     }).setOrigin(1, 0);
 
     // 中间分隔线
-    this.divider = this.scene.add.line(0, 0, 0, -H / 2 + 60, 0, H / 2 - 40, 0xffaa44, 0.4)
+    this.divider = this.displayScene.add.line(0, 0, 0, -H / 2 + 60, 0, H / 2 - 40, 0xffaa44, 0.4)
       .setLineWidth(1);
 
     // 左侧标题
-    this.leftTitle = this.scene.add.text(-W / 4, -H / 2 + 70, '商店货架', {
+    this.leftTitle = this.displayScene.add.text(-W / 4, -H / 2 + 70, '商店货架', {
       fontSize: '18px',
       fill: '#ffffff',
       fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
 
     // 右侧标题
-    this.rightTitle = this.scene.add.text(W / 4, -H / 2 + 70, '我的背包', {
+    this.rightTitle = this.displayScene.add.text(W / 4, -H / 2 + 70, '我的背包', {
       fontSize: '18px',
       fill: '#ffffff',
       fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
 
     // 金币显示
-    this.goldText = this.scene.add.text(0, H / 2 - 28, '', {
+    this.goldText = this.displayScene.add.text(0, H / 2 - 28, '', {
       fontSize: '18px',
       fill: '#ffdd44',
       fontFamily: 'Courier New',
@@ -78,7 +79,7 @@ export class ShopPanel {
     }).setOrigin(0.5, 0.5);
 
     // 提示
-    this.hintText = this.scene.add.text(0, H / 2 - 4, '左键买/卖 1   右键买/卖 全部   [ESC] 关闭', {
+    this.hintText = this.displayScene.add.text(0, H / 2 - 4, '左键买/卖 1   右键买/卖 全部   [ESC] 关闭', {
       fontSize: '12px',
       fill: '#888888',
       fontFamily: 'Courier New'
@@ -94,7 +95,7 @@ export class ShopPanel {
     ]);
 
     // ESC 关闭
-    this.scene.input.keyboard.on('keydown-ESC', () => {
+    this.displayScene.input.keyboard.on('keydown-ESC', () => {
       if (this.visible) this.hide();
     });
   }
@@ -118,6 +119,7 @@ export class ShopPanel {
     this.refresh();
     // 暂停玩家移动
     if (this.scene.player) this.scene.player.canInteract = false;
+    this.scene.uiBlocking = true;
   }
 
   hide() {
@@ -129,6 +131,7 @@ export class ShopPanel {
     this.shopId = null;
     this.npc = null;
     if (this.scene.player) this.scene.player.canInteract = true;
+    this.scene.uiBlocking = false;
   }
 
   refresh() {
@@ -167,7 +170,7 @@ export class ShopPanel {
     const baseY = -660 / 2 + 110;
     const rowH = 36;
     if (stock.length === 0) {
-      const t = this.scene.add.text(baseX, baseY, '（货架空空如也）', {
+      const t = this.displayScene.add.text(baseX, baseY, '（货架空空如也）', {
         fontSize: '14px', fill: '#777777', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       this.container.add(t);
@@ -180,7 +183,7 @@ export class ShopPanel {
       const def = itemData.items?.[slot.id] || {};
       const price = this.service.getBuyPrice(this.shopId, i, this.npc);
       const text = `${def.name || slot.id} ×${slot.count}   ${price} G`;
-      const row = this.scene.add.text(baseX, baseY + i * rowH, text, {
+      const row = this.displayScene.add.text(baseX, baseY + i * rowH, text, {
         fontSize: '15px', fill: this._rarityColor(def.rarity), fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       row.setInteractive({ useHandCursor: true });
@@ -211,7 +214,7 @@ export class ShopPanel {
       if (slot.type === 'quest' || slot.type === 'currency') continue;
       const price = this.service.getSellPrice(slot, this.npc);
       const text = `${slot.name || slot.id} ×${slot.quantity || 1}   ${price} G`;
-      const row = this.scene.add.text(baseX, baseY + visIdx * rowH, text, {
+      const row = this.displayScene.add.text(baseX, baseY + visIdx * rowH, text, {
         fontSize: '15px', fill: this._rarityColor(slot.rarity), fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       row.setInteractive({ useHandCursor: true });
@@ -228,7 +231,7 @@ export class ShopPanel {
     }
 
     if (visIdx === 0) {
-      const t = this.scene.add.text(baseX, baseY, '（无可出售物品）', {
+      const t = this.displayScene.add.text(baseX, baseY, '（无可出售物品）', {
         fontSize: '14px', fill: '#777777', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       this.container.add(t);

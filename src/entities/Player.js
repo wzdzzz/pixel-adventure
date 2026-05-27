@@ -79,7 +79,7 @@ export class Player extends Actor {
     }).setOrigin(0.5).setVisible(false).setDepth(10);
 
     this._onPointerDown = (pointer) => {
-      if (pointer.leftButtonDown() && !scene.gamePaused) this.tryAttack();
+      if (pointer.leftButtonDown() && !scene.gamePaused && !scene.dialoguing && !scene.uiBlocking) this.tryAttack();
     };
     this._onEKeyDown = () => this.tryInteract();
     scene.input.on('pointerdown', this._onPointerDown);
@@ -584,6 +584,8 @@ export class Player extends Actor {
     if (this.state === PlayerState.DEAD || this.state === PlayerState.HURT) return;
     if (this.state === PlayerState.SKILL_CASTING || this.state === PlayerState.CHARGING) return;
     if (this.scene.gamePaused) return;
+    // 对话 / 商店 / 训练师面板打开时屏蔽技能（数字键被对话选项使用）
+    if (this.scene.dialoguing || this.scene.uiBlocking) return;
 
     const skillId = this.skillSlots[slotIndex];
     if (!skillId) return;

@@ -12,8 +12,11 @@
 import Phaser from 'phaser';
 
 export class DialoguePanel {
-  constructor(scene, dialogueEngine) {
+  constructor(scene, dialogueEngine, displayScene = null) {
+    // scene: 事件 / 游戏状态（MainGameScene）
+    // displayScene: 渲染与输入（默认 = scene；传 UIScene 可让面板跨场景置顶）
     this.scene = scene;
+    this.displayScene = displayScene || scene;
     this.engine = dialogueEngine;
     this.visible = false;
 
@@ -25,22 +28,22 @@ export class DialoguePanel {
     const W = 900, H = 240;
     const cx = 960, cy = 1080 - H / 2 - 40;
 
-    this.container = this.scene.add.container(cx, cy)
+    this.container = this.displayScene.add.container(cx, cy)
       .setDepth(9990).setScrollFactor(0).setVisible(false);
 
-    this.bg = this.scene.add.rectangle(0, 0, W, H, 0x000000, 0.92)
+    this.bg = this.displayScene.add.rectangle(0, 0, W, H, 0x000000, 0.92)
       .setStrokeStyle(2, 0x00ff88);
-    this.border = this.scene.add.rectangle(0, 0, W + 4, H + 4, 0, 0)
+    this.border = this.displayScene.add.rectangle(0, 0, W + 4, H + 4, 0, 0)
       .setStrokeStyle(1, 0x00ff88, 0.3);
 
-    this.nameText = this.scene.add.text(-W / 2 + 24, -H / 2 + 14, '', {
+    this.nameText = this.displayScene.add.text(-W / 2 + 24, -H / 2 + 14, '', {
       fontSize: '18px',
       fill: '#00bfff',
       fontFamily: 'Courier New',
       fontStyle: 'bold'
     });
 
-    this.bodyText = this.scene.add.text(-W / 2 + 24, -H / 2 + 50, '', {
+    this.bodyText = this.displayScene.add.text(-W / 2 + 24, -H / 2 + 50, '', {
       fontSize: '17px',
       fill: '#ffffff',
       fontFamily: 'Courier New',
@@ -48,20 +51,26 @@ export class DialoguePanel {
     });
 
     // 选项列表（最多 9 项）
+    // 注意：空文本时 setInteractive() 推断的命中区为 0×0 → 点击无效
+    // 故显式给一个能覆盖整行的 hitArea
+    const OPT_W = W - 64, OPT_H = 22;
     this.optionTexts = [];
     for (let i = 0; i < 9; i++) {
-      const t = this.scene.add.text(-W / 2 + 32, 0, '', {
+      const t = this.displayScene.add.text(-W / 2 + 32, 0, '', {
         fontSize: '16px',
         fill: '#cccccc',
         fontFamily: 'Courier New'
-      }).setInteractive({ useHandCursor: true });
+      }).setInteractive(
+        new Phaser.Geom.Rectangle(0, 0, OPT_W, OPT_H),
+        Phaser.Geom.Rectangle.Contains
+      );
       t.on('pointerover', () => t.setFill('#ffff66'));
       t.on('pointerout',  () => t.setFill('#cccccc'));
       t.on('pointerdown', () => this._choose(i));
       this.optionTexts.push(t);
     }
 
-    this.hintText = this.scene.add.text(W / 2 - 24, H / 2 - 18, '', {
+    this.hintText = this.displayScene.add.text(W / 2 - 24, H / 2 - 18, '', {
       fontSize: '13px',
       fill: '#888888',
       fontFamily: 'Courier New'
@@ -69,8 +78,8 @@ export class DialoguePanel {
 
     this.container.add([this.border, this.bg, this.nameText, this.bodyText, ...this.optionTexts, this.hintText]);
 
-    // 键盘
-    this.keys = this.scene.input.keyboard.addKeys({
+    // 键盘（监听在 displayScene 上，避免 MainGameScene 被暂停时键盘不响应）
+    this.keys = this.displayScene.input.keyboard.addKeys({
       adv1: Phaser.Input.Keyboard.KeyCodes.E,
       adv2: Phaser.Input.Keyboard.KeyCodes.SPACE,
       esc: Phaser.Input.Keyboard.KeyCodes.ESC,
@@ -85,7 +94,7 @@ export class DialoguePanel {
       num9: Phaser.Input.Keyboard.KeyCodes.NINE
     });
 
-    this.scene.input.keyboard.on('keydown', (e) => this._onKey(e));
+    this.displayScene.input.keyboard.on('keydown', (e) => this._onKey(e));
 
     // 打字机
     this._typeTimer = null;
@@ -109,6 +118,7 @@ export class DialoguePanel {
   show() {
     this.container.setVisible(true);
     this.visible = true;
+    if (this.scene) this.scene.uiBlocking = true;
   }
 
   hide() {
@@ -116,6 +126,7 @@ export class DialoguePanel {
     this.visible = false;
     this._stopTypewriter();
     for (const t of this.optionTexts) t.setText('').setVisible(false);
+    if (this.scene) this.scene.uiBlocking = false;
   }
 
   renderNode(data) {
@@ -161,7 +172,7 @@ export class DialoguePanel {
       return;
     }
     this.hintText.setText('...');
-    this._typeTimer = this.scene.time.addEvent({
+    this._typeTimer = this.displayScene.time.addEvent({
       delay: 25,
       repeat: text.length - 1,
       callback: () => {

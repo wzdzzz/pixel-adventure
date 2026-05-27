@@ -286,19 +286,34 @@ export class MainGameScene extends Phaser.Scene {
       actionRegistry: this.actionRegistry,
       dialogueLoader: getDialogueModule
     });
-    this.dialoguePanel = new DialoguePanel(this, this.dialogueEngine);
     SystemRegistry.register('actionRegistry', this.actionRegistry);
     SystemRegistry.register('dialogueEngine', this.dialogueEngine);
 
-    // 4.3 商店系统（ShopService + ShopPanel）
+    // 4.3 商店系统（ShopService）
     this.shopService = ShopService.deserialize(this, saveData?.shopData);
-    this.shopPanel = new ShopPanel(this, this.shopService);
     SystemRegistry.register('shopService', this.shopService);
 
-    // 4.4 训练师系统（TrainerService + TrainerPanel）
+    // 4.4 训练师系统（TrainerService）
     this.trainerService = new TrainerService(this);
-    this.trainerPanel = new TrainerPanel(this, this.trainerService);
     SystemRegistry.register('trainerService', this.trainerService);
+
+    // 面板渲染挂到 UIScene 上（保证在 HUD/技能栏之上），事件仍订阅 MainGameScene
+    // 延迟到 UIScene 完成 create 后再实例化
+    const _createNpcPanels = () => {
+      const ui = this.scene.get('UIScene');
+      this.dialoguePanel = new DialoguePanel(this, this.dialogueEngine, ui);
+      this.shopPanel = new ShopPanel(this, this.shopService, ui);
+      this.trainerPanel = new TrainerPanel(this, this.trainerService, ui);
+    };
+    const ui = this.scene.get('UIScene');
+    if (ui && ui.sys?.settings?.status >= Phaser.Scenes.CREATING) {
+      _createNpcPanels();
+    } else if (ui) {
+      ui.events.once('create', _createNpcPanels);
+    } else {
+      // UIScene 尚未实例化，下一帧再试
+      this.time.delayedCall(0, _createNpcPanels);
+    }
 
     // 4.5 同伴系统
     this.companionManager = new CompanionManager(this);
@@ -1458,7 +1473,8 @@ export class MainGameScene extends Phaser.Scene {
   _showExitConfirm() {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
-    const container = this.add.container(0, 0).setDepth(2000).setScrollFactor(0);
+    // 注意：sprite 用 y 坐标作 depth (Y 排序)，世界可达 16384，所以这里必须更高
+    const container = this.add.container(0, 0).setDepth(30000).setScrollFactor(0);
 
     // 背景遮罩
     const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.55)

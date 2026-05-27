@@ -50,10 +50,14 @@ export class CompanionManager {
     }
 
     // 劫持 AI 的目标 & 敌人判定
+    // 注意：CombatAI 把 config 的值展开到自身属性上，没有保留 .config 引用
     if (npc.ai) {
-      npc.ai.config.getTarget = () => this._pickEnemyFor(npc);
-      npc.ai.config.canEngage = (t) => this._isEnemyOfPlayer(t);
-      npc.ai.config.detectionRange = ENEMY_SEARCH_RADIUS;
+      npc.ai._origGetTarget = npc.ai.getTarget;
+      npc.ai._origCanEngage = npc.ai.canEngage;
+      npc.ai._origDetectionRange = npc.ai.detectionRange;
+      npc.ai.getTarget = () => this._pickEnemyFor(npc);
+      npc.ai.canEngage = (t) => this._isEnemyOfPlayer(t);
+      npc.ai.detectionRange = ENEMY_SEARCH_RADIUS;
     }
 
     this.current = npc;
@@ -71,6 +75,15 @@ export class CompanionManager {
     if (npc._originalFaction) {
       npc.faction = npc._originalFaction;
       if (npc.sprite) npc.sprite.faction = npc._originalFaction;
+    }
+    // 还原被劫持的 AI 配置
+    if (npc.ai && '_origGetTarget' in npc.ai) {
+      npc.ai.getTarget = npc.ai._origGetTarget;
+      npc.ai.canEngage = npc.ai._origCanEngage;
+      npc.ai.detectionRange = npc.ai._origDetectionRange;
+      delete npc.ai._origGetTarget;
+      delete npc.ai._origCanEngage;
+      delete npc.ai._origDetectionRange;
     }
     npc.persistent = false;
     if (npc.config) npc.config.persistent = false;

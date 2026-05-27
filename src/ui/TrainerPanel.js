@@ -6,8 +6,9 @@ import Phaser from 'phaser';
  * 显示训练师可教的技能列表；左键学习；底部按钮重置天赋。
  */
 export class TrainerPanel {
-  constructor(scene, trainerService) {
+  constructor(scene, trainerService, displayScene = null) {
     this.scene = scene;
+    this.displayScene = displayScene || scene;
     this.service = trainerService;
     this.visible = false;
     this.rows = [];
@@ -19,35 +20,35 @@ export class TrainerPanel {
   _build() {
     const W = 760, H = 540;
     const cx = 1920 / 2, cy = 1080 / 2;
-    this.container = this.scene.add.container(cx, cy)
+    this.container = this.displayScene.add.container(cx, cy)
       .setDepth(9991).setScrollFactor(0).setVisible(false);
 
-    this.bg = this.scene.add.rectangle(0, 0, W, H, 0x141420, 0.97)
+    this.bg = this.displayScene.add.rectangle(0, 0, W, H, 0x141420, 0.97)
       .setStrokeStyle(2, 0x66ccff);
-    this.border = this.scene.add.rectangle(0, 0, W + 6, H + 6, 0, 0)
+    this.border = this.displayScene.add.rectangle(0, 0, W + 6, H + 6, 0, 0)
       .setStrokeStyle(1, 0x66ccff, 0.3);
 
-    this.titleText = this.scene.add.text(0, -H / 2 + 22, '训练师', {
+    this.titleText = this.displayScene.add.text(0, -H / 2 + 22, '训练师', {
       fontSize: '24px', fill: '#66ccff', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5, 0);
 
-    this.subText = this.scene.add.text(0, -H / 2 + 56, '', {
+    this.subText = this.displayScene.add.text(0, -H / 2 + 56, '', {
       fontSize: '14px', fill: '#aaaaaa', fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
 
-    this.goldText = this.scene.add.text(0, H / 2 - 60, '', {
+    this.goldText = this.displayScene.add.text(0, H / 2 - 60, '', {
       fontSize: '16px', fill: '#ffdd44', fontFamily: 'Courier New'
     }).setOrigin(0.5, 0.5);
 
     // 重置按钮
-    this.resetBtn = this.scene.add.text(0, H / 2 - 30, '[ 重置天赋 ]', {
+    this.resetBtn = this.displayScene.add.text(0, H / 2 - 30, '[ 重置天赋 ]', {
       fontSize: '16px', fill: '#ff8888', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
     this.resetBtn.on('pointerover', () => this.resetBtn.setFill('#ffcccc'));
     this.resetBtn.on('pointerout', () => this.resetBtn.setFill('#ff8888'));
     this.resetBtn.on('pointerdown', () => this.service.resetTalents());
 
-    this.hintText = this.scene.add.text(0, H / 2 - 8, '[ESC] 关闭', {
+    this.hintText = this.displayScene.add.text(0, H / 2 - 8, '[ESC] 关闭', {
       fontSize: '12px', fill: '#888888', fontFamily: 'Courier New'
     }).setOrigin(0.5, 0.5);
 
@@ -56,7 +57,7 @@ export class TrainerPanel {
       this.goldText, this.resetBtn, this.hintText
     ]);
 
-    this.scene.input.keyboard.on('keydown-ESC', () => {
+    this.displayScene.input.keyboard.on('keydown-ESC', () => {
       if (this.visible) this.hide();
     });
   }
@@ -82,6 +83,7 @@ export class TrainerPanel {
     this.subText.setText(`职业：${player?.classType || '?'}   等级：${ls?.level || 1}   技能点：${ls?.skillPoints || 0}`);
     this.refresh();
     if (this.scene.player) this.scene.player.canInteract = false;
+    this.scene.uiBlocking = true;
   }
 
   hide() {
@@ -91,6 +93,7 @@ export class TrainerPanel {
     this._clearRows();
     if (this.service.currentTrainerId) this.service.close();
     if (this.scene.player) this.scene.player.canInteract = true;
+    this.scene.uiBlocking = false;
   }
 
   refresh() {
@@ -123,7 +126,7 @@ export class TrainerPanel {
     const rowH = 42;
     const tree = this.scene.skillTreeSystem;
     if (!cfg.skills.length) {
-      const t = this.scene.add.text(0, baseY, '（该训练师暂无可教技能）', {
+      const t = this.displayScene.add.text(0, baseY, '（该训练师暂无可教技能）', {
         fontSize: '14px', fill: '#777777', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       this.container.add(t);
@@ -144,7 +147,7 @@ export class TrainerPanel {
       };
       const color = check.ok ? '#ffffff' : colorMap[state] || '#777777';
       const text = `${name}${rankInfo} ${stateLabel}\n  ${desc}  [Lv${entry.levelReq} / ${entry.goldCost}G]`;
-      const row = this.scene.add.text(-360, baseY + i * rowH, text, {
+      const row = this.displayScene.add.text(-360, baseY + i * rowH, text, {
         fontSize: '13px', fill: color, fontFamily: 'Courier New'
       }).setOrigin(0, 0);
       if (check.ok) {
