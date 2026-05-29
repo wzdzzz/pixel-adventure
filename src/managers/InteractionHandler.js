@@ -288,6 +288,7 @@ export const InteractionHandler = {
     if (!this.player.attackHitbox.body.enable) return;
     if (this.player.attackHitRegistered) return;
     if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
+    if (enemy.faction === 'ally') return; // 友方伙伴：不受玩家攻击伤害
     const baseDmg = this.player.getAttack();
     const playerLevel = this.levelSystem?.level || 1;
     const suppressMult = getLevelSuppression(playerLevel, enemy.finalLevel || 1);
@@ -307,6 +308,7 @@ export const InteractionHandler = {
   handleSkillHit(enemy) {
     if (!this.player.skillHitbox.body.enable) return;
     if (enemy.isInvulnerable || enemy.state === EnemyState.DEAD) return;
+    if (enemy.faction === 'ally') return; // 友方伙伴：不受玩家技能伤害
 
     const skillEngine = this.player.skillEngine;
     const skill = skillEngine.getActiveSkill();

@@ -287,7 +287,8 @@ export class ActionRegistry {
       }
       ctx?.dialogueEngine?.stop();
       const ok = mgr.recruit(npc);
-      if (ok && npc.npcMemory && npc.id) {
+      if (ok && npc.id) {
+        // 写 recruited flag → 触发 recruitable→recruited stage 转换（再对话显示已招募内容）
         scene.npcMemory?.setFlag(npc.id, 'recruited', true);
       } else if (!ok && cost > 0) {
         // 回滚

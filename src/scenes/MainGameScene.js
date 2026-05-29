@@ -957,6 +957,7 @@ export class MainGameScene extends Phaser.Scene {
       const overlap = this.physics.add.overlap(this.player.sprite, hitbox, () => {
         const baseDmg = hitbox._enemySkillDamage || 0;
         const owner = hitbox._enemyOwner;
+        if (owner?.faction === 'ally') return; // 友方伙伴 hitbox：不伤玩家（仍可继续命中敌人）
         if (this.player && baseDmg > 0 && !this.player.isInvulnerable) {
           const enemyLevel = owner?.finalLevel || 1;
           const playerLevel = this.levelSystem?.level || 1;
@@ -982,6 +983,7 @@ export class MainGameScene extends Phaser.Scene {
       if (!proj || !this.player) return;
       this.enemyProjectiles.push(proj);
       this.physics.add.overlap(this.player.sprite, proj.sprite, () => {
+        if (proj.owner?.faction === 'ally') return; // 友方伙伴弹道：不伤玩家
         if (this.player && !this.player.isInvulnerable) {
           proj.onHit(this.player);
         }

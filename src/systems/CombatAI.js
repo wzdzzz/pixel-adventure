@@ -147,7 +147,8 @@ export class CombatAI {
 
     switch (this.state) {
       case CombatState.PATROL:
-        this._updatePatrol(delta);
+        // followMode（出战伙伴）：无敌对目标时不巡逻，移动交由 CompanionManager 接管跟随玩家
+        if (!this.followMode) this._updatePatrol(delta);
         break;
       case CombatState.CHASE:
         this._updateChase(tgtSprite, dist);

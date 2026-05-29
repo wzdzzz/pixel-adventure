@@ -58,6 +58,8 @@ export class CompanionManager {
       npc.ai.getTarget = () => this._pickEnemyFor(npc);
       npc.ai.canEngage = (t) => this._isEnemyOfPlayer(t);
       npc.ai.detectionRange = ENEMY_SEARCH_RADIUS;
+      // 跟随模式：无敌对目标时不巡逻，由本管理器接管移动（修复"招募后不跟随"）
+      npc.ai.followMode = true;
     }
 
     this.current = npc;
@@ -81,6 +83,7 @@ export class CompanionManager {
       npc.ai.getTarget = npc.ai._origGetTarget;
       npc.ai.canEngage = npc.ai._origCanEngage;
       npc.ai.detectionRange = npc.ai._origDetectionRange;
+      npc.ai.followMode = false;
       delete npc.ai._origGetTarget;
       delete npc.ai._origCanEngage;
       delete npc.ai._origDetectionRange;
