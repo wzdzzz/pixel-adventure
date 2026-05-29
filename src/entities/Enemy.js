@@ -4,6 +4,10 @@ import { Actor } from './Actor.js';
 import { EnemySkillSystem } from '../systems/EnemySkillSystem.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { scaleBaseStats, applyDerivedScaling } from '../data/monsterScaling.js';
+import { ENEMY_NAMES } from '../data/quests.js';
+
+// Boss 阶段（狂暴）血量阈值：跌破 66% → 阶段1，跌破 33% → 阶段2
+const BOSS_PHASE_THRESHOLDS = [0.66, 0.33];
 
 export const EnemyState = {
   PATROL: 'PATROL',
@@ -101,6 +105,10 @@ export class Enemy extends Actor {
     // 技能系统：从 enemyConfig 读取本怪物的技能列表
     const enemyCfg = getEnemyConfig(characterType);
     this.isBoss = !!enemyCfg.isBoss;
+    this.displayName = ENEMY_NAMES[characterType] || characterType;
+    // Boss 阶段/狂暴状态
+    this._bossPhase = 0;
+    this._enrageMult = 1;
     this.skillSystem = new EnemySkillSystem(scene, this, enemyCfg.skills || ['basic_melee']);
     this._activeSkill = null;     // 当前 telegraph/active/recovery 中的技能
     this._skillRecoveryTime = 300;
@@ -240,6 +248,10 @@ export class Enemy extends Actor {
     }
   }
 
+  // Boss 狂暴：攻击 / 移速随阶段提升
+  getAttack() { return Math.round(super.getAttack() * (this._enrageMult || 1)); }
+  getMoveSpeed() { return super.getMoveSpeed() * Math.min(1.5, this._enrageMult || 1); }
+
   _enterCombat() {
     this.inCombat = true;
     this.aggroTimer = 0;
@@ -248,6 +260,7 @@ export class Enemy extends Actor {
     if (this.state === EnemyState.PATROL) {
       this.setState(EnemyState.CHASE);
     }
+    if (this.isBoss) this.scene.events.emit('bossEngaged', this);
   }
 
   _exitCombat() {
@@ -255,8 +268,13 @@ export class Enemy extends Actor {
     this.aggroTimer = 0;
     this.disengageTimer = 0;
     this.target = null;
-    // 脱战满血
+    // 脱战满血 + 重置狂暴阶段
     this.hp = this.maxHp;
+    if (this.isBoss) {
+      this._bossPhase = 0;
+      this._enrageMult = 1;
+      this.scene.events.emit('bossDisengaged', this);
+    }
     this.onHpChanged();
     // 取消任何进行中的技能
     if (this.skillSystem) this.skillSystem.cancel();
@@ -500,6 +518,9 @@ export class Enemy extends Actor {
 
     this.scene.events.emit('screenShake', 2, 60);
 
+    // Boss 阶段推进（狂暴）
+    if (this.isBoss && this.hp > 0) this._checkBossPhase();
+
     if (effectiveStagger > 0) {
       this.scene.time.delayedCall(effectiveStagger, () => {
         if (this.hp > 0 && this.state === EnemyState.HURT) {
@@ -509,10 +530,28 @@ export class Enemy extends Actor {
     }
   }
 
+  /** Boss 跌破血量阈值时进入下一狂暴阶段：提升攻/速 + 视觉与提示 */
+  _checkBossPhase() {
+    const pct = this.hp / this.maxHp;
+    const targetPhase = BOSS_PHASE_THRESHOLDS.filter(t => pct <= t).length; // 0/1/2
+    if (targetPhase <= this._bossPhase) return;
+    this._bossPhase = targetPhase;
+    this._enrageMult = 1 + targetPhase * 0.3; // 每阶段 +30% 攻击、移速（移速封顶 1.5x）
+    // 视觉：红闪 + 震屏
+    this.sprite.setTint(0xff4444);
+    this.scene.time.delayedCall(220, () => {
+      if (this.sprite?.active) this.sprite.setTint(this._baseTint || 0xffffff);
+    });
+    this.scene.events.emit('screenShake', 5, 220);
+    this.scene.events.emit('showMessage', `${this.displayName} 进入狂暴！`, '#ff4444');
+    this.scene.events.emit('bossPhase', this, targetPhase);
+  }
+
   // ── Death ──────────────────────────────────────────────────────
 
   die() {
     if (this._isDestroyed) return;
+    if (this.isBoss) this.scene.events.emit('bossDefeated', this);
     this.setState(EnemyState.DEAD);
     this.sprite.body.enable = false;
     this.playAnim('die', false);

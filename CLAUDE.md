@@ -38,6 +38,9 @@ npx vite --force  # 清除 Vite 缓存启动
     - recruit/deploy/bench/dismiss/setStance（follow/hold/aggressive/defensive）；篝火 reviveAll
     - 队伍 UI（PanelScene 'party' tab，T 键）；存档 companions{roster,activeId} 兼容老档
     - 友方 faction='ally' 不受/不造成玩家伤害；出战伙伴对话可下达姿态指令
+- **Boss 战斗体验**（见 `docs/plans/2026-05-29-boss-encounter-system.md`）：
+  - 顶部 Boss 血条 HUD（名字+阶段）；阶段/狂暴（HP 66%/33% 阈值 → 攻/速 +30%/阶 + 红闪震屏提示）
+  - 事件 `bossEngaged/bossPhase/bossDefeated/bossDisengaged`；boss 专属音乐（优先于战斗曲）；击败横幅
 - **任务&赏金系统**（开放世界，见 `docs/plans/2026-05-29-quest-bounty-system.md`）：
   - QuestSystem 事件驱动追踪（kill/collect）+ `available→active→completed` 状态 + 自动发奖
   - `data/quests.js` 开放世界主/支线（autoAvailable 可接）+ `generateBounties` 可重复击杀赏金（按等级缩放，篝火/赏金官刷新）

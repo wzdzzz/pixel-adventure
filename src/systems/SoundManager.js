@@ -38,6 +38,7 @@ export default class SoundManager {
 
     // ── 音乐状态机 ──
     this._inCombat = false;
+    this._inBoss = false;
     this._lastCombatTime = 0;
     this._ambientTrack = 'explore';
   }
@@ -84,6 +85,11 @@ export default class SoundManager {
       shopBought: () => audioEngine.playSfx('shop_buy'),
       shopSold: () => audioEngine.playSfx('shop_sell'),
 
+      // ── Boss ──
+      bossEngaged: () => this._onBossEngaged(),
+      bossDefeated: () => this._onBossEnd(),
+      bossDisengaged: () => this._onBossEnd(),
+
       // ── 篝火 / 面板 / 通用 ──
       bonfireRest: () => this._onBonfireRest(),
       switchPanelTab: () => audioEngine.playSfx('ui_click'),
@@ -110,8 +116,9 @@ export default class SoundManager {
     this._bound = false;
   }
 
-  /** 每帧由场景调用：处理战斗音乐超时回落到环境曲。 */
+  /** 每帧由场景调用：处理战斗音乐超时回落到环境曲（Boss 战不超时，由 boss 结束事件控制）。 */
   update(/* time, delta */) {
+    if (this._inBoss) return;
     if (!this._inCombat || !this.scene || !this.scene.time) return;
     const now = this.scene.time.now;
     if (now - this._lastCombatTime > COMBAT_TIMEOUT) {
@@ -199,13 +206,29 @@ export default class SoundManager {
 
   // ───────── 音乐状态机内部 ─────────
 
-  /** 进入战斗：刷新计时；若此前不在战斗则切到战斗曲。 */
+  /** 进入战斗：刷新计时；若此前不在战斗则切到战斗曲（Boss 战时不覆盖 boss 曲）。 */
   _enterCombat() {
     this._lastCombatTime = (this.scene && this.scene.time) ? this.scene.time.now : 0;
+    if (this._inBoss) return;
     if (!this._inCombat) {
       this._inCombat = true;
       this._playMusic('combat');
     }
+  }
+
+  /** Boss 登场：切 boss 曲（优先级高于普通战斗）。 */
+  _onBossEngaged() {
+    this._inBoss = true;
+    this._inCombat = true;
+    this._lastCombatTime = (this.scene && this.scene.time) ? this.scene.time.now : 0;
+    this._playMusic('boss');
+  }
+
+  /** Boss 结束（击败/脱战）：回到环境曲。 */
+  _onBossEnd() {
+    this._inBoss = false;
+    this._inCombat = false;
+    this._playMusic(this._ambientTrack);
   }
 
   /** 安全地调用 music.play（music 可能为 null）。 */

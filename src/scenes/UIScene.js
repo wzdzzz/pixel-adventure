@@ -33,6 +33,7 @@ export class UIScene extends Phaser.Scene {
     this.createQuestTracker();
     this.createDebugButton();
     this.createMinimap();
+    this.createBossBar();
 
     // Listen for resize events to reposition all HUD elements
     this.scale.on('resize', this.onResize, this);
@@ -53,8 +54,84 @@ export class UIScene extends Phaser.Scene {
         this.gameScene.events.off('questCompleted');
         this.gameScene.events.off('skillSlotsChanged');
         this.gameScene.events.off('itemSlotsChanged');
+        this.gameScene.events.off('bossEngaged');
+        this.gameScene.events.off('bossPhase');
+        this.gameScene.events.off('bossDefeated');
+        this.gameScene.events.off('bossDisengaged');
       }
     });
+  }
+
+  // ─── Boss 血条 HUD（顶部居中） ───────────────────────────
+  createBossBar() {
+    const cx = this._uiW / 2;
+    const top = 26;
+    const W = 640, H = 24;
+    this.bossBar = this.add.container(cx, top).setDepth(50).setScrollFactor(0).setVisible(false);
+
+    const frame = this.add.rectangle(0, 0, W + 8, H + 8, 0x000000, 0.75).setStrokeStyle(2, 0x882222);
+    this.bossBarBg = this.add.rectangle(0, 0, W, H, 0x2a0d0d).setStrokeStyle(1, 0x551111);
+    this.bossBarFill = this.add.rectangle(-W / 2, 0, W, H, 0xcc2222).setOrigin(0, 0.5);
+    this.bossNameText = this.add.text(0, -H / 2 - 12, '', {
+      fontSize: '18px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.bossPhaseText = this.add.text(W / 2, -H / 2 - 10, '', {
+      fontSize: '14px', fill: '#ffaa44', fontFamily: 'Courier New'
+    }).setOrigin(1, 0.5);
+    this.bossBar.add([frame, this.bossBarBg, this.bossBarFill, this.bossNameText, this.bossPhaseText]);
+    this._bossBarW = W;
+    this._bossRef = null;
+
+    const gs = this.gameScene;
+    if (!gs) return;
+    gs.events.on('bossEngaged', (boss) => {
+      this._bossRef = boss;
+      this.bossNameText.setText(boss.displayName || 'BOSS');
+      this.bossPhaseText.setText('');
+      this.bossBarFill.width = this._bossBarW;
+      this.bossBar.setVisible(true);
+    });
+    gs.events.on('bossPhase', (boss, phase) => {
+      if (boss !== this._bossRef) return;
+      this.bossPhaseText.setText('狂暴 ' + 'I'.repeat(phase));
+      // 血条闪一下
+      this.bossBarFill.setFillStyle(0xff8888);
+      this.time.delayedCall(180, () => this.bossBarFill && this.bossBarFill.setFillStyle(0xcc2222));
+    });
+    const hideBoss = (boss) => {
+      if (boss && boss !== this._bossRef) return;
+      this._bossRef = null;
+      this.bossBar.setVisible(false);
+    };
+    gs.events.on('bossDisengaged', hideBoss);
+    gs.events.on('bossDefeated', (boss) => {
+      if (boss === this._bossRef) {
+        this._showBossDefeatBanner(boss.displayName || 'BOSS');
+      }
+      hideBoss(boss);
+    });
+  }
+
+  _showBossDefeatBanner(name) {
+    const t = this.add.text(this._uiW / 2, this._uiH / 2 - 80, `${name} 已被击败！`, {
+      fontSize: '40px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 6
+    }).setOrigin(0.5).setDepth(60).setScrollFactor(0);
+    this.tweens.add({ targets: t, alpha: 0, y: t.y - 60, duration: 2500, ease: 'Cubic.easeIn', onComplete: () => t.destroy() });
+  }
+
+  /** 每帧刷新 Boss 血条 */
+  update() {
+    if (this._bossRef && this.bossBar?.visible) {
+      const b = this._bossRef;
+      if (b._isDestroyed || b.state === 'DEAD' || b.hp <= 0 || !b.sprite?.active) {
+        this._bossRef = null;
+        this.bossBar.setVisible(false);
+      } else {
+        const pct = Math.max(0, Math.min(1, b.hp / b.maxHp));
+        this.bossBarFill.width = this._bossBarW * pct;
+      }
+    }
   }
 
   createHUD() {
