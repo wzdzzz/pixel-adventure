@@ -33,7 +33,11 @@ npx vite --force  # 清除 Vite 缓存启动
   - NPCMemoryStore（每 NPC stage/flag/var/dead）+ FactionSystem（5 级关系 + reputation -100~+100）
   - DialogueEngine（节点树）+ ActionRegistry（21+ action）+ NpcTransitions（事件驱动 stage 切换）
   - ShopService/Panel（折扣 + 篝火刷新）+ TrainerService/Panel（教技能 + 重置天赋）
-  - CombatAI（通用战斗状态机）+ CombatNPC + CompanionManager（招募 / 跟随 / 复活）
+  - CombatAI（通用战斗状态机）+ CombatNPC + CompanionManager **队伍系统 v2**（见 `docs/plans/2026-05-29-companion-system-v2-design.md`）：
+    - 名册无上限 roster + 单一出战 active；待命=隐藏禁用常驻实例，出战=劫持 AI+followMode 跟随
+    - recruit/deploy/bench/dismiss/setStance（follow/hold/aggressive/defensive）；篝火 reviveAll
+    - 队伍 UI（PanelScene 'party' tab，T 键）；存档 companions{roster,activeId} 兼容老档
+    - 友方 faction='ally' 不受/不造成玩家伤害；出战伙伴对话可下达姿态指令
 - **音频系统**（程序化合成，无外部音频文件，见 `docs/modules/audio.md`）：
   - Web Audio 实时合成；`AudioEngine`（全局单例 + 三级音量 + localStorage 持久化 + 解锁）
   - 数据驱动 `data/sounds.js`（SFX 参数 + 音乐曲库）；`MusicEngine`（前瞻调度循环乐 + 交叉淡变）
