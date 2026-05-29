@@ -34,6 +34,10 @@ npx vite --force  # 清除 Vite 缓存启动
   - DialogueEngine（节点树）+ ActionRegistry（21+ action）+ NpcTransitions（事件驱动 stage 切换）
   - ShopService/Panel（折扣 + 篝火刷新）+ TrainerService/Panel（教技能 + 重置天赋）
   - CombatAI（通用战斗状态机）+ CombatNPC + CompanionManager（招募 / 跟随 / 复活）
+- **音频系统**（程序化合成，无外部音频文件，见 `docs/modules/audio.md`）：
+  - Web Audio 实时合成；`AudioEngine`（全局单例 + 三级音量 + localStorage 持久化 + 解锁）
+  - 数据驱动 `data/sounds.js`（SFX 参数 + 音乐曲库）；`MusicEngine`（前瞻调度循环乐 + 交叉淡变）
+  - `SoundManager`（事件→SFX + 战斗/环境音乐状态机）；设置面板音量滑条 + 静音
 
 ## 关键约定
 - 中文注释和 UI 文本
@@ -58,3 +62,6 @@ npx vite --force  # 清除 Vite 缓存启动
 - I-Frames 计时器到期会清除 isInvulnerable，技能无敌需要额外保护（检查 `_whirlwindSuperArmor`）
 - 技能 `trySkill()` 先 `setVelocity(0,0)`，读方向应用 `getAimDirection()`（鼠标）而非按键输入
 - 加载存档时必须先用 `getSaveInfo` 决定 classType/currentLevel，再 `createPlayer`，否则技能/装备会与职业不匹配
+- 音频：AudioContext 初始 `suspended`，须首次用户手势后 `resume()`（main.js 已处理）；未解锁时 `playSfx` 安全 no-op
+- 音频：高频事件 SFX 依赖 `SOUNDS[name].minInterval` 节流防爆音；音量滑条线性但 gain 取平方（感知曲线）
+- **场景事件监听器泄漏**：MainGameScene 是复用单例，Phaser 不会在 shutdown 自动清除 `scene.events.on(...)` 注册的用户监听器。任何在 MainGameScene 上挂监听的对象（面板/系统）必须在 `scene.events.once('shutdown', ...)` 里 `off` 解绑，否则返回主菜单/加载存档后会累积陈旧监听器，在已销毁的 UIScene 显示对象上操作导致 `drawImage` 崩溃（DialoguePanel/ShopPanel/TrainerPanel/SoundManager 已遵循此模式）
