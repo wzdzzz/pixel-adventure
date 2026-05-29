@@ -107,9 +107,9 @@ export class CompanionManager {
     if (!this.roster.has(npcId)) return false;
     if (this.activeId === npcId) return true;
 
-    // 死亡伙伴需先复活
+    // 倒下的伙伴需先复活
     const existing = this._getInstance(npcId);
-    if (existing && (existing.state === 'DEAD' || existing.hp <= 0)) {
+    if (existing && this._isDown(existing)) {
       this.scene.events.emit('showMessage', `${this.roster.get(npcId).name} 已倒下，需在篝火恢复`, '#ff8888');
       return false;
     }
@@ -136,6 +136,16 @@ export class CompanionManager {
     this.scene.events.emit('companionBenched', { npcId });
     this.scene.events.emit('rosterChanged');
     return true;
+  }
+
+  /** 出战伙伴倒下：停止跟随并自动收回待命（篝火可恢复后再出战）。 */
+  _recallDowned() {
+    const c = this.activeNpc;
+    if (!c) return;
+    const name = c.name || this.roster.get(c.id)?.name || '伙伴';
+    if (c.sprite?.body) c.sprite.body.setVelocity(0, 0);
+    this.bench(this.activeId);
+    this.scene.events.emit('showMessage', `${name} 倒下了，已收回队伍（篝火可恢复）`, '#ff8888');
   }
 
   /** 设置姿态（active 立即生效，benched 记录待出战生效）。 */
@@ -174,9 +184,14 @@ export class CompanionManager {
       level: cfg.level ?? 1,
       hp: npc ? Math.max(0, Math.round(npc.hp)) : (cfg.hp ?? 0),
       hpMax: npc ? Math.round(npc.maxHp) : (cfg.hp ?? 0),
-      dead: npc ? (npc.state === 'DEAD' || npc.hp <= 0) : false,
+      dead: npc ? this._isDown(npc) : false,
       skills: cfg.skills || [],
     };
+  }
+
+  /** 伙伴是否"倒下"（HP 归零 / 死亡 / 投降）→ 需篝火恢复才能再出战 */
+  _isDown(npc) {
+    return !npc || npc.state === 'DEAD' || npc.hp <= 0 || npc._isSurrendered;
   }
 
   // ─── 内部：激活 / 待命 实现 ──────────────
@@ -273,7 +288,11 @@ export class CompanionManager {
   update(_delta) {
     const c = this.activeNpc;
     if (!c || c._isDestroyed) return;
-    if (c.state === 'DEAD' || c.hp <= 0) return;
+    // 倒下（HP 归零 / 死亡 / 投降）→ 停止跟随并自动收回待命
+    if (this._isDown(c)) {
+      this._recallDowned();
+      return;
+    }
 
     const player = this.scene.player;
     if (!player?.sprite || !c.sprite) return;
@@ -365,6 +384,10 @@ export class CompanionManager {
       if (!c) continue;
       c.hp = c.maxHp;
       c._isSurrendered = false;
+      // 清除投降 stage，恢复为已招募（否则对话会卡在"投降"文本）
+      if (this.scene.npcMemory?.getStage?.(npcId) === '__surrendered__') {
+        this.scene.npcMemory.setStage(npcId, 'recruited');
+      }
       if (c.state === 'DEAD') {
         c.state = 'PATROL';
         if (c.sprite) {
