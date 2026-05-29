@@ -20,7 +20,11 @@ export default {
       speaker: '游侠艾琳',
       text: '需要我做什么？',
       options: [
-        { text: '解散队伍', action: 'dismiss_companion' },
+        { text: '打开队伍面板', action: 'open_party_panel' },
+        { text: '原地待命', action: 'set_stance:hold' },
+        { text: '跟紧我', action: 'set_stance:follow' },
+        { text: '主动出击', action: 'set_stance:aggressive' },
+        { text: '解散你', action: 'dismiss_companion' },
         { text: '继续吧', goto: 'end' }
       ]
     },

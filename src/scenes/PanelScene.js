@@ -4,16 +4,17 @@ import { InventoryPanel } from '../ui/panels/InventoryPanel.js';
 import { SkillTreePanel } from '../ui/panels/SkillTreePanel.js';
 import { QuestLogPanel } from '../ui/panels/QuestLogPanel.js';
 import { SmithyPanel } from '../ui/panels/SmithyPanel.js';
+import { PartyPanel } from '../ui/panels/PartyPanel.js';
 import { Tooltip } from '../ui/Tooltip.js';
 import audioEngine from '../systems/AudioEngine.js';
 
 /** 将值钳制到 [0,1] */
 function clamp01(v) { v = Number(v); if (!isFinite(v)) return 0; return Math.max(0, Math.min(1, v)); }
 
-const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'settings'];
-const TAB_LABELS = ['角色', '背包', '技能', '日志', '设置'];
-const TAB_ICONS = ['👤', '🎒', '⚔', '📜', '⚙'];
-const TAB_KEYS = ['C', 'B', 'X', 'L', ''];
+const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'party', 'settings'];
+const TAB_LABELS = ['角色', '背包', '技能', '日志', '队伍', '设置'];
+const TAB_ICONS = ['👤', '🎒', '⚔', '📜', '👥', '⚙'];
+const TAB_KEYS = ['C', 'B', 'X', 'L', 'T', ''];
 
 export const RARITY_COLORS = {
   common:    { bg: 0x3a3a3a, border: 0x666666 },
@@ -89,6 +90,7 @@ export class PanelScene extends Phaser.Scene {
     this.createInventoryTab();
     this.createSkillTreeTab();
     this.createQuestLogTab();
+    this.createPartyTab();
     this.createSettingsTab();
 
     // 读取默认标签页（由快捷键设置）
@@ -107,7 +109,7 @@ export class PanelScene extends Phaser.Scene {
     });
 
     // C/B/X/L 在面板内：同标签关闭，不同标签切换
-    const panelHotkeys = { C: 'character', B: 'inventory', X: 'skillTree', L: 'questLog' };
+    const panelHotkeys = { C: 'character', B: 'inventory', X: 'skillTree', L: 'questLog', T: 'party' };
     Object.entries(panelHotkeys).forEach(([keyChar, tabName]) => {
       const key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes[keyChar]);
       key.on('down', () => {
@@ -123,12 +125,19 @@ export class PanelScene extends Phaser.Scene {
     this._onShowMessage = (text, color) => this._showPanelToast(text, color);
     if (this.gameScene) this.gameScene.events.on('showMessage', this._onShowMessage);
 
+    // 监听 switchPanelTab（来自 ActionRegistry 等）→ 切到指定标签
+    this._onSwitchTab = (tab) => { if (TABS.includes(tab)) this.switchTab(tab); };
+    if (this.gameScene) this.gameScene.events.on('switchPanelTab', this._onSwitchTab);
+
     // Resize
     this.scale.on('resize', this.handleResize, this);
     this.events.on('shutdown', () => {
       this.scale.off('resize', this.handleResize, this);
       if (this.gameScene && this._onShowMessage) {
         this.gameScene.events.off('showMessage', this._onShowMessage);
+      }
+      if (this.gameScene && this._onSwitchTab) {
+        this.gameScene.events.off('switchPanelTab', this._onSwitchTab);
       }
       // 解绑技能面板的滚轮监听
       if (this._skillWheelHandler) {
@@ -211,6 +220,7 @@ export class PanelScene extends Phaser.Scene {
     if (tabName === 'inventory') this.refreshInventoryTab();
     if (tabName === 'skillTree') this.refreshSkillTreeTab();
     if (tabName === 'questLog') this.refreshQuestLogTab();
+    if (tabName === 'party') this.refreshPartyTab?.();
     if (tabName === 'settings') this.refreshSettingsTab?.();
   }
 
@@ -454,3 +464,4 @@ Object.assign(PanelScene.prototype, InventoryPanel);
 Object.assign(PanelScene.prototype, SkillTreePanel);
 Object.assign(PanelScene.prototype, QuestLogPanel);
 Object.assign(PanelScene.prototype, SmithyPanel);
+Object.assign(PanelScene.prototype, PartyPanel);

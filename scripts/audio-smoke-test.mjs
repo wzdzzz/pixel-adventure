@@ -11,7 +11,7 @@
 //   npm uninstall --no-save playwright        # 测完清理
 import { chromium } from 'playwright';
 
-const URL = 'http://localhost:3000';
+const URL = process.env.GAME_URL || 'http://localhost:3000';
 
 const consoleErrors = [];
 const pageErrors = [];

@@ -183,7 +183,8 @@ export class MainGameScene extends Phaser.Scene {
       C: 'character',
       B: 'inventory',
       X: 'skillTree',
-      L: 'questLog'
+      L: 'questLog',
+      T: 'party'
     };
 
     const openPanelTab = (tabName) => {
@@ -1263,15 +1264,10 @@ export class MainGameScene extends Phaser.Scene {
     this._restoreCompanionIfReady();
   }
 
-  /** 存档加载后：若同伴 NPC 已 spawn 则立即重新招募 */
+  /** 存档加载后：补齐名册中所有伙伴实例并部署出战者 */
   _restoreCompanionIfReady() {
-    const pendingId = this.registry.get('pendingCompanionId');
-    if (!pendingId || !this.companionManager) return;
-    const npc = this.npcRegistry?.instances?.get(pendingId);
-    if (npc && !this.companionManager.getCurrent()) {
-      this.companionManager.recruit(npc);
-      this.registry.set('pendingCompanionId', null);
-    }
+    if (!this.companionManager) return;
+    this.companionManager.restoreInstances();
   }
 
   pauseGame() {

@@ -104,7 +104,11 @@ export class ActionRegistry {
       if (scene.scene.isActive('PanelScene')) {
         scene.events.emit('switchPanelTab', tab);
       } else {
-        scene.scene.launch('PanelScene', { tab });
+        // 通过 registry 指定默认标签（PanelScene.create 读取），并暂停游戏
+        scene.registry?.set('panelDefaultTab', tab);
+        if (scene.pauseGame) scene.pauseGame();
+        scene.scene.launch('PanelScene');
+        scene.scene.bringToTop('PanelScene');
       }
     };
     this.register('open_enhance', (_args, ctx) => {
@@ -299,7 +303,26 @@ export class ActionRegistry {
 
     this.register('dismiss_companion', (_args, ctx) => {
       ctx?.dialogueEngine?.stop();
-      scene?.companionManager?.dismiss();
+      // 解散正在对话的这个伙伴（缺省则解散当前出战者）
+      scene?.companionManager?.dismiss(ctx?.npc?.id);
+    });
+
+    // set_stance:stance — 设置正在对话伙伴的战术姿态
+    this.register('set_stance', (args, ctx) => {
+      const stance = args[0];
+      const npcId = ctx?.npc?.id || scene?.companionManager?.getActiveId();
+      if (!npcId || !stance) return;
+      ctx?.dialogueEngine?.stop();
+      const stanceNames = { follow: '跟紧', hold: '原地待命', aggressive: '主动出击', defensive: '防守' };
+      if (scene?.companionManager?.setStance(npcId, stance)) {
+        scene.events.emit('showMessage', `姿态已设为「${stanceNames[stance] || stance}」`, '#88ccff');
+      }
+    });
+
+    // open_party_panel — 打开队伍面板
+    this.register('open_party_panel', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      openPanelTab('party')();
     });
 
     // === Phase 7 实现 ===

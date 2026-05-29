@@ -60,11 +60,20 @@ export class NPCRegistry {
       this._registerCombatOverlap(instance);
     }
 
-    // 存档加载后：自动重新招募同伴
-    const pending = this.scene.registry?.get?.('pendingCompanionId');
-    if (pending && pending === npcId && this.scene.companionManager && !this.scene.companionManager.getCurrent()) {
-      this.scene.companionManager.recruit(instance);
-      this.scene.registry.set('pendingCompanionId', null);
+    // 名册中的伙伴：spawnChunk 重新生成其源 NPC 时，应保持其待命/出战状态，
+    // 不在世界里以"可招募候选"重复出现（restoreInstances/deploy 统一管理实例）
+    if (this.scene.companionManager?.isRecruited?.(npcId)) {
+      const mgr = this.scene.companionManager;
+      if (mgr.getActiveId() === npcId) {
+        // 已出战者重新关联实例（理论上不会走到，active 实例 persistent 常驻）
+      } else {
+        // 待命者：隐藏禁用
+        instance.persistent = true;
+        if (instance.config) instance.config.persistent = true;
+        instance.sprite?.setVisible(false);
+        if (instance.sprite?.body) instance.sprite.body.enable = false;
+        if (instance.ai) instance.ai.enabled = false;
+      }
     }
 
     return instance;

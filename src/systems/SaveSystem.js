@@ -253,10 +253,10 @@ export class SaveSystem {
         }
       }
 
-      // companion 复活：标记 npcMemory.flag 后由对话/spawn 流程触发，
-      // 这里只记录 id；实际 recruit 由 NPCRegistry.spawnChunk 完成
-      if (saveData.companion?.companionId) {
-        scene.registry.set('pendingCompanionId', saveData.companion.companionId);
+      // 伙伴名册：deserialize（兼容老档单 companion {companionId}），
+      // 实例补齐 + 出战由 MainGameScene._restoreCompanionIfReady → restoreInstances 完成
+      if (saveData.companion && scene.companionManager) {
+        scene.companionManager.deserialize(saveData.companion);
       }
 
       // 恢复世界状态

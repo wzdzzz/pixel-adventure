@@ -85,6 +85,32 @@ export const NPCS = {
     ]
   },
 
+  // ─── 第二个同伴：佣兵巴克（招募 800 金，重甲近战） ───
+  companion_warrior: {
+    id: 'companion_warrior',
+    name: '佣兵巴克',
+    sprite: 'npc',
+    faction: 'ally',
+    essential: true,
+    persistent: false,
+    spawn: { chunkX: 8, chunkY: 8, localX: 14, localY: 18 },
+    initialStage: 'recruitable',
+    dialogueModule: 'companion_warrior',
+    movement: 'stand',
+    combatStats: {
+      level: 4,
+      hp: 120,
+      skills: ['basic_melee'],
+      detectionRange: 260,
+      aggroDelay: 200,
+      primaryAttackStat: 'strength'
+    },
+    recruitCost: { gold: 800 },
+    transitions: [
+      { from: 'recruitable', to: 'recruited', on: 'flag:companion_warrior:recruited' }
+    ]
+  },
+
   // ─── 测试卫兵：戳一下守卫就翻脸（faction = town_guard） ───
   town_guard_01: {
     id: 'town_guard_01',

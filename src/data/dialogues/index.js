@@ -7,12 +7,14 @@ import blacksmith_tom from './blacksmith_tom.js';
 import town_guard from './town_guard.js';
 import trainer_warrior from './trainer_warrior.js';
 import companion_rogue from './companion_rogue.js';
+import companion_warrior from './companion_warrior.js';
 
 const MODULES = {
   blacksmith_tom,
   town_guard,
   trainer_warrior,
-  companion_rogue
+  companion_rogue,
+  companion_warrior
 };
 
 export function getDialogueModule(name) {
