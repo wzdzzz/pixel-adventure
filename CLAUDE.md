@@ -38,6 +38,10 @@ npx vite --force  # 清除 Vite 缓存启动
     - recruit/deploy/bench/dismiss/setStance（follow/hold/aggressive/defensive）；篝火 reviveAll
     - 队伍 UI（PanelScene 'party' tab，T 键）；存档 companions{roster,activeId} 兼容老档
     - 友方 faction='ally' 不受/不造成玩家伤害；出战伙伴对话可下达姿态指令
+- **任务&赏金系统**（开放世界，见 `docs/plans/2026-05-29-quest-bounty-system.md`）：
+  - QuestSystem 事件驱动追踪（kill/collect）+ `available→active→completed` 状态 + 自动发奖
+  - `data/quests.js` 开放世界主/支线（autoAvailable 可接）+ `generateBounties` 可重复击杀赏金（按等级缩放，篝火/赏金官刷新）
+  - 任务日志面板「可接取」分组接受；赏金官 NPC（城镇）发布/刷新委托；动态赏金进存档
 - **音频系统**（程序化合成，无外部音频文件，见 `docs/modules/audio.md`）：
   - Web Audio 实时合成；`AudioEngine`（全局单例 + 三级音量 + localStorage 持久化 + 解锁）
   - 数据驱动 `data/sounds.js`（SFX 参数 + 音乐曲库）；`MusicEngine`（前瞻调度循环乐 + 交叉淡变）
