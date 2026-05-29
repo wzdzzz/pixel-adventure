@@ -101,12 +101,29 @@ export class ShopPanel {
   }
 
   _listen() {
-    this.scene.events.on('shopOpened', ({ shopId, npc }) => this.show(shopId, npc));
-    this.scene.events.on('shopClosed', () => this.hide());
-    this.scene.events.on('shopBought', () => this.refresh());
-    this.scene.events.on('shopSold', () => this.refresh());
-    this.scene.events.on('inventoryUpdated', () => { if (this.visible) this.refresh(); });
-    this.scene.events.on('goldChanged', () => { if (this.visible) this._refreshGold(); });
+    // 存引用以便 shutdown 时解绑（MainGameScene 单例复用，否则陈旧面板
+    // 监听器会在已销毁的 UIScene 文本上操作导致 drawImage 崩溃）
+    this._handlers = {
+      shopOpened: ({ shopId, npc }) => this.show(shopId, npc),
+      shopClosed: () => this.hide(),
+      shopBought: () => this.refresh(),
+      shopSold: () => this.refresh(),
+      inventoryUpdated: () => { if (this.visible) this.refresh(); },
+      goldChanged: () => { if (this.visible) this._refreshGold(); },
+    };
+    for (const ev in this._handlers) this.scene.events.on(ev, this._handlers[ev]);
+    this.scene.events.once('shutdown', this.destroy, this);
+    this.scene.events.once('destroy', this.destroy, this);
+  }
+
+  /** 解绑场景事件 + 销毁显示对象，防止场景重启后监听器泄漏。 */
+  destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    if (this.scene && this.scene.events && this._handlers) {
+      for (const ev in this._handlers) this.scene.events.off(ev, this._handlers[ev]);
+    }
+    if (this.container) { try { this.container.destroy(); } catch (e) { /* UIScene 可能已销毁 */ } this.container = null; }
   }
 
   show(shopId, npc) {

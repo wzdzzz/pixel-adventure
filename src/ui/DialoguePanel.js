@@ -107,12 +107,32 @@ export class DialoguePanel {
   }
 
   _listen() {
-    this.scene.events.on('dialogueStarted', (data) => {
-      console.log('[DialoguePanel] dialogueStarted event received', data);
-      this.show();
-    });
-    this.scene.events.on('dialogueEnded', () => this.hide());
-    this.scene.events.on('dialogueNodeEntered', (data) => this.renderNode(data));
+    // 存引用以便解绑（匿名箭头无法 off）
+    this._onDialogueStarted = () => this.show();
+    this._onDialogueEnded = () => this.hide();
+    this._onNodeEntered = (data) => this.renderNode(data);
+    this.scene.events.on('dialogueStarted', this._onDialogueStarted);
+    this.scene.events.on('dialogueEnded', this._onDialogueEnded);
+    this.scene.events.on('dialogueNodeEntered', this._onNodeEntered);
+
+    // MainGameScene 是复用的单例：返回主菜单 / 加载存档会再次 create()，
+    // 若不在 shutdown 时解绑，陈旧面板的监听器会在已销毁的 UIScene 文本上
+    // setText → "Cannot read properties of null (reading 'drawImage')" 崩溃。
+    this.scene.events.once('shutdown', this.destroy, this);
+    this.scene.events.once('destroy', this.destroy, this);
+  }
+
+  /** 解绑场景事件 + 销毁显示对象（场景 shutdown 时调用，防止监听器泄漏）。 */
+  destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    this._stopTypewriter();
+    if (this.scene && this.scene.events) {
+      this.scene.events.off('dialogueStarted', this._onDialogueStarted);
+      this.scene.events.off('dialogueEnded', this._onDialogueEnded);
+      this.scene.events.off('dialogueNodeEntered', this._onNodeEntered);
+    }
+    if (this.container) { try { this.container.destroy(); } catch (e) { /* UIScene 可能已销毁 */ } this.container = null; }
   }
 
   show() {
