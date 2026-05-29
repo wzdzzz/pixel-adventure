@@ -949,26 +949,48 @@ export class MainGameScene extends Phaser.Scene {
       }
     });
 
-    // 敌人技能 hitbox 生成 → 与 player 注册 overlap
+    // 技能 hitbox 生成 → 按 owner 派系注册 overlap
+    //   友方（出战伙伴）hitbox → 伤害敌人
+    //   敌人 hitbox → 伤害玩家 + 出战伙伴
     this.events.off('enemyHitboxSpawned');
     this.events.on('enemyHitboxSpawned', (hitbox, lifetime) => {
       if (!hitbox || !this.player) return;
       this.enemyHitboxes = this.enemyHitboxes || [];
       this.enemyHitboxes.push(hitbox);
-      const overlap = this.physics.add.overlap(this.player.sprite, hitbox, () => {
-        const baseDmg = hitbox._enemySkillDamage || 0;
-        const owner = hitbox._enemyOwner;
-        if (owner?.faction === 'ally') return; // 友方伙伴 hitbox：不伤玩家（仍可继续命中敌人）
-        if (this.player && baseDmg > 0 && !this.player.isInvulnerable) {
-          const enemyLevel = owner?.finalLevel || 1;
-          const playerLevel = this.levelSystem?.level || 1;
-          const suppressMult = getLevelSuppression(enemyLevel, playerLevel);
-          const finalDmg = Math.round(baseDmg * suppressMult);
-          this.player.takeDamage(finalDmg, owner?.sprite?.x, owner?.sprite?.y);
-        }
-        hitbox.body.enable = false;
-      });
-      // 到期清理
+      const owner = hitbox._enemyOwner;
+      const baseDmg = hitbox._enemySkillDamage || 0;
+      const isAlly = owner?.faction === 'ally';
+      const hitSet = new Set(); // 单次 hitbox 每个目标只命中一次
+      let overlap;
+
+      if (isAlly) {
+        // 友方伙伴 → 敌人
+        const enemySprites = this.enemies.map(e => e.sprite).filter(s => s && s.active);
+        overlap = this.physics.add.overlap(hitbox, enemySprites, (hb, eSprite) => {
+          const e = eSprite.enemyInstance;
+          if (!e || hitSet.has(e) || e.state === EnemyState.DEAD || e.isInvulnerable) return;
+          if (e.faction === 'ally' || e.faction === 'player') return;
+          hitSet.add(e);
+          const dmg = Math.max(1, Math.round(baseDmg * getLevelSuppression(owner.finalLevel || 1, e.finalLevel || 1)));
+          e.takeDamage(dmg, owner.sprite?.x, owner.sprite?.y);
+        });
+      } else {
+        // 敌人 → 玩家 + 出战伙伴
+        const comp = this.companionManager?.getActiveNpc();
+        const targets = [this.player.sprite];
+        if (comp?.sprite?.active && comp.state !== EnemyState.DEAD && comp.hp > 0) targets.push(comp.sprite);
+        overlap = this.physics.add.overlap(hitbox, targets, (hb, tSprite) => {
+          if (baseDmg <= 0) return;
+          const isPlayerT = tSprite === this.player.sprite;
+          const targetActor = isPlayerT ? this.player : tSprite.combatNpcInstance;
+          if (!targetActor || hitSet.has(targetActor) || targetActor.isInvulnerable) return;
+          hitSet.add(targetActor);
+          const lvlT = isPlayerT ? (this.levelSystem?.level || 1) : (targetActor.finalLevel || 1);
+          const dmg = Math.round(baseDmg * getLevelSuppression(owner?.finalLevel || 1, lvlT));
+          targetActor.takeDamage(dmg, owner?.sprite?.x, owner?.sprite?.y);
+        });
+      }
+
       this.time.delayedCall(lifetime || 200, () => {
         if (overlap) this.physics.world.removeCollider(overlap);
         const idx = this.enemyHitboxes?.indexOf(hitbox);
@@ -977,18 +999,32 @@ export class MainGameScene extends Phaser.Scene {
       });
     });
 
-    // 敌人弹道生成 → 与 player 注册 overlap + 加入 update 列表
+    // 弹道生成 → 同样按 owner 派系注册 overlap
     this.events.off('enemyProjectileSpawned');
     this.enemyProjectiles = this.enemyProjectiles || [];
     this.events.on('enemyProjectileSpawned', (proj) => {
       if (!proj || !this.player) return;
       this.enemyProjectiles.push(proj);
-      this.physics.add.overlap(this.player.sprite, proj.sprite, () => {
-        if (proj.owner?.faction === 'ally') return; // 友方伙伴弹道：不伤玩家
-        if (this.player && !this.player.isInvulnerable) {
-          proj.onHit(this.player);
-        }
-      });
+      const isAlly = proj.owner?.faction === 'ally';
+      if (isAlly) {
+        const enemySprites = this.enemies.map(e => e.sprite).filter(s => s && s.active);
+        this.physics.add.overlap(proj.sprite, enemySprites, (ps, eSprite) => {
+          const e = eSprite.enemyInstance;
+          if (!e || e.state === EnemyState.DEAD || e.faction === 'ally' || e.faction === 'player') return;
+          proj.onHit(e);
+        });
+      } else {
+        const comp = this.companionManager?.getActiveNpc();
+        const targets = [this.player.sprite];
+        if (comp?.sprite?.active && comp.state !== EnemyState.DEAD && comp.hp > 0) targets.push(comp.sprite);
+        this.physics.add.overlap(proj.sprite, targets, (ps, tSprite) => {
+          const isPlayerT = tSprite === this.player.sprite;
+          const targetActor = isPlayerT ? this.player : tSprite.combatNpcInstance;
+          if (!targetActor) return;
+          if (isPlayerT && this.player.isInvulnerable) return;
+          proj.onHit(targetActor);
+        });
+      }
     });
 
     this.events.on('enemyDeath', (enemy) => {
@@ -1270,6 +1306,19 @@ export class MainGameScene extends Phaser.Scene {
     this.companionManager.restoreInstances();
   }
 
+  /** 敌人目标：玩家与出战伙伴中更近的一个（伙伴会分担仇恨） */
+  _enemyTarget(enemy) {
+    const playerSprite = this.player?.sprite;
+    const comp = this.companionManager?.getActiveNpc();
+    const compSprite = (comp && comp.sprite?.active && comp.state !== EnemyState.DEAD && comp.hp > 0)
+      ? comp.sprite : null;
+    if (!compSprite) return playerSprite;
+    if (!playerSprite || !enemy?.sprite) return playerSprite || compSprite;
+    const dpl = Phaser.Math.Distance.Between(enemy.sprite.x, enemy.sprite.y, playerSprite.x, playerSprite.y);
+    const dco = Phaser.Math.Distance.Between(enemy.sprite.x, enemy.sprite.y, compSprite.x, compSprite.y);
+    return dco < dpl ? compSprite : playerSprite;
+  }
+
   pauseGame() {
     this.physics.pause();
     this.gamePaused = true;
@@ -1408,7 +1457,7 @@ export class MainGameScene extends Phaser.Scene {
       if (!this.useOpenWorld) {
         // 关卡制模式：更新所有敌人
         this.enemies.forEach(e => {
-          e.update(this.player.sprite, delta);
+          e.update(this._enemyTarget(e), delta);
           if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
         });
       } else {
@@ -1446,7 +1495,7 @@ export class MainGameScene extends Phaser.Scene {
           const dx = e.sprite.x - camCX;
           const dy = e.sprite.y - camCY;
           if (dx * dx + dy * dy < activeRadius2) {
-            e.update(this.player.sprite, delta);
+            e.update(this._enemyTarget(e), delta);
           }
           if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
         }

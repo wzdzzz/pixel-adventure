@@ -16,10 +16,11 @@
  *   companionStanceChanged {npcId,stance} / rosterChanged ()
  */
 
-const FOLLOW_RANGE = 250;
-const RUSH_RANGE = 350;
+const FOLLOW_RANGE = 70;     // 距离 > 此值开始跟随
+const STOP_RANGE = 44;       // 距离 < 此值停下（滞后阈值，避免边界抖动）
+const RUSH_RANGE = 240;      // 距离 > 此值加速追赶
 const TELEPORT_RANGE = 1500;
-const STUCK_TIMEOUT = 5000;
+const STUCK_TIMEOUT = 4000;
 const ENEMY_SEARCH_RADIUS = 250;
 
 // 姿态 → 索敌半径倍率
@@ -308,10 +309,13 @@ export class CompanionManager {
     // 战斗中不打断
     if (c.ai?.inCombat) return;
 
-    // 跟随
-    if (dist > FOLLOW_RANGE) {
-      const baseSpeed = c.stats?.getDerived()?.moveSpeed || 80;
-      const speed = dist > RUSH_RANGE ? baseSpeed * 1.5 : baseSpeed;
+    // 实时跟随（滞后阈值：>FOLLOW_RANGE 开始走，<STOP_RANGE 才停，避免边界抖动）
+    if (dist > FOLLOW_RANGE) this._following = true;
+    else if (dist < STOP_RANGE) this._following = false;
+
+    if (this._following && dist > 1) {
+      const baseSpeed = c.stats?.getDerived()?.moveSpeed || 90;
+      const speed = dist > RUSH_RANGE ? baseSpeed * 1.6 : baseSpeed;
       c.sprite.setVelocity((dx / dist) * speed, (dy / dist) * speed);
     } else {
       c.sprite.setVelocity(0, 0);

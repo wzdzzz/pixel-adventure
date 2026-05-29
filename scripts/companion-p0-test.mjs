@@ -1,6 +1,6 @@
 // 伙伴 P0 修复验证：招募 / 跟随 / 友伤 / 对话 stage 推进
 import { chromium } from 'playwright';
-const URL = 'http://localhost:3002';
+const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
   headless: true,
