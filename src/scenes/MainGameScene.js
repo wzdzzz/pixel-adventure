@@ -45,6 +45,7 @@ import { CompanionManager } from '../systems/CompanionManager.js';
 import { getDialogueModule } from '../data/dialogues/index.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
+import { SHRINE_TYPES } from '../data/shrines.js';
 import SystemRegistry from '../core/SystemRegistry.js';
 import MusicEngine from '../systems/MusicEngine.js';
 import SoundManager from '../systems/SoundManager.js';
@@ -62,6 +63,7 @@ export class MainGameScene extends Phaser.Scene {
     this.breakables = [];
     this.triggerZones = [];
     this.chests = [];
+    this.shrines = [];
     this.decorations = null;
     this.groundTiles = null;
     this.portalSprite = null;
@@ -402,6 +404,7 @@ export class MainGameScene extends Phaser.Scene {
     this.breakables = [];
     this.triggerZones = [];
     this.chests = [];
+    this.shrines = [];
     this.enemyProjectiles = [];
     this.enemyHitboxes = [];
 
@@ -479,6 +482,8 @@ export class MainGameScene extends Phaser.Scene {
 
       if (spawn.type === 'chest') {
         this._spawnChest(wx, wy, spawn, gameObjects);
+      } else if (spawn.type === 'shrine') {
+        this._spawnShrine(wx, wy, spawn, gameObjects);
       } else if (spawn.type === 'bonfire') {
         this._spawnBonfire(wx, wy, spawn, gameObjects);
       } else if (spawn.type === 'npc') {
@@ -625,6 +630,38 @@ export class MainGameScene extends Phaser.Scene {
       () => this.handleChestProximity(chest), null, this);
   }
 
+  /** 生成地标 POI（神殿/祭坛/石碑） */
+  _spawnShrine(x, y, spawn, gameObjects) {
+    const def = SHRINE_TYPES[spawn.shrineType] || SHRINE_TYPES.might;
+    const used = !!this.worldState?.getFlag(`${spawn.id}_used`);
+
+    const sprite = this.physics.add.sprite(x, y, TEXTURES.ARTIFACT);
+    sprite.setOrigin(0.5, 0.5).setDepth(y);
+    sprite.setDisplaySize(30, 30);
+    sprite.setTint(used ? 0x555555 : def.glow);
+    sprite.body.setImmovable(true);
+    sprite.body.setAllowGravity(false);
+
+    // 脉冲光环（未使用时）
+    let glow = null;
+    if (!used) {
+      glow = this.add.circle(x, y, 22, def.glow, 0.22).setDepth(y - 1);
+      this.tweens.add({ targets: glow, scale: 1.3, alpha: 0.08, duration: 900, yoyo: true, repeat: -1 });
+    }
+
+    const label = this.add.text(x, y - 26, used ? `${def.name}（已枯竭）` : `${def.icon} ${def.name} [E]`, {
+      fontSize: '10px', fill: used ? '#777777' : '#ffee99', fontFamily: 'Courier New'
+    }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
+
+    const shrine = { sprite, glow, label, def, used, entityId: spawn.id };
+    sprite.shrineInstance = shrine;
+    this.shrines = this.shrines || [];
+    this.shrines.push(shrine);
+    gameObjects.push({ ref: shrine, type: 'shrine', spawnId: spawn.id });
+
+    this.physics.add.overlap(this.player.sprite, sprite, () => this.handleShrineProximity(shrine), null, this);
+  }
+
   /** 生成篝火 */
   _spawnBonfire(x, y, spawn, gameObjects) {
     const sprite = this.physics.add.sprite(x, y, 'campfire');
@@ -706,6 +743,13 @@ export class MainGameScene extends Phaser.Scene {
         if (idx > -1) this.chests.splice(idx, 1);
         if (chest.sprite) chest.sprite.destroy();
         if (chest.label) chest.label.destroy();
+      } else if (entry.type === 'shrine') {
+        const shrine = entry.ref;
+        const idx = this.shrines.indexOf(shrine);
+        if (idx > -1) this.shrines.splice(idx, 1);
+        if (shrine.sprite) shrine.sprite.destroy();
+        if (shrine.glow) shrine.glow.destroy();
+        if (shrine.label) shrine.label.destroy();
       } else if (entry.type === 'bonfire') {
         const bonfire = entry.ref;
         if (bonfire.sprite) bonfire.sprite.destroy();
@@ -735,6 +779,7 @@ export class MainGameScene extends Phaser.Scene {
     // 确保数组也清空
     this.enemies = [];
     this.chests = [];
+    this.shrines = [];
     // 不清空 npcs — NPC 在篝火休息后仍应存在，但上面已经逐个销毁了
     this.npcs = [];
   }
@@ -784,6 +829,7 @@ export class MainGameScene extends Phaser.Scene {
     this.triggerZones = [];
     this.chests.forEach(c => { if (c.sprite) c.sprite.destroy(); if (c.label) c.label.destroy(); });
     this.chests = [];
+    this.shrines = [];
 
     if (this.portalSprite) { this.portalSprite.destroy(); this.portalSprite = null; }
     if (this.portalLabel) { this.portalLabel.destroy(); this.portalLabel = null; }
@@ -931,6 +977,12 @@ export class MainGameScene extends Phaser.Scene {
       // Check if it's a chest
       if (target.chestInstance) {
         this.handleChestInteract(target.chestInstance);
+        return;
+      }
+
+      // Check if it's a shrine / landmark
+      if (target.shrineInstance) {
+        this.handleShrineInteract(target.shrineInstance);
         return;
       }
 
@@ -1532,6 +1584,19 @@ export class MainGameScene extends Phaser.Scene {
         chest.label.setVisible(dist < 60);
       }
     });
+
+    // 地标 POI 标签按距离显隐
+    if (this.shrines) {
+      this.shrines.forEach(shrine => {
+        if (shrine.used) { if (shrine.label) shrine.label.setVisible(false); return; }
+        if (this.player?.sprite && shrine.label) {
+          const dist = Phaser.Math.Distance.Between(
+            this.player.sprite.x, this.player.sprite.y, shrine.sprite.x, shrine.sprite.y
+          );
+          shrine.label.setVisible(dist < 60);
+        }
+      });
+    }
 
     // Update portal state
     this.updatePortalState();

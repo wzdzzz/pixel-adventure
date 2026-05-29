@@ -38,6 +38,9 @@ npx vite --force  # 清除 Vite 缓存启动
     - recruit/deploy/bench/dismiss/setStance（follow/hold/aggressive/defensive）；篝火 reviveAll
     - 队伍 UI（PanelScene 'party' tab，T 键）；存档 companions{roster,activeId} 兼容老档
     - 友方 faction='ally' 不受/不造成玩家伤害；出战伙伴对话可下达姿态指令
+- **世界地标 POI**（`data/shrines.js`）：开放世界散布神殿/祭坛/石碑，一次性交互（worldState flag 持久化）：
+  战神(攻击buff)/疾风(移速buff)/生命圣泉(回满)/远古石碑(金币+经验)；WorldGenerator 18%/chunk 生成
+- **世界宝箱**：普通/稀有(30%金箱)两档，开启走 LootEngine 掉真实金币/装备/材料（`treasure_common`/`treasure_rare`）
 - **Boss 战斗体验**（见 `docs/plans/2026-05-29-boss-encounter-system.md`）：
   - 顶部 Boss 血条 HUD（名字+阶段）；阶段/狂暴（HP 66%/33% 阈值 → 攻/速 +30%/阶 + 红闪震屏提示）
   - 事件 `bossEngaged/bossPhase/bossDefeated/bossDisengaged`；boss 专属音乐（优先于战斗曲）；击败横幅

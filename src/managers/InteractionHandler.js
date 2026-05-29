@@ -107,6 +107,54 @@ export const InteractionHandler = {
     }
   },
 
+  handleShrineProximity(shrine) {
+    if (this.dialoguing || shrine.used) return;
+    this.player.setInteractTarget(shrine.sprite);
+    shrine.label.setVisible(true);
+  },
+
+  handleShrineInteract(shrine) {
+    if (shrine.used) return;
+    const def = shrine.def;
+
+    // 应用效果
+    if (def.kind === 'buff' && def.buff) {
+      this.player.statusEffects?.apply(def.buff.id, { ...def.buff });
+    } else if (def.kind === 'heal') {
+      this.player.heal(this.player.maxHp);
+    } else if (def.kind === 'reward' && def.reward) {
+      if (def.reward.gold) {
+        this.inventory.gold += def.reward.gold;
+        this.events.emit('goldChanged', this.inventory.gold);
+      }
+      if (def.reward.xp && this.levelSystem) this.levelSystem.addXp(def.reward.xp);
+    }
+
+    // 标记耗尽（持久化）
+    shrine.used = true;
+    if (this.worldState && shrine.entityId) {
+      this.worldState.setFlag(`${shrine.entityId}_used`, true);
+    }
+
+    // 视觉枯竭
+    shrine.sprite.setTint(0x555555);
+    if (shrine.glow) { shrine.glow.destroy(); shrine.glow = null; }
+    shrine.label.setVisible(false);
+    this.player.canInteract = false;
+    this.player.interactTarget = null;
+
+    // 反馈
+    this.events.emit('showMessage', def.msg, '#ffee99');
+    this.events.emit('playSound', def.kind === 'heal' ? 'potion_drink' : 'quest_complete');
+    if (this.floatingText) {
+      const cx = shrine.sprite.x, cy = shrine.sprite.y - 18;
+      const txt = def.kind === 'buff' ? def.buff.description
+        : def.kind === 'heal' ? '生命已恢复'
+        : `+${def.reward.gold}金 +${def.reward.xp}经验`;
+      this.floatingText.spawn(cx, cy, txt, { color: '#ffee99', fontSize: 13, bold: true });
+    }
+  },
+
   handlePortalProximity() {
     if (this.dialoguing) return;
     if (this.portalSprite) {

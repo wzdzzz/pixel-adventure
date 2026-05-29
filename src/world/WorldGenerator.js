@@ -457,6 +457,23 @@ export class WorldGenerator {
       });
     }
 
+    // ─── 5. 地标 POI：神殿 / 祭坛 / 石碑（稀有散布） ──────────
+    // ~18% 的 chunk 会有一个地标（确定性），城镇中心 (8,8) 不生成
+    if (!(chunkX === 8 && chunkY === 8) && rand() < 0.18) {
+      const pos = findWalkablePos();
+      if (pos) {
+        const SHRINE_KEYS = ['might', 'swift', 'vigor', 'relic'];
+        const shrineType = SHRINE_KEYS[Math.floor(rand() * SHRINE_KEYS.length)];
+        entities.push({
+          id: `shrine_${chunkX}_${chunkY}`,
+          type: 'shrine',
+          shrineType,
+          localX: pos.lx,
+          localY: pos.ly,
+        });
+      }
+    }
+
     return entities;
   }
 }
