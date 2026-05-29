@@ -50,7 +50,8 @@ export const ENEMY_CONFIG = {
   },
   // ── Boss（已有 skeleton_king sprite） ──
   skeleton_king: {
-    skills: ['heavy_strike', 'pounce', 'heavy_shot', 'ground_pound'],
+    // 专属技能：近战 + 冲锋 + 骨刺散射（基础）；狂暴后解锁 震地 / 死亡新星
+    skills: ['heavy_strike', 'pounce', 'bone_volley', 'boss_quake', 'death_nova'],
     isBoss: true,
     tier: TIER.BOSS,
     tint: 0xff8888,

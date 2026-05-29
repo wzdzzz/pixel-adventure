@@ -113,6 +113,54 @@ export const ENEMY_SKILLS = {
     color: 0xff4422,
     telegraphTint: 0xff2200,
     priority: 2
+  },
+
+  // ══ Boss 专属技能 ══════════════════════════
+  // 骨刺散射：扇形多发弹道（骷髅王基础）
+  bone_volley: {
+    type: 'ranged_shot',
+    range: 360,
+    minRange: 0,
+    cooldown: 5000,
+    telegraph: 600,
+    activeWindow: 0,
+    damage: 0.9,
+    projectileSpeed: 230,
+    projectileSize: 10,
+    projectileLifetime: 2200,
+    projectileCount: 5,        // 5 发
+    spreadDeg: 60,             // 扇形 60°
+    color: 0xbbffbb,
+    telegraphTint: 0xccffcc,
+    priority: 1
+  },
+  // 巨力震地：大范围 AOE（狂暴 1 阶解锁）
+  boss_quake: {
+    type: 'aoe_burst',
+    range: 200,
+    cooldown: 7000,
+    telegraph: 950,
+    activeWindow: 250,
+    damage: 2.2,
+    radius: 170,
+    color: 0xff6600,
+    telegraphTint: 0xff3300,
+    minPhase: 1,               // Boss 进入狂暴 1 阶后才会使用
+    priority: 3
+  },
+  // 死亡新星：超大范围终结技（狂暴 2 阶解锁）
+  death_nova: {
+    type: 'aoe_burst',
+    range: 260,
+    cooldown: 9000,
+    telegraph: 1200,
+    activeWindow: 300,
+    damage: 2.8,
+    radius: 240,
+    color: 0xcc33ff,
+    telegraphTint: 0xaa00ff,
+    minPhase: 2,               // Boss 进入狂暴 2 阶后才会使用
+    priority: 4
   }
 };
 

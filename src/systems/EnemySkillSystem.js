@@ -58,6 +58,8 @@ export class EnemySkillSystem {
       if (this.cooldowns[id] > 0) continue;
       const skill = getEnemySkill(id);
       if (!skill) continue;
+      // Boss 阶段门槛：未达狂暴阶段不解锁该技能
+      if (skill.minPhase && (this.enemy._bossPhase || 0) < skill.minPhase) continue;
       if (dist > skill.range) continue;
       if (skill.minRange && dist < skill.minRange) continue;
       candidates.push(skill);
@@ -201,19 +203,26 @@ export class EnemySkillSystem {
     const dy = player.y - sprite.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 1) return;
-    const dirX = dx / dist;
-    const dirY = dy / dist;
+    const baseAngle = Math.atan2(dy, dx);
 
-    const proj = new EnemyProjectile(this.scene, sprite.x, sprite.y, dirX, dirY, {
-      speed: skill.projectileSpeed || 200,
-      size: skill.projectileSize || 8,
-      color: skill.color ?? 0xffaa44,
-      lifetime: skill.projectileLifetime || 2000,
-      damage: this.enemy.getAttack() * (skill.damage || 1),
-      owner: this.enemy
-    });
-
-    this.scene.events.emit('enemyProjectileSpawned', proj);
+    // 多发扇形（projectileCount + spreadDeg）；默认单发
+    const count = Math.max(1, skill.projectileCount || 1);
+    const spread = (skill.spreadDeg || 0) * Math.PI / 180;
+    const dmg = this.enemy.getAttack() * (skill.damage || 1);
+    for (let i = 0; i < count; i++) {
+      // 在 [-spread/2, +spread/2] 均匀分布
+      const offset = count > 1 ? (-spread / 2 + (spread * i) / (count - 1)) : 0;
+      const a = baseAngle + offset;
+      const proj = new EnemyProjectile(this.scene, sprite.x, sprite.y, Math.cos(a), Math.sin(a), {
+        speed: skill.projectileSpeed || 200,
+        size: skill.projectileSize || 8,
+        color: skill.color ?? 0xffaa44,
+        lifetime: skill.projectileLifetime || 2000,
+        damage: dmg,
+        owner: this.enemy
+      });
+      this.scene.events.emit('enemyProjectileSpawned', proj);
+    }
   }
 
   _executeChargeAttack(skill, player) {
