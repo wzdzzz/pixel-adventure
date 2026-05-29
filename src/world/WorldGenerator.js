@@ -447,13 +447,13 @@ export class WorldGenerator {
     for (let c = 0; c < chestCount; c++) {
       const pos = findWalkablePos();
       if (!pos) continue;
-      const locked = rand() < 0.4;
+      const rare = rand() < 0.3;  // 30% 稀有（金）宝箱：更丰厚的战利品
       entities.push({
         id: `chest_${chunkX}_${chunkY}_${c}`,
         type: 'chest',
         localX: pos.lx,
         localY: pos.ly,
-        locked
+        rare
       });
     }
 

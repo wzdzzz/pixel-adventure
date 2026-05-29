@@ -53,6 +53,11 @@ export const InteractionHandler = {
       this.player.heal(chest.reward.healAmount);
     }
 
+    // 战利品：走 LootEngine 掉落管线（金币 + 装备 + 材料），按玩家等级缩放
+    const lootTable = chest.lootTable || 'treasure_common';
+    const playerLevel = this.levelSystem?.level || 1;
+    this.events.emit('enemyDropLoot', lootTable, chest.sprite.x, chest.sprite.y, playerLevel, !!chest.isRare, chest.isRare ? 'elite' : 'normal');
+
     // Open animation
     this.tweens.add({
       targets: chest.sprite,

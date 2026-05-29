@@ -594,23 +594,25 @@ export class MainGameScene extends Phaser.Scene {
 
   /** 生成宝箱 */
   _spawnChest(x, y, spawn, gameObjects) {
-    const locked = spawn.locked || false;
+    const rare = spawn.rare || spawn.locked || false; // 兼容旧 locked 字段
     const sprite = this.physics.add.sprite(x, y,
-      locked ? TEXTURES.CHEST_LOCKED : TEXTURES.CHEST_CLOSED);
+      rare ? TEXTURES.CHEST_LOCKED : TEXTURES.CHEST_CLOSED);
     sprite.setOrigin(0.5, 0.5).setDepth(y);
     sprite.setDisplaySize(32, 28);
     sprite.body.setImmovable(true);
     sprite.body.setAllowGravity(false);
 
     const label = this.add.text(x, y - 24,
-      locked ? '需要钥匙' : '按 E 打开', {
-        fontSize: '10px', fill: locked ? '#ff6666' : '#aaaaaa',
+      rare ? '✦ 稀有宝箱 [E]' : '按 E 打开', {
+        fontSize: '10px', fill: rare ? '#ffcc44' : '#aaaaaa',
         fontFamily: 'Courier New'
       }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
 
     const chest = {
-      sprite, label, locked, opened: false,
-      reward: locked ? { score: 50, healAmount: 25 } : { score: 20, healAmount: 0 },
+      sprite, label, locked: false, opened: false,
+      isRare: rare,
+      lootTable: rare ? 'treasure_rare' : 'treasure_common',
+      reward: { score: rare ? 50 : 20, healAmount: rare ? 25 : 0 },
       entityId: spawn.id
     };
 

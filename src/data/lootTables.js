@@ -498,5 +498,75 @@ export const LOOT_TABLES = {
         items: []
       }
     ]
+  },
+
+  // ── 宝箱（探索奖励） ─────────────────────────────────────
+  treasure_common: {
+    minDrops: 1,
+    maxDrops: 3,
+    pools: [
+      { name: 'currency', weight: 100, items: [{ id: 'coin', range: [15, 40] }] },
+      { name: 'consumable', weight: 50, items: [{ id: 'potion', weight: 100 }] },
+      { name: 'mana_consumable', weight: 30, items: [{ id: 'mana_potion', weight: 100 }] },
+      {
+        name: 'equipment', weight: 30,
+        items: [
+          { id: 'copper_ring', weight: 30 },
+          { id: 'worn_boots', weight: 25 },
+          { id: 'rusty_dagger', weight: 20 },
+          { id: 'steel_blade', weight: 15 },
+          { id: 'swift_boots', weight: 10 }
+        ]
+      },
+      {
+        name: 'materials', weight: 45,
+        items: [
+          { id: 'iron_shard', weight: 50 },
+          { id: 'refining_stone', weight: 20 },
+          { id: 'enhance_stone', weight: 10 },
+          { id: 'red_gem', weight: 4 },
+          { id: 'blue_gem', weight: 4 },
+          { id: 'green_gem', weight: 4 },
+          { id: 'yellow_gem', weight: 4 }
+        ]
+      }
+    ]
+  },
+  treasure_rare: {
+    minDrops: 3,
+    maxDrops: 5,
+    pools: [
+      { name: 'currency', weight: 100, items: [{ id: 'coin', range: [60, 140] }] },
+      { name: 'consumable', weight: 60, items: [{ id: 'heart', weight: 100 }] },
+      { name: 'mana_consumable', weight: 40, items: [{ id: 'mana_potion', weight: 100 }] },
+      {
+        name: 'equipment', weight: 75,
+        items: [
+          { id: 'steel_blade', weight: 22 },
+          { id: 'swift_boots', weight: 20 },
+          { id: 'guardian_plate', weight: 16 },
+          { id: 'shadow_dagger', weight: 14 },
+          { id: 'flame_staff', weight: 14 },
+          { id: 'lava_blade', weight: 8 },
+          { id: 'skull_king_crown', weight: 6 }
+        ]
+      },
+      {
+        name: 'materials', weight: 70,
+        items: [
+          { id: 'enhance_stone', weight: 18 },
+          { id: 'refining_stone', weight: 14 },
+          { id: 'chaos_essence', weight: 8 },
+          { id: 'ancient_core', weight: 6 },
+          { id: 'soul_crystal', weight: 5 },
+          { id: 'star_fragment', weight: 3 },
+          { id: 'divine_heart', weight: 2 },
+          { id: 'red_gem', weight: 6 },
+          { id: 'blue_gem', weight: 6 },
+          { id: 'green_gem', weight: 6 },
+          { id: 'yellow_gem', weight: 6 }
+        ]
+      }
+    ]
   }
 };
