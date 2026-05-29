@@ -195,6 +195,7 @@ export const PartyPanel = {
       this.partyDetailName.setText('');
       this.partyDetailSub.setText('');
       this.partyDetailSkills.setText('');
+      this.partyEmptyHint.setColor('#666688');
       this.partyEmptyHint.setText('在城镇找到可招募的伙伴，与其对话即可加入队伍。\n同时只能有 1 名伙伴出战。');
       return;
     }
@@ -205,6 +206,10 @@ export const PartyPanel = {
     this.partyDetailSub.setText(`Lv${info.level}   HP ${info.hp}/${info.hpMax}   ${statusTxt}`);
     this.partyDetailSub.setColor(info.active ? '#88ffaa' : (info.dead ? '#ff7777' : '#aaaacc'));
     this.partyDetailSkills.setText(`技能: ${(info.skills || []).join(', ') || '无'}`);
+
+    // 倒下提示
+    this.partyEmptyHint.setText(info.dead ? '⚠ 该伙伴已倒下 — 在篝火旁休息以恢复全队后方可再次出战' : '');
+    this.partyEmptyHint.setColor(info.dead ? '#ff8888' : '#666688');
 
     // 姿态高亮
     this.partyStanceBtns.forEach(b => {
