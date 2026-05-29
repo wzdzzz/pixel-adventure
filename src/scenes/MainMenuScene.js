@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { CLASS_CONFIG, GENDER_OPTIONS } from '../data/classConfig.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import audioEngine from '../systems/AudioEngine.js';
+import MusicEngine from '../systems/MusicEngine.js';
 
 /**
  * 主菜单场景 — 标题画面 + 角色选择
@@ -43,6 +45,13 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.buildMenuPhase();
     this.buildSelectPhase();
+
+    // 菜单背景音乐（AudioContext 解锁后自动开始播放）
+    this.menuMusic = new MusicEngine();
+    this.menuMusic.play('menu');
+    this.events.once('shutdown', () => {
+      if (this.menuMusic) { this.menuMusic.destroy(); this.menuMusic = null; }
+    });
   }
 
   // ═══════════════════════════════════════════
@@ -109,12 +118,13 @@ export class MainMenuScene extends Phaser.Scene {
     bg.on('pointerover', () => {
       bg.setFillStyle(0x2a2a3e, 1);
       txt.setScale(1.05);
+      audioEngine.playSfx('ui_hover');
     });
     bg.on('pointerout', () => {
       bg.setFillStyle(0x1a1a2e, 0.9);
       txt.setScale(1);
     });
-    bg.on('pointerdown', callback);
+    bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); callback(); });
 
     this.menuContainer.add([bg, txt]);
     return { bg, txt };
@@ -197,7 +207,7 @@ export class MainMenuScene extends Phaser.Scene {
         fontSize: '15px', fill: '#aaaaaa', fontFamily: 'Courier New'
       }).setOrigin(0.5);
 
-      bg.on('pointerdown', () => this.selectGender(g));
+      bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); this.selectGender(g); });
       this.selectContainer.add([bg, txt]);
       this.genderBtns[g] = { bg, txt };
     });
@@ -211,9 +221,9 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '18px', fill: '#44ff66', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x2a3e2a));
+    confirmBg.on('pointerover', () => { confirmBg.setFillStyle(0x2a3e2a); audioEngine.playSfx('ui_hover'); });
     confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x1a2e1a));
-    confirmBg.on('pointerdown', () => this.confirmSelection());
+    confirmBg.on('pointerdown', () => { audioEngine.playSfx('quest_accept'); this.confirmSelection(); });
     this.selectContainer.add([confirmBg, confirmTxt]);
 
     // Back button
@@ -223,7 +233,7 @@ export class MainMenuScene extends Phaser.Scene {
     const backTxt = this.add.text(70, 30, '← 返回', {
       fontSize: '14px', fill: '#888888', fontFamily: 'Courier New'
     }).setOrigin(0.5);
-    backBg.on('pointerdown', () => this.showMenuPhase());
+    backBg.on('pointerdown', () => { audioEngine.playSfx('ui_close'); this.showMenuPhase(); });
     this.selectContainer.add([backBg, backTxt]);
 
     // Apply initial highlights
@@ -286,7 +296,7 @@ export class MainMenuScene extends Phaser.Scene {
     const allElements = [bg, nameText, resText, descText, ...statTexts];
     this.selectContainer.add(allElements);
 
-    bg.on('pointerdown', () => this.selectClass(cls.id));
+    bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); this.selectClass(cls.id); });
 
     return { bg, nameText, allElements };
   }

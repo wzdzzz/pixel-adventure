@@ -75,8 +75,11 @@ export class ActionRegistry {
       scene?.worldState?.setFlag(key, v);
     });
 
-    // play_sound（暂时桩）
-    this.register('play_sound', stub('play_sound'));
+    // play_sound:音效名 —— 通过事件解耦交给 SoundManager 播放程序化 SFX
+    this.register('play_sound', (args, _ctx) => {
+      const name = args[0];
+      if (name) scene?.events?.emit('playSound', name);
+    });
 
     // === Phase 4 实现 ===
     this.register('open_shop', (args, ctx) => {

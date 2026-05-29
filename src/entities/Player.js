@@ -235,6 +235,9 @@ export class Player extends Actor {
     this.attackHitRegistered = false;
     this.setState(PlayerState.ATTACK_STARTUP);
 
+    // 攻击音效（按职业区分近战 / 远程）
+    this.scene.events.emit('playerAttack', this.classType);
+
     if (this.isRangedClass()) {
       this.playAnim('idle');
       // Brief "charge" tint for ranged classes
@@ -729,6 +732,7 @@ export class Player extends Actor {
         break;
     }
     this.scene.triggerSystem?.fire('onSkillCast', { skillId: skill.id });
+    this.scene.events.emit('skillCast', skill.id);
   }
 
   onSkillTick(skill) {

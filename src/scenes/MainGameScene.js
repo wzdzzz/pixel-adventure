@@ -46,6 +46,8 @@ import { getDialogueModule } from '../data/dialogues/index.js';
 import { getEnemyConfig } from '../data/enemyConfig.js';
 import { getLayoutOverride } from '../world/WorldLayout.js';
 import SystemRegistry from '../core/SystemRegistry.js';
+import MusicEngine from '../systems/MusicEngine.js';
+import SoundManager from '../systems/SoundManager.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -111,6 +113,21 @@ export class MainGameScene extends Phaser.Scene {
     SystemRegistry.register('triggerSystem', this.triggerSystem);
     SystemRegistry.register('skillTreeSystem', this.skillTreeSystem);
     SystemRegistry.register('questSystem', this.questSystem);
+
+    // 程序化音频：音乐引擎 + 音效管理器（绑定本场景事件）
+    this.musicEngine = new MusicEngine();
+    this.soundManager = new SoundManager(this, this.musicEngine);
+    this.soundManager.bind();
+    SystemRegistry.register('musicEngine', this.musicEngine);
+    SystemRegistry.register('soundManager', this.soundManager);
+    this._currentMusicZone = null; // 'town' | 'wild'，用于切换环境曲
+    // 场景关闭时解绑事件、停止音乐，避免泄漏
+    this.events.once('shutdown', () => {
+      if (this.soundManager) this.soundManager.destroy();
+      if (this.musicEngine) this.musicEngine.destroy();
+      this.soundManager = null;
+      this.musicEngine = null;
+    });
 
     // 兼容：保留 Phaser registry 供现有 UI 面板使用
     this.registry.set('levelSystem', this.levelSystem);
@@ -1298,6 +1315,21 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     if (this.gamePaused) return;
+
+    // ─── 音频：音乐状态机 + 城镇/野外环境曲切换 ───
+    if (this.soundManager) {
+      this.soundManager.update(time, delta);
+      if (this.player?.sprite) {
+        // 城镇中心世界坐标 (8704, 8704)，半径约 1.2 chunk 内视为城镇
+        const dx = this.player.sprite.x - 8704;
+        const dy = this.player.sprite.y - 8704;
+        const zone = (dx * dx + dy * dy) < (1200 * 1200) ? 'town' : 'wild';
+        if (zone !== this._currentMusicZone) {
+          this._currentMusicZone = zone;
+          this.soundManager.setAmbient(zone === 'town' ? 'town' : 'explore');
+        }
+      }
+    }
 
     // ─── 开放世界系统更新 ─────────────────────────
     if (this.useOpenWorld && this.chunkManager && this.player?.sprite) {

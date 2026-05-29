@@ -5,6 +5,10 @@ import { SkillTreePanel } from '../ui/panels/SkillTreePanel.js';
 import { QuestLogPanel } from '../ui/panels/QuestLogPanel.js';
 import { SmithyPanel } from '../ui/panels/SmithyPanel.js';
 import { Tooltip } from '../ui/Tooltip.js';
+import audioEngine from '../systems/AudioEngine.js';
+
+/** 将值钳制到 [0,1] */
+function clamp01(v) { v = Number(v); if (!isFinite(v)) return 0; return Math.max(0, Math.min(1, v)); }
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'settings'];
 const TAB_LABELS = ['角色', '背包', '技能', '日志', '设置'];
@@ -90,6 +94,7 @@ export class PanelScene extends Phaser.Scene {
     // 读取默认标签页（由快捷键设置）
     const defaultTab = this.gameScene?.registry?.get('panelDefaultTab') || 'character';
     this.switchTab(defaultTab);
+    audioEngine.playSfx('ui_open');
     if (this.gameScene?.registry) this.gameScene.registry.set('panelDefaultTab', null);
 
     // Input — ESC / TAB 关闭面板
@@ -175,7 +180,7 @@ export class PanelScene extends Phaser.Scene {
       bg.on('pointerout', () => {
         if (this.activeTab !== tab) bg.setFillStyle(0x2a2a4e);
       });
-      bg.on('pointerdown', () => this.switchTab(tab));
+      bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); this.switchTab(tab); });
 
       this.tabButtons.push({ bg, label, hint, tab });
     });
@@ -248,6 +253,7 @@ export class PanelScene extends Phaser.Scene {
   }
 
   closePanel() {
+    audioEngine.playSfx('ui_close');
     this.tweens.add({
       targets: this.overlay,
       alpha: 0,
@@ -318,10 +324,118 @@ export class PanelScene extends Phaser.Scene {
         fontSize: '14px', fill: '#666688', fontFamily: 'Courier New'
       });
     container.add(note);
+
+    // ── 右栏：音频设置（音量滑条 + 静音） ──
+    const audioX = this.panelX + 30;
+    const audioTitle = this.add.text(audioX, topY, '🔊 音频设置', {
+      fontSize: '16px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+    });
+    container.add(audioTitle);
+
+    this._volSliders = [];
+    const sx = audioX + 20;
+    this._volSliders.push(this._createVolumeSlider(container, sx, topY + 56, '主音量',
+      () => audioEngine.getMasterVolume(), (v) => audioEngine.setMasterVolume(v)));
+    this._volSliders.push(this._createVolumeSlider(container, sx, topY + 116, '音乐',
+      () => audioEngine.getMusicVolume(), (v) => audioEngine.setMusicVolume(v)));
+    this._volSliders.push(this._createVolumeSlider(container, sx, topY + 176, '音效',
+      () => audioEngine.getSfxVolume(), (v) => audioEngine.setSfxVolume(v)));
+
+    this._muteRefresh = this._createMuteToggle(container, sx, topY + 230);
+
+    const audioNote = this.add.text(audioX, topY + 270,
+      '设置自动保存（独立于存档）', {
+        fontSize: '13px', fill: '#666688', fontFamily: 'Courier New'
+      });
+    container.add(audioNote);
+
+    // 拖动滑条：场景级 pointermove / pointerup 处理
+    this._sliderDragging = null;
+    this.input.on('pointermove', (p) => {
+      if (this._sliderDragging && p.isDown) this._sliderDragging(p.x);
+    });
+    this.input.on('pointerup', () => { this._sliderDragging = null; });
+  }
+
+  /**
+   * 创建一个音量滑条行。
+   * @returns {{refresh:Function}} 提供 refresh() 以同步外部值
+   */
+  _createVolumeSlider(container, x, y, label, getVal, setVal) {
+    const W = 220, H = 8;
+    const v0 = clamp01(getVal());
+
+    const lbl = this.add.text(x, y - 18, label, {
+      fontSize: '14px', fill: '#ccccdd', fontFamily: 'Courier New'
+    });
+    const track = this.add.rectangle(x, y, W, H, 0x2a2a44)
+      .setOrigin(0, 0.5).setStrokeStyle(1, 0x555577);
+    const fill = this.add.rectangle(x, y, W * v0, H, 0x44aaff).setOrigin(0, 0.5);
+    const handle = this.add.circle(x + W * v0, y, 9, 0x88ccff).setStrokeStyle(2, 0xffffff);
+    const valTxt = this.add.text(x + W + 16, y, Math.round(v0 * 100) + '%', {
+      fontSize: '13px', fill: '#88ccff', fontFamily: 'Courier New'
+    }).setOrigin(0, 0.5);
+
+    const apply = (px) => {
+      const v = clamp01((px - x) / W);
+      setVal(v);
+      fill.width = W * v;
+      handle.x = x + W * v;
+      valTxt.setText(Math.round(v * 100) + '%');
+    };
+
+    // 透明命中区（比滑条略大），按下即开始拖动
+    const hit = this.add.rectangle(x + W / 2, y, W + 24, 30, 0x000000, 0.001)
+      .setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', (p) => {
+      this._sliderDragging = apply;
+      apply(p.x);
+      audioEngine.playSfx('ui_click');
+    });
+
+    container.add([lbl, track, fill, handle, valTxt, hit]);
+
+    return {
+      refresh: () => {
+        const v = clamp01(getVal());
+        fill.width = W * v;
+        handle.x = x + W * v;
+        valTxt.setText(Math.round(v * 100) + '%');
+      }
+    };
+  }
+
+  /** 创建静音勾选框。 */
+  _createMuteToggle(container, x, y) {
+    const box = this.add.rectangle(x, y, 20, 20, audioEngine.muted ? 0x44aaff : 0x222244)
+      .setStrokeStyle(2, 0x6666aa).setInteractive({ useHandCursor: true });
+    const check = this.add.text(x, y, audioEngine.muted ? '✓' : '', {
+      fontSize: '15px', fill: '#ffffff', fontFamily: 'Courier New'
+    }).setOrigin(0.5);
+    const lbl = this.add.text(x + 16, y, '静音', {
+      fontSize: '14px', fill: '#ccccdd', fontFamily: 'Courier New'
+    }).setOrigin(0, 0.5);
+
+    box.on('pointerdown', () => {
+      const m = audioEngine.toggleMuted();
+      box.setFillStyle(m ? 0x44aaff : 0x222244);
+      check.setText(m ? '✓' : '');
+      audioEngine.playSfx('ui_click');
+    });
+
+    container.add([box, check, lbl]);
+    return {
+      refresh: () => {
+        box.setFillStyle(audioEngine.muted ? 0x44aaff : 0x222244);
+        check.setText(audioEngine.muted ? '✓' : '');
+      }
+    };
   }
 
   refreshSettingsTab() {
-    // 静态内容，无需刷新
+    // 同步音量滑条 / 静音状态（值可能在别处变更）
+    if (this._volSliders) this._volSliders.forEach((s) => s.refresh && s.refresh());
+    if (this._muteRefresh && this._muteRefresh.refresh) this._muteRefresh.refresh();
   }
 
   handleResize(gameSize) {
