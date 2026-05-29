@@ -92,11 +92,14 @@ export const QuestLogPanel = {
     }).setOrigin(0.5);
     this.questTrackBtnBg.on('pointerdown', () => {
       if (!this.selectedQuestId) return;
-      const questSystem = this.registry.get('questSystem');
-      if (questSystem) {
+      const questSystem = this.gameScene?.questSystem || this.registry.get('questSystem');
+      if (!questSystem) return;
+      if (this._questBtnMode === 'accept') {
+        questSystem.acceptQuest(this.selectedQuestId);
+      } else if (this._questBtnMode === 'track') {
         questSystem.setTrackedQuest(this.selectedQuestId);
-        this.refreshQuestLogTab();
       }
+      this.refreshQuestLogTab();
     });
     container.add([this.questTrackBtnBg, this.questTrackBtnText]);
 
@@ -135,8 +138,8 @@ export const QuestLogPanel = {
 
     // Group quests
     const groups = [
-      { label: '-- 主线任务 --', quests: questSystem.quests.filter(q => q.type === 'main' && q.status === 'active') },
-      { label: '-- 支线任务 --', quests: questSystem.quests.filter(q => q.type === 'side' && q.status === 'active') },
+      { label: '-- 可接取 --', quests: questSystem.quests.filter(q => q.status === 'available') },
+      { label: '-- 进行中 --', quests: questSystem.quests.filter(q => q.status === 'active') },
       { label: '-- 已完成 --', quests: questSystem.quests.filter(q => q.status === 'completed') }
     ];
 
@@ -181,12 +184,14 @@ export const QuestLogPanel = {
     this.questListContainer.y = 0;
     this._questListScrollY = 0;
 
-    // Auto-select first active quest if none selected
-    if (!this.selectedQuestId) {
-      const firstActive = questSystem.getActiveQuests()[0];
-      if (firstActive) this.selectQuest(firstActive.id);
-    } else {
+    // 默认选中：优先进行中，其次可接取
+    const stillValid = this.selectedQuestId && questSystem.quests.find(q => q.id === this.selectedQuestId && q.status !== 'locked');
+    if (stillValid) {
       this.selectQuest(this.selectedQuestId);
+    } else {
+      const first = questSystem.getActiveQuests()[0] || questSystem.getAvailableQuests()[0];
+      if (first) this.selectQuest(first.id);
+      else this.selectQuest(null);
     }
   },
 
@@ -204,6 +209,9 @@ export const QuestLogPanel = {
       this.questObjTexts.forEach(t => t.setText(''));
       this.questRewardsTitle.setText('');
       this.questRewardsText.setText('');
+      this._questBtnMode = null;
+      if (this.questTrackBtnBg) this.questTrackBtnBg.setVisible(false);
+      if (this.questTrackBtnText) this.questTrackBtnText.setVisible(false);
       return;
     }
 
@@ -240,19 +248,27 @@ export const QuestLogPanel = {
     }
     this.questRewardsText.setText(rewardStr);
 
-    // 追踪按钮状态
+    // 底部按钮：可接取 → 接受任务；进行中 → 追踪；其他隐藏
     const isTracked = questSystem._trackedQuestId === quest.id;
-    const isActive = quest.status === 'active';
     if (this.questTrackBtnBg && this.questTrackBtnText) {
-      if (!isActive) {
-        this.questTrackBtnBg.setVisible(false);
-        this.questTrackBtnText.setVisible(false);
-      } else {
+      if (quest.status === 'available') {
+        this._questBtnMode = 'accept';
+        this.questTrackBtnBg.setVisible(true);
+        this.questTrackBtnText.setVisible(true);
+        this.questTrackBtnText.setText('接受任务');
+        this.questTrackBtnText.setColor('#44ff88');
+        this.questTrackBtnBg.setStrokeStyle(1, 0x44ff88);
+      } else if (quest.status === 'active') {
+        this._questBtnMode = 'track';
         this.questTrackBtnBg.setVisible(true);
         this.questTrackBtnText.setVisible(true);
         this.questTrackBtnText.setText(isTracked ? '已追踪' : '追踪任务');
         this.questTrackBtnText.setColor(isTracked ? '#ffd700' : '#44bb44');
         this.questTrackBtnBg.setStrokeStyle(1, isTracked ? 0xffd700 : 0x44bb44);
+      } else {
+        this._questBtnMode = null;
+        this.questTrackBtnBg.setVisible(false);
+        this.questTrackBtnText.setVisible(false);
       }
     }
   }

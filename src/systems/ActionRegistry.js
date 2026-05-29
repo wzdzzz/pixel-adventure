@@ -143,18 +143,24 @@ export class ActionRegistry {
       svc.open(trainerId, ctx?.npc);
     });
 
-    // accept_quest:questId — 把 quest 状态改成 active
+    // accept_quest:questId — 接受任务（available/locked → active）
     this.register('accept_quest', (args, _ctx) => {
       const questId = args[0];
       const qs = scene?.questSystem;
       if (!questId || !qs) return;
-      const q = qs.quests.find(x => x.id === questId);
-      if (!q) return;
-      if (q.status === 'locked') {
-        q.status = 'active';
-        scene.events.emit('questActivated', q);
-        scene.events.emit('showMessage', `接受任务：${q.name || q.id}`, '#44ff88');
-      }
+      qs.acceptQuest(questId);
+    });
+
+    // refresh_bounties — 刷新任务板上的可重复赏金（赏金官对话用）
+    this.register('refresh_bounties', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      scene?.questSystem?.refreshBounties(3);
+    });
+
+    // open_quest_log — 打开任务日志面板
+    this.register('open_quest_log', (_args, ctx) => {
+      ctx?.dialogueEngine?.stop();
+      openPanelTab('questLog')();
     });
 
     // turn_in_quest:questId — 强制完成（用于无目标式任务）

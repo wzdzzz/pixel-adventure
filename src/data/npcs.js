@@ -44,6 +44,19 @@ export const NPCS = {
     ]
   },
 
+  // ─── 赏金官：发布开放世界委托 / 刷新赏金 ───
+  bounty_officer: {
+    id: 'bounty_officer',
+    name: '赏金官 老雷',
+    sprite: 'npc',
+    faction: 'townfolk',
+    essential: true,
+    spawn: { chunkX: 8, chunkY: 8, localX: 10, localY: 12 },
+    initialStage: 'greet',
+    dialogueModule: 'bounty_officer',
+    movement: 'stand'
+  },
+
   // ─── 训练师：教技能 + 重置天赋 ───
   warrior_trainer_npc: {
     id: 'warrior_trainer_npc',

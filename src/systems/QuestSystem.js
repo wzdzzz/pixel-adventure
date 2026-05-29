@@ -1,4 +1,4 @@
-import { questData } from '../data/quests.js';
+import { questData, BOUNTY_TARGETS, ENEMY_NAMES } from '../data/quests.js';
 import SystemRegistry from '../core/SystemRegistry.js';
 
 export class QuestSystem {
@@ -6,11 +6,15 @@ export class QuestSystem {
     this.scene = scene;
     this.quests = questData.map(q => ({
       ...q,
-      status: 'locked',
+      // autoAvailable 的任务进游戏即可接取；否则 locked 由触发器开启
+      status: q.autoAvailable ? 'available' : 'locked',
       objectives: q.objectives.map(o => ({ ...o, current: 0 }))
     }));
     this._trackedQuestId = null;
+    this._bountySeq = 0;
     this.setupEventListeners();
+    // 初始生成一批可重复赏金（新游戏；读档时 fromJSON 会重建已存的）
+    this.generateBounties(3);
   }
 
   setupEventListeners() {
@@ -49,7 +53,66 @@ export class QuestSystem {
         this.checkNpcQuestTrigger(npcId);
       }
     });
+
+    // 篝火休息 → 刷新可重复赏金（回城节奏）
+    this.scene.events.on('bonfireRest', () => this.refreshBounties(3));
   }
+
+  // ─── 接取 / 赏金 ────────────────────────────────
+
+  /** 接受一个可接取/锁定的任务 → active */
+  acceptQuest(id) {
+    const q = this.quests.find(x => x.id === id);
+    if (!q) return false;
+    if (q.status !== 'available' && q.status !== 'locked') return false;
+    q.status = 'active';
+    this.scene.events.emit('questActivated', q);
+    this.scene.events.emit('showMessage', `接受任务：${q.title}`, '#44ff88');
+    return true;
+  }
+
+  /** 生成 count 个可重复击杀赏金（按玩家等级缩放，避免与现有可接取赏金重复敌人） */
+  generateBounties(count = 3) {
+    const lvl = (SystemRegistry.get('levelSystem') || this.scene.levelSystem)?.level || 1;
+    const existing = new Set(
+      this.quests.filter(q => q.type === 'bounty' && q.status === 'available')
+        .flatMap(q => q.objectives.map(o => o.target))
+    );
+    const pool = BOUNTY_TARGETS.filter(t => !existing.has(t.id));
+    const added = [];
+    for (let i = 0; i < count && pool.length > 0; i++) {
+      const t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+      const name = ENEMY_NAMES[t.id] || t.id;
+      const required = t.count;
+      const id = `bounty_${++this._bountySeq}`;
+      const q = {
+        id,
+        title: `赏金：${name}`,
+        type: 'bounty',
+        description: `讨伐 ${required} 只${name}，向冒险公会领取赏金。`,
+        objectives: [{ id: `${id}_obj`, text: `击败${name}`, type: 'kill', target: t.id, required, current: 0 }],
+        rewards: {
+          xp: Math.round(required * 16 * (1 + lvl * 0.1)),
+          gold: Math.round(required * 12 * (1 + lvl * 0.1)),
+        },
+        status: 'available',
+      };
+      this.quests.push(q);
+      added.push(q);
+    }
+    if (added.length) this.scene.events.emit('questProgressUpdated');
+    return added;
+  }
+
+  /** 清掉未接取的旧赏金并重新生成一批 */
+  refreshBounties(count = 3) {
+    this.quests = this.quests.filter(q => !(q.type === 'bounty' && q.status === 'available'));
+    const added = this.generateBounties(count);
+    this.scene.events.emit('showMessage', `任务板已刷新（${added.length} 个新委托）`, '#88ccff');
+    return added;
+  }
+
+  getAvailableQuests() { return this.quests.filter(q => q.status === 'available'); }
 
   activateQuestsForLevel(levelIndex) {
     this.quests.forEach(q => {
@@ -129,16 +192,39 @@ export class QuestSystem {
   }
 
   toJSON() {
-    return this.quests.map(q => ({
-      id: q.id, status: q.status,
-      objectives: q.objectives.map(o => ({ id: o.id, current: o.current }))
-    }));
+    return this.quests.map(q => {
+      const base = {
+        id: q.id, status: q.status,
+        objectives: q.objectives.map(o => ({ id: o.id, current: o.current }))
+      };
+      // 动态赏金不在静态 data 中，需存完整定义以便重建
+      if (q.type === 'bounty') {
+        base.dynamic = {
+          title: q.title, description: q.description, type: q.type, rewards: q.rewards,
+          objectives: q.objectives.map(o => ({ id: o.id, text: o.text, type: o.type, target: o.target, required: o.required }))
+        };
+      }
+      return base;
+    });
   }
 
   fromJSON(data) {
     if (!data) return;
+    // 移除构造时生成的动态赏金（将由存档定义重建，避免重复）
+    this.quests = this.quests.filter(q => q.type !== 'bounty');
+    let maxSeq = 0;
     data.forEach(saved => {
-      const quest = this.quests.find(q => q.id === saved.id);
+      let quest = this.quests.find(q => q.id === saved.id);
+      if (!quest && saved.dynamic) {
+        quest = {
+          id: saved.id, ...saved.dynamic,
+          objectives: saved.dynamic.objectives.map(o => ({ ...o, current: 0 })),
+          status: 'available',
+        };
+        this.quests.push(quest);
+        const m = /^bounty_(\d+)$/.exec(saved.id);
+        if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+      }
       if (quest) {
         quest.status = saved.status;
         saved.objectives.forEach(so => {
@@ -147,5 +233,7 @@ export class QuestSystem {
         });
       }
     });
+    this._bountySeq = Math.max(this._bountySeq, maxSeq);
+    this.scene.events.emit('questProgressUpdated');
   }
 }
