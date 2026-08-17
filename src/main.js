@@ -62,8 +62,8 @@ window.addEventListener('error', (event) => {
 
 // 开发模式下的调试信息
 if (import.meta.env.DEV) {
-  console.log('[Pixel Adventure] 游戏启动 (开发模式)');
-  console.log('[Pixel Adventure] 按 F12 打开开发者工具查看日志');
+  console.log('[云荒问道] 游戏启动 (开发模式)');
+  console.log('[云荒问道] 按 F12 打开开发者工具查看日志');
   window.__game = game; // 调试钩子（仅 DEV）
 }
 

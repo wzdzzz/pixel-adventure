@@ -3,6 +3,7 @@ import { CLASS_CONFIG, GENDER_OPTIONS } from '../data/classConfig.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import audioEngine from '../systems/AudioEngine.js';
 import MusicEngine from '../systems/MusicEngine.js';
+import { RESOURCE_LABELS, STAT_LABELS, THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * 主菜单场景 — 标题画面 + 角色选择
@@ -63,7 +64,7 @@ export class MainMenuScene extends Phaser.Scene {
     const cy = this.h / 2;
 
     // Title
-    const title = this.add.text(cx, cy - 140, '像素冒险', {
+    const title = this.add.text(cx, cy - 140, THEME_CONFIG.title, {
       fontSize: '48px', fill: '#00ff88',
       fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -76,7 +77,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // Subtitle
-    const sub = this.add.text(cx, cy - 90, 'Pixel Adventure', {
+    const sub = this.add.text(cx, cy - 90, THEME_CONFIG.subtitle, {
       fontSize: '16px', fill: '#556677', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     this.menuContainer.add(sub);
@@ -165,7 +166,7 @@ export class MainMenuScene extends Phaser.Scene {
     const cx = this.w / 2;
 
     // Title
-    const title = this.add.text(cx, 30, '选择你的职业', {
+    const title = this.add.text(cx, 30, '选择修行路数', {
       fontSize: '24px', fill: '#ffffff',
       fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -217,7 +218,7 @@ export class MainMenuScene extends Phaser.Scene {
     const confirmBg = this.add.rectangle(cx, confirmY, 180, 40, 0x1a2e1a)
       .setStrokeStyle(2, 0x44ff66)
       .setInteractive({ useHandCursor: true });
-    const confirmTxt = this.add.text(cx, confirmY, '开始冒险', {
+    const confirmTxt = this.add.text(cx, confirmY, '踏入云荒', {
       fontSize: '18px', fill: '#44ff66', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -249,7 +250,6 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Resource color
     const resourceColors = { rage: '#ff4444', stamina: '#ddcc00', mana: '#4488ff' };
-    const resourceNames = { rage: '怒气', stamina: '体力', mana: '魔力' };
 
     // Class name
     const nameText = this.add.text(x, y - h / 2 + 24, cls.name, {
@@ -258,7 +258,7 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Resource tag
-    const resText = this.add.text(x, y - h / 2 + 48, resourceNames[cls.resource], {
+    const resText = this.add.text(x, y - h / 2 + 48, RESOURCE_LABELS[cls.resource], {
       fontSize: '14px', fill: resourceColors[cls.resource],
       fontFamily: 'Courier New'
     }).setOrigin(0.5);
@@ -266,11 +266,10 @@ export class MainMenuScene extends Phaser.Scene {
     // Description
     const descText = this.add.text(x, y - h / 2 + 74, cls.description, {
       fontSize: '13px', fill: '#888899', fontFamily: 'Courier New',
-      wordWrap: { width: w - 24 }, align: 'center'
+      wordWrap: { width: w - 24, useAdvancedWrap: true }, align: 'center'
     }).setOrigin(0.5, 0);
 
     // Base stats
-    const statNames = { con: '体质', str: '力量', int: '智力', agi: '敏捷', per: '感知', lck: '幸运' };
     const stats = cls.baseStats;
     let statY = y + 20;
     const statTexts = [];
@@ -278,7 +277,7 @@ export class MainMenuScene extends Phaser.Scene {
       const barW = val * 8;
       const barColor = val >= 10 ? 0x44ff66 : val >= 7 ? 0xaacc44 : 0x666688;
 
-      const label = this.add.text(x - w / 2 + 14, statY, statNames[key], {
+      const label = this.add.text(x - w / 2 + 14, statY, STAT_LABELS[key], {
         fontSize: '12px', fill: '#777788', fontFamily: 'Courier New'
       }).setOrigin(0, 0.5);
 

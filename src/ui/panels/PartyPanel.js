@@ -34,7 +34,7 @@ export const PartyPanel = {
     ).setStrokeStyle(1, 0x3a3a4a);
     container.add(listBg);
 
-    this.partyListTitle = this.add.text(leftX + 10, contentTop + 10, '队伍 (0)', {
+    this.partyListTitle = this.add.text(leftX + 10, contentTop + 10, '同行 (0)', {
       fontSize: '15px', fill: '#aaaacc', fontFamily: 'Courier New', fontStyle: 'bold'
     });
     container.add(this.partyListTitle);
@@ -133,7 +133,7 @@ export const PartyPanel = {
 
     this.partyListContainer.removeAll(true);
     const roster = mgr.getRoster();
-    this.partyListTitle.setText(`队伍 (${roster.length})`);
+    this.partyListTitle.setText(`同行 (${roster.length})`);
 
     const leftX = this.panelLeft + 10;
     let y = this._partyListTop;
@@ -196,7 +196,7 @@ export const PartyPanel = {
       this.partyDetailSub.setText('');
       this.partyDetailSkills.setText('');
       this.partyEmptyHint.setColor('#666688');
-      this.partyEmptyHint.setText('在城镇找到可招募的伙伴，与其对话即可加入队伍。\n同时只能有 1 名伙伴出战。');
+      this.partyEmptyHint.setText('在栖云坊市寻找愿意同行的修士。\n同时只能有 1 名同伴出战。');
       return;
     }
     this.partyEmptyHint.setText('');

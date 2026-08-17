@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import itemData from '../data/items.json';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * ShopPanel — 商店双栏 UI（左：商店货架 / 右：玩家背包）
@@ -39,7 +40,7 @@ export class ShopPanel {
       .setStrokeStyle(1, 0xffaa44, 0.3);
 
     // Title
-    this.titleText = this.displayScene.add.text(0, -H / 2 + 24, '商店', {
+    this.titleText = this.displayScene.add.text(0, -H / 2 + 24, '坊市商铺', {
       fontSize: '24px',
       fill: '#ffcc66',
       fontFamily: 'Courier New',
@@ -57,14 +58,14 @@ export class ShopPanel {
       .setLineWidth(1);
 
     // 左侧标题
-    this.leftTitle = this.displayScene.add.text(-W / 4, -H / 2 + 70, '商店货架', {
+    this.leftTitle = this.displayScene.add.text(-W / 4, -H / 2 + 70, '商铺货架', {
       fontSize: '18px',
       fill: '#ffffff',
       fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
 
     // 右侧标题
-    this.rightTitle = this.displayScene.add.text(W / 4, -H / 2 + 70, '我的背包', {
+    this.rightTitle = this.displayScene.add.text(W / 4, -H / 2 + 70, '我的行囊', {
       fontSize: '18px',
       fill: '#ffffff',
       fontFamily: 'Courier New'
@@ -131,7 +132,7 @@ export class ShopPanel {
     this.npc = npc;
     this.visible = true;
     this.container.setVisible(true);
-    this.titleText.setText(npc?.name ? `${npc.name} 的商店` : '商店');
+    this.titleText.setText(npc?.name ? `${npc.name}的铺面` : '坊市商铺');
     this._refreshRelation();
     this.refresh();
     // 暂停玩家移动
@@ -161,7 +162,7 @@ export class ShopPanel {
 
   _refreshGold() {
     const gold = this.scene.inventory?.gold ?? 0;
-    this.goldText.setText(`💰 ${gold} G`);
+    this.goldText.setText(`${THEME_CONFIG.currency} ${gold}`);
   }
 
   _refreshRelation() {
@@ -199,7 +200,7 @@ export class ShopPanel {
       const slot = stock[i];
       const def = itemData.items?.[slot.id] || {};
       const price = this.service.getBuyPrice(this.shopId, i, this.npc);
-      const text = `${def.name || slot.id} ×${slot.count}   ${price} G`;
+      const text = `${def.name || slot.id} ×${slot.count}   ${price} ${THEME_CONFIG.currency}`;
       const row = this.displayScene.add.text(baseX, baseY + i * rowH, text, {
         fontSize: '15px', fill: this._rarityColor(def.rarity), fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
@@ -230,7 +231,7 @@ export class ShopPanel {
       // 跳过 quest/currency
       if (slot.type === 'quest' || slot.type === 'currency') continue;
       const price = this.service.getSellPrice(slot, this.npc);
-      const text = `${slot.name || slot.id} ×${slot.quantity || 1}   ${price} G`;
+      const text = `${slot.name || slot.id} ×${slot.quantity || 1}   ${price} ${THEME_CONFIG.currency}`;
       const row = this.displayScene.add.text(baseX, baseY + visIdx * rowH, text, {
         fontSize: '15px', fill: this._rarityColor(slot.rarity), fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);

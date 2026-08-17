@@ -13,7 +13,7 @@ const STAT_DEF = {
   yellow: { stat: 'critRate',   isFlat: true, baseValue: 1.5 }
 };
 
-const STAT_LABEL = { attack: '攻击', spellPower: '法术强度', maxHp: '生命值', critRate: '暴击率' };
+const STAT_LABEL = { attack: '攻击', spellPower: '术法强度', maxHp: '气血', critRate: '暴击率' };
 
 export const GEMS = {};
 for (const color of COLORS) {
@@ -21,7 +21,7 @@ for (const color of COLORS) {
   GEMS[`${color}_gem`] = {
     id: `${color}_gem`,
     color,
-    name: { red:'红宝石', blue:'蓝宝石', green:'绿宝石', yellow:'黄宝石' }[color],
+    name: { red:'赤霞灵玉', blue:'沧溟灵玉', green:'青木灵玉', yellow:'金阳灵玉' }[color],
     stat: def.stat,
     isFlat: def.isFlat,
     baseValue: def.baseValue,
@@ -48,7 +48,7 @@ export function makeGemInstance(gemId, level = 1) {
     id: gemId,
     type: 'gem',
     color: def.color,
-    name: `${def.name} Lv.${level}`,
+    name: `${def.name} · ${level}阶`,
     icon: def.icon,
     level,
     stat: def.stat,
@@ -57,7 +57,7 @@ export function makeGemInstance(gemId, level = 1) {
     rarity: level >= 7 ? 'epic' : level >= 4 ? 'rare' : level >= 2 ? 'uncommon' : 'common',
     stackable: true,
     maxStack: 99,
-    description: `镶嵌到装备孔位 +${valueText} ${STAT_LABEL[def.stat] || def.stat}`,
+    description: `镶入装备孔位，${STAT_LABEL[def.stat] || def.stat} +${valueText}`,
     sellPrice: level * level * 5
   };
 }

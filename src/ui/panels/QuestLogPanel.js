@@ -1,3 +1,5 @@
+import { THEME_CONFIG } from '../../config/themeConfig.js';
+
 export const QuestLogPanel = {
   createQuestLogTab() {
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
@@ -24,7 +26,7 @@ export const QuestLogPanel = {
     container.add(listBg);
 
     // Quest list title
-    const listTitle = this.add.text(leftX + 10, contentTop + 10, '任务列表', {
+    const listTitle = this.add.text(leftX + 10, contentTop + 10, '游历与悬赏', {
       fontSize: '15px', fill: '#aaaacc', fontFamily: 'Courier New', fontStyle: 'bold'
     });
     container.add(listTitle);
@@ -241,8 +243,8 @@ export const QuestLogPanel = {
     // Rewards
     this.questRewardsTitle.setText('-- 奖励 --');
     let rewardStr = '';
-    if (quest.rewards.xp) rewardStr += `经验: ${quest.rewards.xp}  `;
-    if (quest.rewards.gold) rewardStr += `金币: ${quest.rewards.gold}`;
+    if (quest.rewards.xp) rewardStr += `${THEME_CONFIG.experience}: ${quest.rewards.xp}  `;
+    if (quest.rewards.gold) rewardStr += `${THEME_CONFIG.currency}: ${quest.rewards.gold}`;
     if (quest.rewards.items) {
       quest.rewards.items.forEach(ri => { rewardStr += `  ${ri.name || ri.id} x${ri.count || 1}`; });
     }

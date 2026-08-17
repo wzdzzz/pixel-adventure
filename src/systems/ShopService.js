@@ -1,5 +1,6 @@
 import itemData from '../data/items.json';
 import { getShopConfig } from '../data/shops.js';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * 商店服务
@@ -165,7 +166,7 @@ export class ShopService {
     const totalPrice = unitPrice * buyCount;
     const inv = this.scene.inventory;
     if (!inv || (inv.gold || 0) < totalPrice) {
-      this.scene.events.emit('showMessage', '金币不足');
+      this.scene.events.emit('showMessage', `${THEME_CONFIG.currency}不足`);
       return false;
     }
 

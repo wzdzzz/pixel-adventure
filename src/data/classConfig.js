@@ -11,8 +11,8 @@
 export const CLASS_CONFIG = {
   warrior: {
     id: 'warrior',
-    name: '战士',
-    description: '近战格斗家，通过战斗积累怒气释放强力技能',
+    name: '体修',
+    description: '以体魄和重兵近身破敌，交战时积蓄罡气',
     baseStats: { con: 10, str: 8, int: 5, agi: 8, per: 5, lck: 3 },
     resource: 'rage',
     texturePrefix: 'hero',
@@ -24,8 +24,8 @@ export const CLASS_CONFIG = {
 
   archer: {
     id: 'archer',
-    name: '弓箭手',
-    description: '远程射手，利用体力进行风筝式战斗',
+    name: '剑修',
+    description: '驭使飞剑远程攻敌，以身法调整战位',
     baseStats: { con: 6, str: 5, int: 5, agi: 12, per: 8, lck: 3 },
     resource: 'stamina',
     texturePrefix: 'hero',  // TODO: archer sprites
@@ -36,8 +36,8 @@ export const CLASS_CONFIG = {
 
   mage: {
     id: 'mage',
-    name: '法师',
-    description: '施法者，消耗法力造成爆发伤害和控制',
+    name: '术修',
+    description: '施展五行术法，擅长爆发、控制与护身',
     baseStats: { con: 5, str: 3, int: 12, agi: 6, per: 6, lck: 5 },
     resource: 'mana',
     texturePrefix: 'hero',  // TODO: mage sprites

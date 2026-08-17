@@ -3,33 +3,31 @@ import { RARITY_MULTIPLIERS } from '../../data/lootTables.js';
 import { GEMS } from '../../data/gems.js';
 import { SETS, countSetPieces } from '../../data/sets.js';
 import itemData from '../../data/items.json';
+import { EQUIPMENT_SLOT_LABELS, RARITY_LABELS, STAT_LABELS, THEME_CONFIG, WEAPON_TYPE_LABELS } from '../../config/themeConfig.js';
 
-const RARITY_LABEL = {
-  common:'普通', uncommon:'优秀', rare:'稀有',
-  epic:'史诗', legendary:'传说', mythic:'神话'
-};
+const RARITY_LABEL = RARITY_LABELS;
 
 const STAT_LABEL = {
-  attack:'攻击', defense:'防御', maxHp:'生命', maxMp:'法力',
-  spellPower:'法术强度', moveSpeed:'移速', attackSpeed:'攻速',
-  hpRegen:'回血', critDmg:'暴伤', critRate:'暴击', armorPen:'穿甲',
+  attack:'攻击', defense:'防御', maxHp:'气血', maxMp:'灵力',
+  spellPower:'术法强度', moveSpeed:'移速', attackSpeed:'攻速',
+  hpRegen:'气血恢复', critDmg:'暴伤', critRate:'暴击', armorPen:'破防',
   tenacity:'韧性', cdr:'冷缩', lifesteal:'吸血',
-  con:'体质', str:'力量', int:'智力', agi:'敏捷', per:'感知', lck:'幸运'
+  con:STAT_LABELS.con, str:STAT_LABELS.str, int:STAT_LABELS.int,
+  agi:STAT_LABELS.agi, per:STAT_LABELS.per, lck:STAT_LABELS.lck
 };
 
 function formatEquipTooltip(item, equippedSetCount) {
   const lines = [];
   const enh = item.enhanceLevel ? ` +${item.enhanceLevel}` : '';
   lines.push(`${item.name}${enh}`);
-  lines.push(`[${RARITY_LABEL[item.rarity] || '普通'}] Lv.${item.level || 1}`);
+  lines.push(`[${RARITY_LABEL[item.rarity] || RARITY_LABEL.common}] Lv.${item.level || 1}`);
   if (item.slot) {
-    const slotLabel = { helmet:'头盔', armor:'护甲', weapon:'武器', offhand:'副手',
-      necklace:'项链', ring1:'戒指', ring2:'戒指', boots:'鞋子' }[item.slot] || item.slot;
+    const slotLabel = EQUIPMENT_SLOT_LABELS[item.slot] || item.slot;
     lines.push(`部位: ${slotLabel}`);
   }
   if (item.weaponType) {
-    const wt = { heavy:'战士', light:'弓箭手', magic:'法师' }[item.weaponType] || '';
-    if (wt) lines.push(`职业: ${wt}`);
+    const wt = WEAPON_TYPE_LABELS[item.weaponType] || '';
+    if (wt) lines.push(`器物: ${wt}`);
   }
   // 基础属性（含 rarity × level × enhance 缩放）
   if (item.baseStats && Object.keys(item.baseStats).length) {
@@ -142,7 +140,7 @@ function formatEquipCompare(newItem, equippedItem) {
   const lines = [];
   const enh = equippedItem.enhanceLevel ? ` +${equippedItem.enhanceLevel}` : '';
   lines.push(`当前: ${equippedItem.name}${enh}`);
-  lines.push(`[${RARITY_LABEL[equippedItem.rarity] || '普通'}] Lv.${equippedItem.level || 1}`);
+  lines.push(`[${RARITY_LABEL[equippedItem.rarity] || RARITY_LABEL.common}] Lv.${equippedItem.level || 1}`);
   lines.push('');
 
   const ns = calcEquipStats(newItem);
@@ -242,7 +240,7 @@ export const InventoryPanel = {
     const sortTypes = [
       { key: 'level', label: '等级▼' },
       { key: 'type', label: '种类' },
-      { key: 'rarity', label: '稀有度' }
+      { key: 'rarity', label: '品质' }
     ];
     sortTypes.forEach((st, i) => {
       const btn = this.add.text(this.panelLeft + 65 + i * 65, sortY, `[${st.label}]`, {
@@ -262,7 +260,7 @@ export const InventoryPanel = {
     });
 
     // Gold display
-    this.invGoldText = this.add.text(this.panelLeft + contentW - 10, sortY, '金币: 0', {
+    this.invGoldText = this.add.text(this.panelLeft + contentW - 10, sortY, `${THEME_CONFIG.currency}: 0`, {
       fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
     }).setOrigin(1, 0);
     container.add(this.invGoldText);
@@ -459,7 +457,7 @@ export const InventoryPanel = {
     if (!inv || !this.invSlots) return;
 
     // Update gold
-    if (this.invGoldText) this.invGoldText.setText(`金币: ${inv.gold}`);
+    if (this.invGoldText) this.invGoldText.setText(`${THEME_CONFIG.currency}: ${inv.gold}`);
 
     // Get filtered view
     const filtered = this.invActiveFilter === 'all'
@@ -533,7 +531,7 @@ export const InventoryPanel = {
       const enhSuffix = item.type === 'equipment' && item.enhanceLevel ? ` +${item.enhanceLevel}` : '';
       this.invDetailName.setText(item.name + enhSuffix);
       this.invDetailName.setColor('#' + rarityColor.border.toString(16).padStart(6, '0'));
-      this.invDetailRarity.setText(`[${RARITY_LABEL[item.rarity] || '普通'}] Lv.${item.level || 1}  数量: ${item.quantity}`);
+      this.invDetailRarity.setText(`[${RARITY_LABEL[item.rarity] || RARITY_LABEL.common}] Lv.${item.level || 1}  数量: ${item.quantity}`);
       // 装备：详细多行（覆盖 invDetailDesc）
       if (item.type === 'equipment') {
         const sc = getSetCount(this.gameScene?.equipmentSystem, item);
@@ -737,7 +735,7 @@ export const InventoryPanel = {
     if (this.tooltipContainer2) this.tooltipContainer2.setVisible(false);
     this.tooltipBg.setStrokeStyle(1, 0x6666aa);
     this.tooltipText.setText(
-      `${item.name}\n[${RARITY_LABEL[item.rarity] || '普通'}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? '\n售价: ' + item.sellPrice : ''}`
+      `${item.name}\n[${RARITY_LABEL[item.rarity] || RARITY_LABEL.common}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? `\n售价: ${item.sellPrice} ${THEME_CONFIG.currency}` : ''}`
     );
     this.tooltipBg.setSize(this.tooltipText.width + 16, this.tooltipText.height + 12);
     let tx = x + 30, ty = y - 40;

@@ -14,7 +14,7 @@
 export const SHOPS = {
   tom_shop: {
     id: 'tom_shop',
-    name: '铁匠汤姆的货架',
+    name: '炼器师石崇山的货架',
     inventory: [
       { id: 'potion', count: 5 },
       { id: 'mana_potion', count: 3 }

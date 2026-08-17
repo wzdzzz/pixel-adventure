@@ -79,8 +79,8 @@ await browser.close();
 console.log('\n=== page errors:', pageErrors.length, '===');
 pageErrors.slice(0, 6).forEach(e => console.log('  -', e.slice(0, 160)));
 
-const pass = !r.error && r.isBoss && r.displayName === '骷髅王' &&
-  r.engagedFired && r.barVisibleAfterEngage && r.barName === '骷髅王' && r.inBossMusic &&
+const pass = !r.error && r.isBoss && r.displayName === '白骨鬼王' &&
+  r.engagedFired && r.barVisibleAfterEngage && r.barName === '白骨鬼王' && r.inBossMusic &&
   r.phase1 === 1 && Math.abs(r.enrage1 - 1.3) < 0.001 && r.atkIncreased &&
   r.phase2 === 2 && Math.abs(r.enrage2 - 1.6) < 0.001 &&
   r.defeatedFired && after.barHidden && after.inBoss === false &&

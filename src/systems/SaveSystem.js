@@ -1,4 +1,6 @@
 import { WorldStateManager } from '../world/WorldStateManager.js';
+import { getDefaultWorldSpawn } from '../world/worldConfig.js';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * 存档/读档系统（3 槽位）
@@ -28,6 +30,38 @@ export class SaveSystem {
   /** 取槽位 key */
   static _key(slotId) {
     return `${SaveSystem.SAVE_KEY_PREFIX}${slotId}`;
+  }
+
+  /** 对读出的存档做一次内存态迁移，不直接写回 localStorage。 */
+  static _normalizeSaveData(saveData) {
+    if (!saveData || !saveData.version) return null;
+
+    // 旧存档迁移：关卡制 → 开放世界 (v3.0.0)
+    if (SaveSystem._compareVersions(saveData.version, '3.0.0') < 0) {
+      // 旧关卡坐标在开放世界中无意义，重置到城镇中心
+      if (saveData.player) {
+        saveData.player.position = getDefaultWorldSpawn();
+      }
+    }
+
+    if ((saveData.themeVersion || 0) < THEME_CONFIG.version) {
+      saveData.meta = saveData.meta || {};
+      saveData.meta.levelName = '云荒游历';
+      saveData.themeVersion = THEME_CONFIG.version;
+    }
+
+    return saveData;
+  }
+
+  /** 读取完整存档数据，供场景在创建世界前取得 seed / 玩家位置。 */
+  static readSaveData(slotId) {
+    try {
+      const saveString = localStorage.getItem(SaveSystem._key(slotId));
+      if (!saveString) return null;
+      return SaveSystem._normalizeSaveData(JSON.parse(saveString));
+    } catch (_) {
+      return null;
+    }
   }
 
   /** 老存档迁移到槽 1（仅在槽 1 还没存档时迁） */
@@ -66,11 +100,12 @@ export class SaveSystem {
       const levelSystem = scene.levelSystem;
       const levelName = (typeof scene.currentLevel === 'number')
         ? (scene.registry.get('levelName') || `第${scene.currentLevel + 1}关`)
-        : '';
+        : '云荒游历';
 
       const saveData = {
         timestamp: Date.now(),
         version: SaveSystem.SAVE_VERSION,
+        themeVersion: THEME_CONFIG.version,
         slotId,
         // 简要元数据用于存档列表预览（不参与加载）
         meta: {
@@ -139,21 +174,11 @@ export class SaveSystem {
         return false;
       }
 
-      const saveData = JSON.parse(saveString);
+      const saveData = SaveSystem._normalizeSaveData(JSON.parse(saveString));
 
-      if (!saveData.version) {
+      if (!saveData) {
         console.log('[SaveSystem] 存档格式无效');
         return false;
-      }
-
-      // ── 旧存档迁移：关卡制 → 开放世界 (v3.0.0) ──
-      if (SaveSystem._compareVersions(saveData.version, '3.0.0') < 0) {
-        console.log(`[SaveSystem] 存档版本 ${saveData.version} < 3.0.0，执行开放世界迁移`);
-        // 旧关卡坐标在开放世界中无意义，重置到城镇中心
-        // 城镇中心 = chunk(8,8) 的中心像素位置: 8*1024+512 = 8704
-        if (saveData.player) {
-          saveData.player.position = { x: 8 * 1024 + 512, y: 8 * 1024 + 512 };
-        }
       }
 
       scene.registry.set('gameState', {
@@ -260,11 +285,17 @@ export class SaveSystem {
       }
 
       // 恢复世界状态
-      if (saveData.worldState) {
-        scene.worldState = WorldStateManager.deserialize(saveData.worldState);
+      const canReuseWorldState = saveData.worldState &&
+        scene.worldState?.seed === saveData.worldState.seed;
+      const loadedWorldState = canReuseWorldState
+        ? scene.worldState
+        : saveData.worldState
+          ? WorldStateManager.deserialize(saveData.worldState)
+          : (scene.worldState || new WorldStateManager());
+      if (typeof scene.replaceWorldState === 'function') {
+        scene.replaceWorldState(loadedWorldState);
       } else {
-        // 旧存档兼容：创建新的 WorldStateManager
-        scene.worldState = new WorldStateManager(Date.now());
+        scene.worldState = loadedWorldState;
       }
 
       if (scene.player && saveData.player?.stats?.base) {
@@ -372,7 +403,9 @@ export class SaveSystem {
       const level = meta.level || data.levelSystem?.level || 1;
       const score = meta.score ?? data.gameState?.score ?? 0;
       const currentLevel = meta.currentLevel ?? data.gameState?.currentLevel ?? 0;
-      const levelName = meta.levelName || `第 ${currentLevel + 1} 关`;
+      const levelName = (data.themeVersion || 0) < THEME_CONFIG.version
+        ? '云荒游历'
+        : (meta.levelName || '云荒游历');
       return {
         slotId,
         timestamp: data.timestamp,

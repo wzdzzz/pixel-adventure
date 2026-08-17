@@ -110,7 +110,7 @@ export class EnhanceSystem {
     });
 
     if (failedDrops.length > 0) {
-      this.scene.events.emit('showMessage', '背包已满，部分材料丢失', '#ff6666');
+      this.scene.events.emit('showMessage', '行囊已满，部分材料丢失', '#ff6666');
     }
 
     const summary = drops.map(d => `${MATERIALS[d.matId]?.name || d.matId} ×${d.count}`).join(', ');

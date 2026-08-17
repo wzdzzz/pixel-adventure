@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { RARITY_LABELS } from '../config/themeConfig.js';
 import { PlayerState } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
 import { InventorySystem } from '../systems/InventorySystem.js';
@@ -26,9 +27,16 @@ import { TEXTURES } from '../assets/AssetManager.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
 import { ChunkManager } from '../world/ChunkManager.js';
 import { WorldStateManager } from '../world/WorldStateManager.js';
-import { EntityPool } from '../world/EntityPool.js';
-import { EntityManager } from '../world/EntityManager.js';
 import { BIOMES } from '../world/biomes/biomeConfig.js';
+import {
+  WORLD_CHUNK_PX,
+  WORLD_CONFIG,
+  WORLD_HEIGHT_PX,
+  WORLD_WIDTH_PX,
+  chunkKey,
+  getDefaultWorldSpawn,
+  worldToChunk,
+} from '../world/worldConfig.js';
 import { Enemy, EnemyState } from '../entities/Enemy.js';
 import { NPC } from '../entities/NPC.js';
 import { NPCRegistry } from '../systems/NPCRegistry.js';
@@ -80,12 +88,15 @@ export class MainGameScene extends Phaser.Scene {
     this.worldGenerator = null;
     this.chunkManager = null;
     this.worldState = null;
-    this.entityPool = null;
-    this.entityManager = null;
     this.useOpenWorld = false;  // 标记是否使用开放世界模式
   }
 
   create() {
+    this._worldDisposed = false;
+    this._pauseReasons = new Set();
+    this.gamePaused = false;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this._shutdownWorld, this);
+
     // 清除上一次的注册
     SystemRegistry.clear();
 
@@ -123,14 +134,6 @@ export class MainGameScene extends Phaser.Scene {
     SystemRegistry.register('musicEngine', this.musicEngine);
     SystemRegistry.register('soundManager', this.soundManager);
     this._currentMusicZone = null; // 'town' | 'wild'，用于切换环境曲
-    // 场景关闭时解绑事件、停止音乐，避免泄漏
-    this.events.once('shutdown', () => {
-      if (this.soundManager) this.soundManager.destroy();
-      if (this.musicEngine) this.musicEngine.destroy();
-      this.soundManager = null;
-      this.musicEngine = null;
-    });
-
     // 兼容：保留 Phaser registry 供现有 UI 面板使用
     this.registry.set('levelSystem', this.levelSystem);
     this.registry.set('equipmentSystem', this.equipmentSystem);
@@ -139,6 +142,7 @@ export class MainGameScene extends Phaser.Scene {
 
     // 若有待加载存档：先读 meta 决定职业/性别/当前关卡，确保 createPlayer 用正确的职业
     const pendingSlot = this.registry.get('pendingLoadSlot');
+    let initialSaveData = null;
     if (pendingSlot) {
       const info = SaveSystem.getSaveInfo(pendingSlot);
       if (info) {
@@ -150,12 +154,20 @@ export class MainGameScene extends Phaser.Scene {
         // 清空过时的 savedPlayerData，避免 createPlayer 用旧位置/HP
         this.registry.remove('savedPlayerData');
       }
+      if (SaveSystem.hasSave(pendingSlot)) {
+        initialSaveData = SaveSystem.readSaveData(pendingSlot);
+      }
     }
 
-    const gs = this.registry.get('gameState');
+    if (!initialSaveData) {
+      const activeSlot = this.registry.get('activeSaveSlot') || 1;
+      if (SaveSystem.hasSave(activeSlot)) {
+        initialSaveData = SaveSystem.readSaveData(activeSlot);
+      }
+    }
 
     // 使用开放世界模式
-    this.enterWorld();
+    this.enterWorld(initialSaveData);
     this.tryLoadSave();
     this.setupEvents();
 
@@ -177,7 +189,6 @@ export class MainGameScene extends Phaser.Scene {
 
     // Panel toggle keys
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
-    this.gamePaused = false;
     this._exitConfirm = null;
 
     // C=角色, B=背包, X=技能, L=日志 — 再按关闭
@@ -194,7 +205,7 @@ export class MainGameScene extends Phaser.Scene {
       // 面板已打开时由 PanelScene 自己处理快捷键，这里不重复
       if (this.scene.isActive('PanelScene')) return;
       if (this.gamePaused) return;
-      this.pauseGame();
+      this.pauseGame('panel');
       this.registry.set('panelDefaultTab', tabName);
       this.scene.launch('PanelScene');
       this.scene.bringToTop('PanelScene');
@@ -233,9 +244,12 @@ export class MainGameScene extends Phaser.Scene {
     // M：打开世界地图
     this.mKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
     this.mKey.on('down', () => {
+      if (this._worldMapInputLockUntil && this.time.now < this._worldMapInputLockUntil) return;
       if (this.dialoguing || this.gamePaused) return;
       if (!this.useOpenWorld) return;
-      this.pauseGame();
+      if (this.scene.isActive('WorldMapScene')) return;
+      this._worldMapInputLockUntil = this.time.now + 250;
+      this.pauseGame('world-map');
       this.scene.launch('WorldMapScene');
       this.scene.bringToTop('WorldMapScene');
     });
@@ -277,17 +291,13 @@ export class MainGameScene extends Phaser.Scene {
     if (saveData?.worldState) {
       this.worldState = WorldStateManager.deserialize(saveData.worldState);
     } else {
-      this.worldState = new WorldStateManager(Date.now());
+      this.worldState = new WorldStateManager();
     }
 
     // 2. 创建世界生成器（种子化，确定性）
     this.worldGenerator = new WorldGenerator(this.worldState.seed);
 
-    // 3. 创建实体池和管理器
-    this.entityPool = new EntityPool();
-    this.entityManager = new EntityManager();
-
-    // 4. 创建 Chunk 管理器
+    // 3. 创建 Chunk 管理器
     this.chunkManager = new ChunkManager(this, this.worldGenerator, this.worldState);
 
     // 4.1 NPC 系统三件套（FactionSystem / NPCMemoryStore / NPCRegistry）
@@ -320,12 +330,15 @@ export class MainGameScene extends Phaser.Scene {
     // 面板渲染挂到 UIScene 上（保证在 HUD/技能栏之上），事件仍订阅 MainGameScene
     // 延迟到 UIScene 完成 create 后再实例化
     const _createNpcPanels = () => {
+      if (this._worldDisposed) return;
       const ui = this.scene.get('UIScene');
       this.dialoguePanel = new DialoguePanel(this, this.dialogueEngine, ui);
       this.shopPanel = new ShopPanel(this, this.shopService, ui);
       this.trainerPanel = new TrainerPanel(this, this.trainerService, ui);
     };
     const ui = this.scene.get('UIScene');
+    this._createNpcPanels = _createNpcPanels;
+    this._npcPanelUi = ui;
     if (ui && ui.sys?.settings?.status >= Phaser.Scenes.CREATING) {
       _createNpcPanels();
     } else if (ui) {
@@ -342,50 +355,119 @@ export class MainGameScene extends Phaser.Scene {
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();
 
-    // 5. 设置物理世界边界（16×16 chunks × 32 tiles × 32px = 16384px）
+    // 5. 设置物理世界边界
     // 必须在创建玩家之前，因为 Actor 构造函数调用 setCollideWorldBounds(true)
-    const worldSize = 16 * 32 * 32; // 16384
-    this.physics.world.setBounds(0, 0, worldSize, worldSize);
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH_PX, WORLD_HEIGHT_PX);
 
     // 5.1. 创建玩家（生成在城镇中心）
-    // 城镇 chunk = (8,8)，世界坐标 = 8*1024+512 = 8704
-    const spawnX = 8 * 1024 + 512;
-    const spawnY = 8 * 1024 + 512;
+    const defaultSpawn = getDefaultWorldSpawn();
+    const savedPos = saveData?.player?.position;
+    const halfTile = WORLD_CONFIG.tileSize / 2;
+    const spawnX = Number.isFinite(savedPos?.x)
+      ? Phaser.Math.Clamp(savedPos.x, halfTile, WORLD_WIDTH_PX - halfTile)
+      : defaultSpawn.x;
+    const spawnY = Number.isFinite(savedPos?.y)
+      ? Phaser.Math.Clamp(savedPos.y, halfTile, WORLD_HEIGHT_PX - halfTile)
+      : defaultSpawn.y;
+    if (saveData?.player) {
+      this.registry.set('savedPlayerData', saveData.player);
+    } else {
+      this.registry.remove('savedPlayerData');
+    }
     this._createWorldPlayer(spawnX, spawnY);
 
     // 5.5. 注册基础碰撞
     this.setupWorldCollisions();
 
     // 6. 摄像机跟随玩家（不设边界）
-    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
-    this.cameras.main.setDeadzone(80, 60);
+    this.startPlayerCameraFollow();
     // 不 setBounds — 世界由 Chunk 流式加载
 
     // 7. 注册 chunk 事件（必须在首次 update 之前）
-    this.events.on('chunk-loaded', (data) => {
+    if (this._onWorldChunkLoaded) this.events.off('chunk-loaded', this._onWorldChunkLoaded);
+    if (this._onWorldChunkUnloaded) this.events.off('chunk-unloaded', this._onWorldChunkUnloaded);
+    if (this._onPlayerChunkChanged) this.events.off('player-chunk-changed', this._onPlayerChunkChanged);
+
+    this._onWorldChunkLoaded = (data) => {
       this._registerChunkCollisions(data.chunkX, data.chunkY);
       this._spawnChunkEntities(data.chunkX, data.chunkY);
       // NPC: chunk 加载时生成该 chunk 配置的 NPC
       if (this.npcRegistry) this.npcRegistry.spawnChunk(data.chunkX, data.chunkY);
-    });
+    };
 
     // chunk 卸载时清理实体
-    this.events.on('chunk-unloaded', (data) => {
+    this._onWorldChunkUnloaded = (data) => {
       this._despawnChunkEntities(data.chunkX, data.chunkY);
       // NPC: chunk 卸载时销毁非 persistent NPC
-      if (this.npcRegistry) this.npcRegistry.despawnChunk(`${data.chunkX},${data.chunkY}`);
-    });
+      if (this.npcRegistry) this.npcRegistry.despawnChunk(chunkKey(data.chunkX, data.chunkY));
+    };
+    this._onPlayerChunkChanged = ({ chunkX, chunkY }) => {
+      this._checkLocationDiscovery(chunkX, chunkY);
+      const biome = this.worldGenerator.getBiome(chunkX, chunkY);
+      this.events.emit('levelChanged', BIOMES[biome]?.name || biome, 0);
+    };
+    this.events.on('chunk-loaded', this._onWorldChunkLoaded);
+    this.events.on('chunk-unloaded', this._onWorldChunkUnloaded);
+    this.events.on('player-chunk-changed', this._onPlayerChunkChanged);
 
     // 8. 首次触发 Chunk 加载（会发射 chunk-loaded 事件）
     this.chunkManager.update(spawnX, spawnY);
 
-    // 9. 通知 UI
-    const biome = this.worldGenerator.getBiome(8, 8);
-    const biomeCfg = BIOMES[biome];
-    const biomeName = biomeCfg ? biomeCfg.name : biome;
-    this.events.emit('levelChanged', `${biomeName} — 城镇`, 0);
-
     console.log(`[MainGameScene] 开放世界已初始化 seed=${this.worldState.seed}`);
+  }
+
+  replaceWorldState(worldState) {
+    if (!worldState) return;
+    const seedChanged = this.worldState && this.worldState.seed !== worldState.seed;
+
+    this.worldState = worldState;
+
+    if (seedChanged || !this.worldGenerator) {
+      this.worldGenerator = new WorldGenerator(this.worldState.seed);
+    }
+
+    if (this.chunkManager) {
+      this.chunkManager.worldState = this.worldState;
+      this.chunkManager.generator = this.worldGenerator;
+    }
+  }
+
+  _shutdownWorld() {
+    if (this._worldDisposed) return;
+    this._worldDisposed = true;
+
+    if (this._npcPanelUi && this._createNpcPanels) {
+      this._npcPanelUi.events.off('create', this._createNpcPanels);
+    }
+
+    if (this._onWorldChunkLoaded) this.events.off('chunk-loaded', this._onWorldChunkLoaded);
+    if (this._onWorldChunkUnloaded) this.events.off('chunk-unloaded', this._onWorldChunkUnloaded);
+    if (this._onPlayerChunkChanged) this.events.off('player-chunk-changed', this._onPlayerChunkChanged);
+
+    if (this.scene.isActive('WorldMapScene')) this.scene.stop('WorldMapScene');
+    if (this.scene.isActive('PanelScene')) this.scene.stop('PanelScene');
+
+    this.dialoguePanel?.destroy?.();
+    this.shopPanel?.destroy?.();
+    this.trainerPanel?.destroy?.();
+    this._despawnAllWorldEntities?.();
+    this.npcRegistry?.destroyAll?.();
+    this.chunkManager?.destroy?.();
+    this.soundManager?.destroy?.();
+    this.musicEngine?.destroy?.();
+
+    this._pauseReasons?.clear();
+    this.gamePaused = false;
+    this._chunkGameObjects?.clear();
+    SystemRegistry.clear();
+
+    this.chunkManager = null;
+    this.npcRegistry = null;
+    this.dialoguePanel = null;
+    this.shopPanel = null;
+    this.trainerPanel = null;
+    this.soundManager = null;
+    this.musicEngine = null;
   }
 
   /**
@@ -407,6 +489,11 @@ export class MainGameScene extends Phaser.Scene {
     this.shrines = [];
     this.enemyProjectiles = [];
     this.enemyHitboxes = [];
+    this._enemySprites = this.physics.add.group();
+    // Members already own configured bodies; the group is only a spatial index.
+    this._enemySprites.internalCreateCallback = null;
+    this._enemySprites.internalRemoveCallback = null;
+    this._enemyGroupsByChunk = new Map();
 
     // 创建一个虚拟 level 对象来复用 LevelBuilder.createPlayer()
     // createPlayer 使用 level.playerStart.x/y 作为像素坐标
@@ -434,12 +521,11 @@ export class MainGameScene extends Phaser.Scene {
     const playerCollider = this.physics.add.collider(this.player.sprite, wallLayer);
     chunkData.colliders.push(playerCollider);
 
-    // 所有已存在的敌人也需要与新 chunk 墙壁碰撞
-    for (const enemy of this.enemies) {
-      if (enemy.sprite?.active) {
-        const c = this.physics.add.collider(enemy.sprite, wallLayer);
-        chunkData.colliders.push(c);
-      }
+    // One collider per spawn-chunk group replaces one collider per enemy.
+    for (const [enemyChunkKey, enemyGroup] of this._enemyGroupsByChunk) {
+      const [enemyChunkX, enemyChunkY] = enemyChunkKey.split(',').map(Number);
+      if (Math.abs(enemyChunkX - chunkX) > 1 || Math.abs(enemyChunkY - chunkY) > 1) continue;
+      this._registerEnemyGroupWallCollision(enemyGroup, wallLayer, chunkData);
     }
 
     console.log(`[MainGameScene] 注册碰撞 chunk(${chunkX},${chunkY})`);
@@ -455,6 +541,87 @@ export class MainGameScene extends Phaser.Scene {
     // 玩家 vs 静态障碍物（虽然开放世界不使用这些 groups，但保持兼容）
     this.physics.add.collider(this.player.sprite, this.walls);
     this.physics.add.collider(this.player.sprite, this.obstacles);
+
+    this._sharedEnemyColliders = [
+      this.physics.add.collider(
+        this.player.sprite,
+        this._enemySprites,
+        (playerSprite, enemySprite) => this.handleEnemyContact(enemySprite.enemyInstance),
+        (playerSprite, enemySprite) => {
+          const enemy = enemySprite.enemyInstance;
+          if (!enemy || enemy._isDestroyed) return false;
+          if (this.player.state === PlayerState.SKILL_CASTING) {
+            const activeSkill = this.player.skillEngine.getActiveSkill();
+            if (activeSkill?.effect.type === 'dash') return false;
+          }
+          enemySprite.body.pushable = false;
+          return true;
+        },
+        this
+      ),
+      this.physics.add.overlap(
+        this.player.attackHitbox,
+        this._enemySprites,
+        (hitbox, enemySprite) => this.handleAttackHit(enemySprite.enemyInstance),
+        null,
+        this
+      ),
+      this.physics.add.overlap(
+        this.player.skillHitbox,
+        this._enemySprites,
+        (hitbox, enemySprite) => this.handleSkillHit(enemySprite.enemyInstance),
+        null,
+        this
+      ),
+    ];
+  }
+
+  _registerEnemyGroupWallCollision(enemyGroup, wallLayer, chunkData) {
+    const collider = this.physics.add.collider(enemyGroup, wallLayer);
+    chunkData.colliders ??= [];
+    chunkData.colliders.push(collider);
+    enemyGroup._worldColliders ??= [];
+    enemyGroup._worldColliders.push(collider);
+  }
+
+  _destroyOwnedColliders(owner) {
+    if (!owner?._worldColliders) return;
+    for (const collider of owner._worldColliders) {
+      if (collider?.world) collider.destroy();
+    }
+    owner._worldColliders.length = 0;
+    for (const chunkData of this.chunkManager?.activeChunks?.values?.() || []) {
+      if (chunkData.colliders) chunkData.colliders = chunkData.colliders.filter(collider => collider?.world);
+    }
+  }
+
+  _destroyEnemyChunkGroup(chunkX, chunkY) {
+    const key = chunkKey(chunkX, chunkY);
+    const group = this._enemyGroupsByChunk?.get(key);
+    if (!group) return;
+
+    for (const collider of group._worldColliders || []) {
+      if (collider?.world) collider.destroy();
+    }
+    group._worldColliders = [];
+    for (const chunkData of this.chunkManager?.activeChunks?.values?.() || []) {
+      if (chunkData.colliders) {
+        chunkData.colliders = chunkData.colliders.filter(collider => collider?.world);
+      }
+    }
+    if (group.scene && group.children) group.destroy(false);
+    this._enemyGroupsByChunk.delete(key);
+  }
+
+  _removeWorldEntityEntry(ref) {
+    if (!this._chunkGameObjects) return;
+    for (const entries of this._chunkGameObjects.values()) {
+      const index = entries.findIndex(entry => entry.ref === ref);
+      if (index !== -1) {
+        entries.splice(index, 1);
+        return;
+      }
+    }
   }
 
   // ═════════���══════════════════════════════��══════════════════════
@@ -468,17 +635,17 @@ export class MainGameScene extends Phaser.Scene {
     const chunkData = this.chunkManager.getChunk(chunkX, chunkY);
     if (!chunkData || !chunkData.entities) return;
 
-    const key = `${chunkX},${chunkY}`;
-    const worldOffsetX = chunkX * 1024;
-    const worldOffsetY = chunkY * 1024;
+    const key = chunkKey(chunkX, chunkY);
+    const worldOffsetX = chunkX * WORLD_CHUNK_PX;
+    const worldOffsetY = chunkY * WORLD_CHUNK_PX;
 
     // 初始化 gameObjects 列表
     const gameObjects = [];
     this._chunkGameObjects.set(key, gameObjects);
 
     for (const spawn of chunkData.entities) {
-      const wx = worldOffsetX + spawn.localX * 32 + 16;
-      const wy = worldOffsetY + spawn.localY * 32 + 16;
+      const wx = worldOffsetX + spawn.localX * WORLD_CONFIG.tileSize + WORLD_CONFIG.tileSize / 2;
+      const wy = worldOffsetY + spawn.localY * WORLD_CONFIG.tileSize + WORLD_CONFIG.tileSize / 2;
 
       if (spawn.type === 'chest') {
         this._spawnChest(wx, wy, spawn, gameObjects);
@@ -493,9 +660,6 @@ export class MainGameScene extends Phaser.Scene {
         this._spawnEnemy(wx, wy, spawn, gameObjects);
       }
     }
-
-    // 特殊地点首次发现通知
-    this._checkLocationDiscovery(chunkX, chunkY);
 
     console.log(`[MainGameScene] 生成 chunk(${chunkX},${chunkY}) 实体: ${gameObjects.length} 个`);
   }
@@ -552,7 +716,7 @@ export class MainGameScene extends Phaser.Scene {
     enemy._leashRadius = 450;
 
     this.enemies.push(enemy);
-    gameObjects.push({ ref: enemy, type: 'enemy', spawnId: spawn.id });
+    gameObjects.push({ ref: enemy, type: 'enemy', spawnId: spawn.id, colliders: [] });
 
     // 注册碰撞
     this._registerEnemyCollisions(enemy);
@@ -560,41 +724,26 @@ export class MainGameScene extends Phaser.Scene {
 
   /** 为单个敌人注册所有碰撞 */
   _registerEnemyCollisions(enemy) {
-    if (!this.player?.sprite) return;
+    const enemyChunk = worldToChunk(enemy.spawnX, enemy.spawnY);
+    const key = chunkKey(enemyChunk.chunkX, enemyChunk.chunkY);
 
-    // 敌人 vs 墙壁 — 存入对应 chunk 的 colliders 数组，chunk 卸载时自动清理
-    for (const [, cd] of this.chunkManager.activeChunks) {
-      if (cd.wallLayer) {
-        if (!cd.colliders) cd.colliders = [];
-        const c = this.physics.add.collider(enemy.sprite, cd.wallLayer);
-        cd.colliders.push(c);
+    this._enemySprites.add(enemy.sprite);
+
+    let enemyGroup = this._enemyGroupsByChunk.get(key);
+    if (!enemyGroup) {
+      enemyGroup = this.add.group();
+      enemyGroup._worldColliders = [];
+      this._enemyGroupsByChunk.set(key, enemyGroup);
+
+      for (const [wallChunkKey, chunkData] of this.chunkManager.activeChunks) {
+        const [wallChunkX, wallChunkY] = wallChunkKey.split(',').map(Number);
+        if (Math.abs(enemyChunk.chunkX - wallChunkX) > 1 || Math.abs(enemyChunk.chunkY - wallChunkY) > 1) continue;
+        if (chunkData.wallLayer) {
+          this._registerEnemyGroupWallCollision(enemyGroup, chunkData.wallLayer, chunkData);
+        }
       }
     }
-
-    // 玩家 vs 敌人碰撞（阻挡 + 接触伤害判定）
-    this.physics.add.collider(
-      this.player.sprite, enemy.sprite,
-      () => this.handleEnemyContact(enemy),
-      (playerSprite, enemySprite) => {
-        if (this.player.state === PlayerState.SKILL_CASTING) {
-          const activeSkill = this.player.skillEngine.getActiveSkill();
-          if (activeSkill && activeSkill.effect.type === 'dash') {
-            return false;
-          }
-        }
-        enemySprite.body.pushable = false;
-        return true;
-      },
-      this
-    );
-
-    // 玩家普攻 hitbox vs 敌人
-    this.physics.add.overlap(this.player.attackHitbox, enemy.sprite,
-      () => this.handleAttackHit(enemy), null, this);
-
-    // 玩家技能 hitbox vs 敌人
-    this.physics.add.overlap(this.player.skillHitbox, enemy.sprite,
-      () => this.handleSkillHit(enemy), null, this);
+    enemyGroup.add(enemy.sprite);
   }
 
   /** 生成宝箱 */
@@ -608,7 +757,7 @@ export class MainGameScene extends Phaser.Scene {
     sprite.body.setAllowGravity(false);
 
     const label = this.add.text(x, y - 24,
-      rare ? '✦ 稀有宝箱 [E]' : '按 E 打开', {
+      rare ? '✦ 灵蕴宝匣 [E]' : '按 E 打开', {
         fontSize: '10px', fill: rare ? '#ffcc44' : '#aaaaaa',
         fontFamily: 'Courier New'
       }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
@@ -623,11 +772,10 @@ export class MainGameScene extends Phaser.Scene {
 
     sprite.chestInstance = chest;
     this.chests.push(chest);
-    gameObjects.push({ ref: chest, type: 'chest', spawnId: spawn.id });
-
     // 玩家接近检测
-    this.physics.add.overlap(this.player.sprite, sprite,
+    const overlap = this.physics.add.overlap(this.player.sprite, sprite,
       () => this.handleChestProximity(chest), null, this);
+    gameObjects.push({ ref: chest, type: 'chest', spawnId: spawn.id, colliders: [overlap] });
   }
 
   /** 生成地标 POI（神殿/祭坛/石碑） */
@@ -657,9 +805,10 @@ export class MainGameScene extends Phaser.Scene {
     sprite.shrineInstance = shrine;
     this.shrines = this.shrines || [];
     this.shrines.push(shrine);
-    gameObjects.push({ ref: shrine, type: 'shrine', spawnId: spawn.id });
-
-    this.physics.add.overlap(this.player.sprite, sprite, () => this.handleShrineProximity(shrine), null, this);
+    const overlap = this.physics.add.overlap(
+      this.player.sprite, sprite, () => this.handleShrineProximity(shrine), null, this
+    );
+    gameObjects.push({ ref: shrine, type: 'shrine', spawnId: spawn.id, colliders: [overlap] });
   }
 
   /** 生成篝火 */
@@ -684,24 +833,24 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     const bonfire = { sprite, label, id: spawn.id };
-    gameObjects.push({ ref: bonfire, type: 'bonfire', spawnId: spawn.id });
 
     // 玩家接近检测
-    this.physics.add.overlap(this.player.sprite, sprite, () => {
+    const overlap = this.physics.add.overlap(this.player.sprite, sprite, () => {
       if (this.dialoguing) return;
       this.player.setInteractTarget(sprite);
       label.setVisible(true);
     }, null, this);
+    gameObjects.push({ ref: bonfire, type: 'bonfire', spawnId: spawn.id, colliders: [overlap] });
   }
 
   /** 生�� NPC */
   _spawnNPC(x, y, spawn, gameObjects) {
     // 根据 subtype 决定 NPC 配置
     const npcConfigs = {
-      shop:     { name: '商人',   dialogues: ['欢迎光临！', '需要买些什么？'] },
-      smith:    { name: '铁匠',   dialogues: ['需要打造装备吗？', '我这里有最好的锻造技术。'] },
-      quest:    { name: '冒险者公会', dialogues: ['有新任务可以接取。', '祝你冒险顺利！'] },
-      merchant: { name: '旅行商人',  dialogues: ['路过此地，带了些好东西。', '看看有没有需要的？'] },
+      shop:     { name: '坊市掌柜', dialogues: ['道友请看。', '需要添置些什么？'] },
+      smith:    { name: '炼器师', dialogues: ['要淬炼法器吗？', '火候与灵材，缺一不可。'] },
+      quest:    { name: '悬赏堂', dialogues: ['堂中有新的悬赏。', '此行多加小心。'] },
+      merchant: { name: '云游行商', dialogues: ['沿商路带来一些山外货。', '道友不妨看看。'] },
     };
     const cfg = npcConfigs[spawn.subtype] || { name: 'NPC', dialogues: ['...'] };
 
@@ -712,28 +861,34 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     this.npcs.push(npc);
-    gameObjects.push({ ref: npc, type: 'npc', spawnId: spawn.id });
-
     // 玩家接近检测
-    this.physics.add.overlap(this.player.sprite, npc.sprite,
+    const overlap = this.physics.add.overlap(this.player.sprite, npc.sprite,
       () => this.handleNPCProximity(npc), null, this);
+    gameObjects.push({ ref: npc, type: 'npc', spawnId: spawn.id, colliders: [overlap] });
   }
 
   /**
    * 卸载 chunk 时销毁所有关联的 GameObjects
    */
   _despawnChunkEntities(chunkX, chunkY) {
-    const key = `${chunkX},${chunkY}`;
+    const key = chunkKey(chunkX, chunkY);
     // chunkData 可能已被 destroyChunk 删除，用临时缓存
     const objs = this._chunkGameObjects?.get(key);
     if (!objs) return;
 
     for (const entry of objs) {
+      if (entry.colliders) {
+        for (const collider of entry.colliders) {
+          if (collider?.world) collider.destroy();
+        }
+        entry.colliders.length = 0;
+      }
       if (entry.type === 'enemy') {
         const enemy = entry.ref;
         const idx = this.enemies.indexOf(enemy);
         if (idx > -1) this.enemies.splice(idx, 1);
         // destroy() 内部有 _isDestroyed 防重入
+        this._destroyOwnedColliders(enemy);
         if (enemy.destroy) enemy.destroy();
         // 确保血条一定被清理
         if (enemy.destroyHealthBar) enemy.destroyHealthBar();
@@ -763,6 +918,7 @@ export class MainGameScene extends Phaser.Scene {
       }
     }
 
+    this._destroyEnemyChunkGroup(chunkX, chunkY);
     this._chunkGameObjects.delete(key);
   }
 
@@ -780,6 +936,11 @@ export class MainGameScene extends Phaser.Scene {
     this.enemies = [];
     this.chests = [];
     this.shrines = [];
+    if (this._enemySprites?.scene && this._enemySprites.children) this._enemySprites.clear();
+    for (const group of this._enemyGroupsByChunk?.values?.() || []) {
+      if (group.scene && group.children) group.destroy(false);
+    }
+    this._enemyGroupsByChunk?.clear?.();
     // 不清空 npcs — NPC 在篝火休息后仍应存在，但上面已经逐个销毁了
     this.npcs = [];
   }
@@ -949,9 +1110,14 @@ export class MainGameScene extends Phaser.Scene {
     const mapData = this.mapData;
     const mapWidth = mapData[0].length * GAME_CONFIG.MAP.TILE_SIZE;
     const mapHeight = mapData.length * GAME_CONFIG.MAP.TILE_SIZE;
-    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
+    this.startPlayerCameraFollow();
     this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
-    this.cameras.main.setDeadzone(80, 60);
+  }
+
+  startPlayerCameraFollow() {
+    const camera = this.cameras.main;
+    camera.setDeadzone();
+    camera.startFollow(this.player.sprite, true, 1, 1);
   }
 
   setupEvents() {
@@ -1082,6 +1248,8 @@ export class MainGameScene extends Phaser.Scene {
     });
 
     this.events.on('enemyDeath', (enemy) => {
+      this._destroyOwnedColliders(enemy);
+      this._removeWorldEntityEntry(enemy);
       const idx = this.enemies.indexOf(enemy);
       if (idx > -1) this.enemies.splice(idx, 1);
       const g = this.registry.get('gameState');
@@ -1158,7 +1326,7 @@ export class MainGameScene extends Phaser.Scene {
           const isMythic = drop.itemData.rarity === 'mythic';
           const msg = this.add.text(
             this.cameras.main.width / 2, 60,
-            `${isMythic ? '神话' : '传说'}装备掉落: ${drop.itemData.name}`,
+            `${RARITY_LABELS[drop.itemData.rarity]}器物掉落: ${drop.itemData.name}`,
             {
               fontSize: '16px', fill: isMythic ? '#ff4444' : '#ffaa00', fontFamily: 'Courier New',
               fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
@@ -1373,14 +1541,19 @@ export class MainGameScene extends Phaser.Scene {
     return dco < dpl ? compSprite : playerSprite;
   }
 
-  pauseGame() {
+  pauseGame(reason = 'legacy') {
+    this._pauseReasons ??= new Set();
+    this._pauseReasons.add(reason);
     this.physics.pause();
     this.gamePaused = true;
   }
 
-  resumeGame() {
-    this.physics.resume();
-    this.gamePaused = false;
+  resumeGame(reason = 'legacy') {
+    this._pauseReasons?.delete(reason);
+    this.gamePaused = (this._pauseReasons?.size || 0) > 0;
+    if (!this.gamePaused && this.hitStopTimer <= 0 && !this._worldDisposed) {
+      this.physics.resume();
+    }
   }
 
   /** 使用物品快捷栏第 i 个槽位（按物品 id 查找背包） */
@@ -1421,10 +1594,11 @@ export class MainGameScene extends Phaser.Scene {
     if (this.soundManager) {
       this.soundManager.update(time, delta);
       if (this.player?.sprite) {
-        // 城镇中心世界坐标 (8704, 8704)，半径约 1.2 chunk 内视为城镇
-        const dx = this.player.sprite.x - 8704;
-        const dy = this.player.sprite.y - 8704;
-        const zone = (dx * dx + dy * dy) < (1200 * 1200) ? 'town' : 'wild';
+        const town = getDefaultWorldSpawn();
+        const dx = this.player.sprite.x - town.x;
+        const dy = this.player.sprite.y - town.y;
+        const townRadius = WORLD_CHUNK_PX * 1.2;
+        const zone = (dx * dx + dy * dy) < (townRadius * townRadius) ? 'town' : 'wild';
         if (zone !== this._currentMusicZone) {
           this._currentMusicZone = zone;
           this.soundManager.setAmbient(zone === 'town' ? 'town' : 'explore');
@@ -1436,14 +1610,6 @@ export class MainGameScene extends Phaser.Scene {
     if (this.useOpenWorld && this.chunkManager && this.player?.sprite) {
       // Chunk 流式加载/卸载
       this.chunkManager.update(this.player.sprite.x, this.player.sprite.y);
-
-      // 实体距离分级
-      if (this.entityManager) {
-        const cam = this.cameras.main;
-        const camCenterX = cam.scrollX + cam.width / 2;
-        const camCenterY = cam.scrollY + cam.height / 2;
-        this.entityManager.update(camCenterX, camCenterY, this.chunkManager.activeChunks);
-      }
     }
 
     // NPC 注册表逐帧更新（位置同步、巡逻、可视化）
@@ -1519,8 +1685,7 @@ export class MainGameScene extends Phaser.Scene {
         const cam = this.cameras.main;
         const camCX = cam.scrollX + cam.width / 2;
         const camCY = cam.scrollY + cam.height / 2;
-        const activeRadius2 = 1200 * 1200; // 与 EntityManager.activeRadius 一致
-        const CHUNK_PX = 1024;
+        const activeRadius2 = 1200 * 1200;
 
         for (let i = this.enemies.length - 1; i >= 0; i--) {
           const e = this.enemies[i];
@@ -1533,10 +1698,9 @@ export class MainGameScene extends Phaser.Scene {
             continue;
           }
           // 检测敌人是否走进了未加载的 chunk 区域
-          const ecx = Math.floor(e.sprite.x / CHUNK_PX);
-          const ecy = Math.floor(e.sprite.y / CHUNK_PX);
-          const chunkKey = `${ecx},${ecy}`;
-          if (!this.chunkManager.activeChunks.has(chunkKey)) {
+          const { chunkX: ecx, chunkY: ecy } = worldToChunk(e.sprite.x, e.sprite.y);
+          const enemyChunkKey = chunkKey(ecx, ecy);
+          if (!this.chunkManager.activeChunks.has(enemyChunkKey)) {
             // 敌人走出已加载区域，拉回出生点并重置巡逻
             e.sprite.setPosition(e.spawnX, e.spawnY);
             e.sprite.setVelocity(0, 0);
@@ -1548,7 +1712,15 @@ export class MainGameScene extends Phaser.Scene {
           }
           const dx = e.sprite.x - camCX;
           const dy = e.sprite.y - camCY;
-          if (dx * dx + dy * dy < activeRadius2) {
+          const isNearCamera = dx * dx + dy * dy < activeRadius2;
+          const shouldSimulate = isNearCamera && e.state !== EnemyState.DEAD;
+          if (shouldSimulate && !e.sprite.body.enable) {
+            this.physics.world.enable(e.sprite);
+          } else if (!shouldSimulate && e.sprite.body.enable) {
+            e.sprite.setVelocity(0, 0);
+            this.physics.world.disable(e.sprite);
+          }
+          if (isNearCamera) {
             e.update(this._enemyTarget(e), delta);
           }
           if (e.sprite) e.sprite.setDepth(e.sprite.y + e.sprite.x * 0.001);
@@ -1619,7 +1791,7 @@ export class MainGameScene extends Phaser.Scene {
   _showExitConfirm() {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
-    // 注意：sprite 用 y 坐标作 depth (Y 排序)，世界可达 16384，所以这里必须更高
+    // sprite 用 y 坐标作 depth (Y 排序)，弹窗需高于世界最大 Y。
     const container = this.add.container(0, 0).setDepth(30000).setScrollFactor(0);
 
     // 背景遮罩
@@ -1655,7 +1827,7 @@ export class MainGameScene extends Phaser.Scene {
     mkBtn(h / 2 - 35, '保存进度...', 0x44ff88, () => {
       this._closeExitConfirm();
       // 暂停游戏，打开存档选择
-      this.pauseGame();
+      this.pauseGame('save-select');
       this.scene.launch('SaveSelectScene', {
         mode: 'save',
         returnTo: 'MainGameScene'

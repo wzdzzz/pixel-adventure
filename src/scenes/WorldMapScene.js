@@ -1,6 +1,11 @@
 import Phaser from 'phaser';
-import { BIOMES, getDifficultyAtChunk, WORLD_CENTER } from '../world/biomes/biomeConfig.js';
+import { BIOMES, getDifficultyAtChunk } from '../world/biomes/biomeConfig.js';
 import { WORLD_LAYOUT } from '../world/WorldLayout.js';
+import {
+  WORLD_CHUNK_PX,
+  WORLD_CONFIG,
+  chunkTileToWorld,
+} from '../world/worldConfig.js';
 
 /**
  * 大地图场�� — 按 M 打开，展示 16×16 世界概览，可传送到已探索区域
@@ -12,6 +17,7 @@ export class WorldMapScene extends Phaser.Scene {
 
   create() {
     this.gameScene = this.scene.get('MainGameScene');
+    this._closing = false;
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
@@ -20,7 +26,7 @@ export class WorldMapScene extends Phaser.Scene {
       .setInteractive();
 
     // ─── 地图参数 ────────────────────────────────────────
-    const gridCount = 16;
+    const gridCount = WORLD_CONFIG.widthChunks;
     const cellSize = Math.min(Math.floor((h - 200) / gridCount), 40);
     const mapSize = cellSize * gridCount;
     const mapX = Math.floor((w - mapSize) / 2);
@@ -28,7 +34,7 @@ export class WorldMapScene extends Phaser.Scene {
     this._map = { mapX, mapY, cellSize, gridCount, mapSize };
 
     // ─── 标题 ────────────────────────────────────────────
-    this.add.text(w / 2, 30, '世界地图', {
+    this.add.text(w / 2, 30, '云荒舆图', {
       fontSize: '22px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5);
 
@@ -56,10 +62,10 @@ export class WorldMapScene extends Phaser.Scene {
     this._drawLegend();
 
     // ─── 输入 ────────────────────────────────────────────
-    const mKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
-    mKey.on('down', () => this._close());
-    const escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
-    escKey.on('down', () => this._close());
+    this.mKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
+    this.mKey.once('down', () => this._close());
+    this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.escKey.once('down', () => this._close());
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -171,8 +177,8 @@ export class WorldMapScene extends Phaser.Scene {
 
     const px = player.sprite.x;
     const py = player.sprite.y;
-    const fracX = (px / 1024) / gridCount;
-    const fracY = (py / 1024) / gridCount;
+    const fracX = (px / WORLD_CHUNK_PX) / gridCount;
+    const fracY = (py / WORLD_CHUNK_PX) / gridCount;
 
     // 绿色闪烁点
     this._playerMarker = this.add.circle(
@@ -208,7 +214,7 @@ export class WorldMapScene extends Phaser.Scene {
     // 探索统计
     const ws = this.gameScene?.worldState;
     const explored = ws?.exploredChunks?.size || 0;
-    const total = 256;
+    const total = WORLD_CONFIG.widthChunks * WORLD_CONFIG.heightChunks;
     const pct = Math.floor(explored / total * 100);
 
     this.add.text(infoX, infoY, '探索进度', {
@@ -241,7 +247,7 @@ export class WorldMapScene extends Phaser.Scene {
     });
 
     // 传送点列表
-    this.add.text(infoX, infoY + 170, '快速传送', {
+    this.add.text(infoX, infoY + 170, '挪移阵', {
       fontSize: '13px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
     });
 
@@ -350,30 +356,46 @@ export class WorldMapScene extends Phaser.Scene {
     const player = this.gameScene?.player;
     if (!player?.sprite) return;
 
-    // 目标世界坐标（chunk 中心）
-    const destX = chunkX * 1024 + 512;
-    const destY = chunkY * 1024 + 512;
-
-    // 1. 清理所有实体 GameObjects
-    if (this.gameScene._despawnAllWorldEntities) {
-      this.gameScene._despawnAllWorldEntities();
+    const gen = this.gameScene.worldGenerator;
+    const safeTile = gen?.findNearestWalkableTile?.(chunkX, chunkY, 16, 16);
+    if (!safeTile) {
+      this.gameScene.events.emit('showMessage', `无法传送到 (${chunkX}, ${chunkY})：没有安全落点`, '#ff8888');
+      return;
     }
 
-    // 2. 传送玩家
-    player.sprite.setPosition(destX, destY);
+    // 目标世界坐标（最近可行走 tile 的中心）
+    const { x: destX, y: destY } = chunkTileToWorld(
+      chunkX, chunkY, safeTile.localX, safeTile.localY
+    );
 
-    // 3. 销毁旧 chunk 并在新位置同步加载（包括实体生成）
+    // 1. 传送玩家
+    player.sprite.setPosition(destX, destY);
+    player.sprite.setVelocity(0, 0);
+    if (player.sprite.body) {
+      player.sprite.body.reset(destX, destY);
+      player.sprite.body.setVelocity(0, 0);
+    }
+    player.canInteract = false;
+    player.interactTarget = null;
+
+    const companion = this.gameScene.companionManager?.getActiveNpc?.();
+    if (companion?.sprite) {
+      const cx = destX + 24;
+      const cy = destY + 24;
+      companion.sprite.setPosition(cx, cy);
+      companion.sprite.setVelocity?.(0, 0);
+      if (companion.sprite.body) {
+        companion.sprite.body.reset(cx, cy);
+        companion.sprite.body.setVelocity(0, 0);
+      }
+    }
+
+    // 2. ChunkManager 统一卸载旧世界，并同步加载目标 chunk。
     if (this.gameScene.chunkManager) {
       this.gameScene.chunkManager.teleportReset(destX, destY);
     }
 
-    // 4. 通知 UI 更新区域名
-    const gen = this.gameScene.worldGenerator;
-    if (gen) {
-      const biome = gen.getBiome(chunkX, chunkY);
-      const biomeCfg = BIOMES[biome];
-      this.gameScene.events.emit('levelChanged', biomeCfg?.name || biome, 0);
-    }
+    this.gameScene.cameras.main.centerOn(destX, destY);
 
     // 显示传送提示
     this.gameScene.events.emit('showMessage', `已传送到 (${chunkX}, ${chunkY})`);
@@ -386,9 +408,14 @@ export class WorldMapScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════
 
   _close() {
+    if (this._closing) return;
+    this._closing = true;
+    if (this.gameScene) {
+      this.gameScene._worldMapInputLockUntil = this.gameScene.time.now + 250;
+    }
     this.scene.stop('WorldMapScene');
     if (this.gameScene?.resumeGame) {
-      this.gameScene.resumeGame();
+      this.gameScene.resumeGame('world-map');
     }
   }
 }

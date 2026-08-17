@@ -1,5 +1,6 @@
 import { getTrainerConfig } from '../data/trainers.js';
 import SystemRegistry from '../core/SystemRegistry.js';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * 训练师服务
@@ -20,7 +21,7 @@ export class TrainerService {
   open(trainerId, npc = null) {
     const cfg = getTrainerConfig(trainerId);
     if (!cfg) {
-      this.scene.events.emit('showMessage', '该训练师不存在', '#ff8888');
+      this.scene.events.emit('showMessage', '该教习不存在', '#ff8888');
       return false;
     }
     // 职业过滤
@@ -56,8 +57,8 @@ export class TrainerService {
     if (!node) return { ok: false, reason: '节点不存在' };
     if (node.currentRank >= node.maxRank) return { ok: false, reason: '已学满' };
     if (ls.level < skillEntry.levelReq) return { ok: false, reason: `需要等级 ${skillEntry.levelReq}` };
-    if (ls.skillPoints < node.cost) return { ok: false, reason: `需要 ${node.cost} 技能点` };
-    if ((inv.gold || 0) < skillEntry.goldCost) return { ok: false, reason: '金币不足' };
+    if (ls.skillPoints < node.cost) return { ok: false, reason: `需要 ${node.cost} ${THEME_CONFIG.skillPoint}` };
+    if ((inv.gold || 0) < skillEntry.goldCost) return { ok: false, reason: `${THEME_CONFIG.currency}不足` };
     const allPrereq = node.prerequisites.every(p => tree.unlockedNodes.has(p));
     if (!allPrereq) return { ok: false, reason: '前置未满足' };
     return { ok: true };
@@ -91,7 +92,7 @@ export class TrainerService {
     const inv = this.scene.inventory;
     const cost = cfg.talentResetCost || 5000;
     if ((inv.gold || 0) < cost) {
-      this.scene.events.emit('showMessage', `重置需要 ${cost} 金币`, '#ff8888');
+      this.scene.events.emit('showMessage', `重悟传承需要 ${cost} ${THEME_CONFIG.currency}`, '#ff8888');
       return false;
     }
     const tree = SystemRegistry.get('skillTreeSystem') || this.scene.skillTreeSystem;
@@ -113,7 +114,7 @@ export class TrainerService {
     this.scene.events.emit('goldChanged', inv.gold);
     this.scene.events.emit('skillPointsChanged', ls.skillPoints);
     this.scene.events.emit('talentsReset', { trainerId: this.currentTrainerId });
-    this.scene.events.emit('showMessage', `已重置天赋，返还 ${refund} 点`, '#44ff88');
+    this.scene.events.emit('showMessage', `已重悟传承，返还 ${refund} ${THEME_CONFIG.skillPoint}`, '#44ff88');
     return true;
   }
 }

@@ -18,6 +18,12 @@ export class NPCRegistry {
     this.byChunk = new Map();            // chunkKey -> Set<npcId>
     // 战斗 NPC 工厂（Phase 3 注入，未注入时纯走 NPC）
     this._combatNpcFactory = null;
+    this._onNpcDeath = ({ npcId, npc }) => {
+      this._destroyColliders(npc);
+      this.instances.delete(npcId);
+      for (const set of this.byChunk.values()) set.delete(npcId);
+    };
+    this.scene.events.on('npcDeath', this._onNpcDeath);
   }
 
   setCombatNpcFactory(fn) {
@@ -81,7 +87,8 @@ export class NPCRegistry {
 
   _registerInteractOverlap(npc) {
     if (!this.scene?.player?.sprite || !npc?.sprite) return;
-    this.scene.physics.add.overlap(
+    npc._registryColliders ??= [];
+    npc._registryColliders.push(this.scene.physics.add.overlap(
       this.scene.player.sprite,
       npc.sprite,
       () => {
@@ -91,23 +98,35 @@ export class NPCRegistry {
           this.scene.handleNPCProximity(npc);
         }
       }
-    );
+    ));
   }
 
   _registerCombatOverlap(npc) {
     const scene = this.scene;
     const player = scene?.player;
     if (!player?.attackHitbox || !player?.skillHitbox || !npc?.sprite) return;
-    scene.physics.add.overlap(player.attackHitbox, npc.sprite,
-      () => scene.handleAttackHit && scene.handleAttackHit(npc), null, scene);
-    scene.physics.add.overlap(player.skillHitbox, npc.sprite,
-      () => scene.handleSkillHit && scene.handleSkillHit(npc), null, scene);
+    npc._registryColliders ??= [];
+    npc._registryColliders.push(
+      scene.physics.add.overlap(player.attackHitbox, npc.sprite,
+        () => scene.handleAttackHit && scene.handleAttackHit(npc), null, scene),
+      scene.physics.add.overlap(player.skillHitbox, npc.sprite,
+        () => scene.handleSkillHit && scene.handleSkillHit(npc), null, scene)
+    );
+  }
+
+  _destroyColliders(npc) {
+    if (!npc?._registryColliders) return;
+    for (const collider of npc._registryColliders) {
+      if (collider?.world) collider.destroy();
+    }
+    npc._registryColliders.length = 0;
   }
 
   despawn(npcId) {
     const npc = this.instances.get(npcId);
     if (!npc) return;
     if (npc.persistent || npc.config?.persistent) return;
+    this._destroyColliders(npc);
     npc.destroy();
     this.instances.delete(npcId);
     for (const set of this.byChunk.values()) set.delete(npcId);
@@ -119,6 +138,7 @@ export class NPCRegistry {
     for (const npcId of [...set]) {
       const npc = this.instances.get(npcId);
       if (npc && !(npc.persistent || npc.config?.persistent)) {
+        this._destroyColliders(npc);
         npc.destroy();
         this.instances.delete(npcId);
       }
@@ -151,7 +171,11 @@ export class NPCRegistry {
   }
 
   destroyAll() {
-    for (const npc of this.instances.values()) npc.destroy();
+    this.scene.events.off('npcDeath', this._onNpcDeath);
+    for (const npc of this.instances.values()) {
+      this._destroyColliders(npc);
+      npc.destroy();
+    }
     this.instances.clear();
     this.byChunk.clear();
   }

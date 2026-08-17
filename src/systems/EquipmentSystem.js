@@ -10,6 +10,9 @@ import { RARITY_MULTIPLIERS } from '../data/lootTables.js';
 import { GEMS } from '../data/gems.js';
 import { SetSystem } from './SetSystem.js';
 import SystemRegistry from '../core/SystemRegistry.js';
+import { syncItemDisplayFields } from './ItemDisplaySync.js';
+import { WEAPON_CLASS_LABELS } from '../config/themeConfig.js';
+import itemData from '../data/items.json';
 
 export const EQUIP_SLOTS = ['helmet', 'armor', 'weapon', 'offhand', 'necklace', 'ring1', 'ring2', 'boots'];
 
@@ -87,8 +90,8 @@ export class EquipmentSystem {
         (wt === 'light' && playerClass === 'archer') ||
         (wt === 'magic' && playerClass === 'mage');
       if (!allowed) {
-        const classLabel = wt === 'heavy' ? '战士' : wt === 'light' ? '弓箭手' : '法师';
-        this.scene.events.emit('showMessage', `职业不符 (限 ${classLabel})`);
+        const classLabel = WEAPON_CLASS_LABELS[wt];
+        this.scene.events.emit('showMessage', `修行路数不符（限${classLabel}）`);
         return false;
       }
     }
@@ -107,7 +110,7 @@ export class EquipmentSystem {
         // Inventory full — revert the swap
         this.slots[targetSlot] = prev;
         inv.addItem(item);
-        this.scene.events.emit('showMessage', '背包已满，无法替换');
+        this.scene.events.emit('showMessage', '行囊已满，无法替换');
         return false;
       }
     }
@@ -128,7 +131,7 @@ export class EquipmentSystem {
 
     const added = inv.addItem(item);
     if (!added) {
-      this.scene.events.emit('showMessage', '背包已满');
+      this.scene.events.emit('showMessage', '行囊已满');
       return false;
     }
 
@@ -301,7 +304,7 @@ export class EquipmentSystem {
   fromJSON(data) {
     if (data?.slots) {
       EQUIP_SLOTS.forEach(s => {
-        this.slots[s] = data.slots[s] || null;
+        this.slots[s] = syncItemDisplayFields(data.slots[s], itemData.items) || null;
       });
     }
   }

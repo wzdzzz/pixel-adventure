@@ -12,7 +12,7 @@
 export const TRAINERS = {
   warrior_trainer: {
     id: 'warrior_trainer',
-    name: '战士导师',
+    name: '体修教习石崇山',
     classFilter: 'warrior',
     skills: [
       { skillId: 'ber_1', goldCost: 100, levelReq: 2 },
@@ -24,14 +24,14 @@ export const TRAINERS = {
   },
   archer_trainer: {
     id: 'archer_trainer',
-    name: '游侠导师',
+    name: '剑修沈青萝',
     classFilter: 'archer',
     skills: [],
     talentResetCost: 5000
   },
   mage_trainer: {
     id: 'mage_trainer',
-    name: '法师导师',
+    name: '术修教习',
     classFilter: 'mage',
     skills: [],
     talentResetCost: 5000

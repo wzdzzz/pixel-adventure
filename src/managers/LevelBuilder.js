@@ -152,7 +152,7 @@ export const LevelBuilder = {
     sprite.body.setImmovable(true);
     sprite.body.setAllowGravity(false);
 
-    const label = this.add.text(x, y - 24, locked ? '需要钥匙' : '按 E 打开', {
+    const label = this.add.text(x, y - 24, locked ? '需要禁制令牌' : '按 E 打开', {
       fontSize: '10px', fill: locked ? '#ff6666' : '#aaaaaa',
       fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
@@ -176,7 +176,7 @@ export const LevelBuilder = {
     const requiredKeys = level.portalRequiredKeys || 0;
     this.portalRequiredKeys = requiredKeys;
 
-    this.portalLabel = this.add.text(x, y - 28, `需要 ${requiredKeys} 把钥匙`, {
+    this.portalLabel = this.add.text(x, y - 28, `需要 ${requiredKeys} 枚禁制令牌`, {
       fontSize: '10px', fill: '#ff6666',
       fontFamily: 'Courier New'
     }).setOrigin(0.5).setDepth(y + 1);
@@ -217,7 +217,7 @@ export const LevelBuilder = {
         ease: 'Sine.easeInOut'
       });
     } else if (!hasEnoughKeys) {
-      this.portalLabel.setText(`需要 ${this.portalRequiredKeys} 把钥匙 (${gs.keysCollected}/${this.portalRequiredKeys})`);
+      this.portalLabel.setText(`需要 ${this.portalRequiredKeys} 枚禁制令牌 (${gs.keysCollected}/${this.portalRequiredKeys})`);
     }
   },
 

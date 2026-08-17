@@ -1,4 +1,5 @@
 import masterItemData from '../data/items.json';
+import { syncItemDisplayFields } from './ItemDisplaySync.js';
 
 export class InventorySystem {
   constructor(scene) {
@@ -211,8 +212,11 @@ export class InventorySystem {
       if (!slot) return;
       const master = masterItemData.items?.[slot.id];
       if (master) {
+        syncItemDisplayFields(slot, masterItemData.items);
         slot.stackable = master.stackable ?? slot.stackable ?? false;
         slot.maxStack = master.maxStack ?? slot.maxStack ?? 1;
+      } else {
+        syncItemDisplayFields(slot, masterItemData.items);
       }
     });
 

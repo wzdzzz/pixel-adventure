@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { RESOURCE_LABELS, THEME_CONFIG } from '../../config/themeConfig.js';
 
 export const SkillTreePanel = {
   createSkillTreeTab() {
@@ -17,7 +18,7 @@ export const SkillTreePanel = {
     container.add(contentBg);
 
     // Skill points display
-    this.skillPointsText = this.add.text(this.panelLeft + 20, contentTop + 10, '技能点: 0', {
+    this.skillPointsText = this.add.text(this.panelLeft + 20, contentTop + 10, `${THEME_CONFIG.skillPoint}: 0`, {
       fontSize: '15px', fill: '#00ccff', fontFamily: 'Courier New'
     });
     container.add(this.skillPointsText);
@@ -84,8 +85,7 @@ export const SkillTreePanel = {
           if (!skill) return null;
           const desc = player._skillModule?.getSkillDescription?.(skillId, lv) || skill.description || '';
           const cdSec = (skill.cooldown / 1000).toFixed(1);
-          const resourceLabels = { stamina: '体力', rage: '怒气', mana: '魔力', none: '' };
-          const r = resourceLabels[skill.resource] || '';
+          const r = RESOURCE_LABELS[skill.resource] || '';
           const costLine = skill.resource === 'none'
             ? `冷却: ${cdSec}s`
             : `冷却: ${cdSec}s   ${r}: ${skill.cost}`;
@@ -192,7 +192,7 @@ export const SkillTreePanel = {
     });
 
     // Bottom hint（固定，不随滚动）
-    this.skillHintText = this.add.text(this.panelX, viewBottom + 4, '每3级获得1个技能点 · 滚轮可滚动', {
+    this.skillHintText = this.add.text(this.panelX, viewBottom + 4, `每3级获得1个${THEME_CONFIG.skillPoint} · 滚轮可滚动`, {
       fontSize: '13px', fill: '#555566', fontFamily: 'Courier New'
     }).setOrigin(0.5, 0);
     container.add(this.skillHintText);
@@ -247,7 +247,7 @@ export const SkillTreePanel = {
     if (!engine || !this.skillCards) return;
 
     if (this.skillPointsText) {
-      this.skillPointsText.setText(`技能点: ${levelSystem ? levelSystem.skillPoints : 0}`);
+      this.skillPointsText.setText(`${THEME_CONFIG.skillPoint}: ${levelSystem ? levelSystem.skillPoints : 0}`);
     }
 
     const skillPoints = levelSystem ? levelSystem.skillPoints : 0;
@@ -274,8 +274,7 @@ export const SkillTreePanel = {
       }
 
       // Update stats line
-      const resourceNames = { stamina: '体力', rage: '怒气', mana: '魔力' };
-      const resourceName = resourceNames[base.resource] || '';
+      const resourceName = RESOURCE_LABELS[base.resource] || '';
       const dmgText = scaled.effect?.damageMultiplier ? ` | 伤害: ${Math.round(scaled.effect.damageMultiplier * 100)}%` : '';
       card.statsText.setText(`${resourceName}: ${scaled.cost} | 冷却: ${(scaled.cooldown / 1000).toFixed(1)}s${dmgText}`);
 
@@ -325,7 +324,7 @@ export const SkillTreePanel = {
         card.btnBg.setStrokeStyle(1, 0x444444);
         card.btnBg.setFillStyle(0x2a2a2a);
         card.btnBg.disableInteractive();
-        card.nextLvText.setText('技能点不足');
+        card.nextLvText.setText(`${THEME_CONFIG.skillPoint}不足`);
         card.nextLvText.setColor('#664444');
       }
     });

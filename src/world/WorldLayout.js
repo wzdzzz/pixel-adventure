@@ -6,9 +6,10 @@
  * 无 Phaser 依赖。
  */
 import { TILE_IDS } from './WorldGenerator.js';
+import { WORLD_CONFIG } from './worldConfig.js';
 
 /** chunk 边长（tile 数） */
-const CHUNK_SIZE = 32;
+const CHUNK_SIZE = WORLD_CONFIG.chunkTiles;
 
 // ─── 世界预制区域坐标 ───────────────────────────────────────
 export const WORLD_LAYOUT = {

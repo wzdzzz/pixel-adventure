@@ -23,8 +23,8 @@ export const WARRIOR_SKILLS = {
   // ─── 1. 重击 ───
   heavyStrike: {
     id: 'heavyStrike',
-    name: '重击',
-    description: '重重一击，造成{dmg}%攻击力伤害，20%概率破甲3秒',
+    name: '撼山击',
+    description: '凝聚力道猛击，造成{dmg}%攻击力伤害，20%概率碎罡3秒',
     icon: '🗡️',
     resource: 'rage',
     baseCost: 20,
@@ -49,8 +49,8 @@ export const WARRIOR_SKILLS = {
   // ─── 2. 旋风斩 ───
   whirlwind: {
     id: 'whirlwind',
-    name: '旋风斩',
-    description: '旋转攻击{dur}秒，对周围敌人每0.2秒造成{dmg}%攻击力伤害',
+    name: '罡风轮',
+    description: '催动罡气旋身攻敌{dur}秒，对周围敌人每0.2秒造成{dmg}%攻击力伤害',
     icon: '🌀',
     resource: 'rage',
     baseCost: 30,
@@ -73,8 +73,8 @@ export const WARRIOR_SKILLS = {
   // ─── 3. 冲锋 ───
   charge: {
     id: 'charge',
-    name: '野蛮冲锋',
-    description: '向前方冲锋，造成{dmg}%攻击力伤害并击晕{stun}秒',
+    name: '铁山靠',
+    description: '挺身撞向前方，造成{dmg}%攻击力伤害并击晕{stun}秒',
     icon: '💥',
     resource: 'none',
     baseCost: 0,
@@ -101,8 +101,8 @@ export const WARRIOR_SKILLS = {
   // ─── 4. 战吼 ───
   warCry: {
     id: 'warCry',
-    name: '战吼',
-    description: '怒吼增加{atkBonus}%攻击力，持续{dur}秒',
+    name: '震岳喝',
+    description: '运气震喝，攻击力提升{atkBonus}%，持续{dur}秒',
     icon: '📣',
     resource: 'none',
     baseCost: 0,
@@ -124,8 +124,8 @@ export const WARRIOR_SKILLS = {
   // ─── 5. 斩杀 ───
   execute: {
     id: 'execute',
-    name: '斩杀',
-    description: '猛力一击造成{dmg}%伤害，目标低于30%生命时伤害翻倍',
+    name: '断脉斩',
+    description: '直取要害造成{dmg}%伤害，目标气血低于30%时伤害翻倍',
     icon: '⚰️',
     resource: 'rage',
     baseCost: 30,
@@ -149,8 +149,8 @@ export const WARRIOR_SKILLS = {
   // ─── 6. 地裂斩 ───
   groundSplitter: {
     id: 'groundSplitter',
-    name: '地裂斩',
-    description: '劈开大地，造成{dmg}%伤害并减速30%持续2秒',
+    name: '开山式',
+    description: '力劈地面，造成{dmg}%伤害并使敌人迟滞30%，持续2秒',
     icon: '🌋',
     resource: 'rage',
     baseCost: 25,
@@ -177,8 +177,8 @@ export const WARRIOR_SKILLS = {
   // ─── 7. 血怒 ───
   bloodRage: {
     id: 'bloodRage',
-    name: '血怒',
-    description: '进入血怒状态，攻击吸血{lifesteal}%，持续{dur}秒',
+    name: '燃血诀',
+    description: '燃动气血，攻击吸取气血{lifesteal}%，持续{dur}秒',
     icon: '🩸',
     resource: 'rage',
     baseCost: 40,
@@ -200,8 +200,8 @@ export const WARRIOR_SKILLS = {
   // ─── 8. 防御姿态 ───
   defensiveStance: {
     id: 'defensiveStance',
-    name: '防御姿态',
-    description: '进入防御姿态，减伤{dr}%，持续{dur}秒',
+    name: '玄龟架',
+    description: '沉身守势，受到的伤害降低{dr}%，持续{dur}秒',
     icon: '🛡️',
     resource: 'none',
     baseCost: 0,
@@ -223,8 +223,8 @@ export const WARRIOR_SKILLS = {
   // ─── 9. 跳斩 ───
   leapStrike: {
     id: 'leapStrike',
-    name: '跳斩',
-    description: '跳向目标区域，落地造成{dmg}%范围伤害，地面燃烧3秒。恢复怒气',
+    name: '天坠击',
+    description: '跃向目标区域，落地造成{dmg}%范围伤害，并引燃地面3秒。恢复罡气',
     icon: '⬆️',
     resource: 'none',
     baseCost: 0,
@@ -250,8 +250,8 @@ export const WARRIOR_SKILLS = {
   // ─── 10. 破甲打击 ───
   armorBreakStrike: {
     id: 'armorBreakStrike',
-    name: '破甲打击',
-    description: '降低目标30%防御，持续5秒',
+    name: '碎罡击',
+    description: '震散目标护体之力，使其防御降低30%，持续5秒',
     icon: '🔨',
     resource: 'rage',
     baseCost: 15,
@@ -275,8 +275,8 @@ export const WARRIOR_SKILLS = {
   // ─── 11. 挑衅 ───
   taunt: {
     id: 'taunt',
-    name: '挑衅',
-    description: '强制周围敌人攻击你{dur}秒',
+    name: '镇魂喝',
+    description: '以震魂之声迫使周围敌人攻击你{dur}秒',
     icon: '😤',
     resource: 'none',
     baseCost: 0,
@@ -296,8 +296,8 @@ export const WARRIOR_SKILLS = {
   // ─── 12. 狂怒爆发（大招）───
   berserkerRage: {
     id: 'berserkerRage',
-    name: '狂怒爆发',
-    description: '释放全部怒气，攻击+{atkBonus}%，攻速+30%，持续{dur}秒',
+    name: '金刚怒相',
+    description: '释放全部罡气，攻击力提升{atkBonus}%，攻击速度提升30%，持续{dur}秒',
     icon: '👹',
     resource: 'rage',
     baseCost: 50,
@@ -324,8 +324,8 @@ export const WARRIOR_SKILLS = {
 export const WARRIOR_PASSIVES = {
   battleFury: {
     id: 'battleFury',
-    name: '战斗狂怒',
-    description: '每10点怒气增加2%攻击力',
+    name: '越战越勇',
+    description: '每10点罡气使攻击力提升2%',
     icon: '🔥',
     maxLevel: 3,
     category: 'passive',
@@ -337,8 +337,8 @@ export const WARRIOR_PASSIVES = {
   },
   unyielding: {
     id: 'unyielding',
-    name: '不屈',
-    description: '生命值低于30%时减伤20%',
+    name: '不动心',
+    description: '气血低于30%时，受到的伤害降低20%',
     icon: '💪',
     maxLevel: 3,
     category: 'passive',
@@ -350,7 +350,7 @@ export const WARRIOR_PASSIVES = {
   },
   heavyArmor: {
     id: 'heavyArmor',
-    name: '厚甲',
+    name: '铁骨',
     description: '防御力提升15%',
     icon: '🛡️',
     maxLevel: 3,
@@ -362,8 +362,8 @@ export const WARRIOR_PASSIVES = {
   },
   bloodlust: {
     id: 'bloodlust',
-    name: '嗜血',
-    description: '击杀敌人回复10%最大生命',
+    name: '血炼',
+    description: '击杀敌人后恢复10%最大气血',
     icon: '❤️',
     maxLevel: 3,
     category: 'passive',
@@ -374,7 +374,7 @@ export const WARRIOR_PASSIVES = {
   },
   weaponMastery: {
     id: 'weaponMastery',
-    name: '武器专精',
+    name: '百兵通',
     description: '近战伤害提升10%',
     icon: '⚔️',
     maxLevel: 3,
@@ -386,7 +386,7 @@ export const WARRIOR_PASSIVES = {
   },
   concussiveStrikes: {
     id: 'concussiveStrikes',
-    name: '震荡打击',
+    name: '透劲',
     description: '普通攻击10%概率眩晕0.5秒',
     icon: '💫',
     maxLevel: 3,
@@ -416,7 +416,7 @@ export const WARRIOR_EFFECTS = {
   },
   armorBreak: {
     id: 'armorBreak',
-    name: '破甲',
+    name: '碎罡',
     type: 'debuff',
     duration: 5000,
     maxStacks: 1,
@@ -425,7 +425,7 @@ export const WARRIOR_EFFECTS = {
   },
   slow: {
     id: 'slow',
-    name: '减速',
+    name: '迟滞',
     type: 'debuff',
     duration: 2000,
     maxStacks: 1,
@@ -434,7 +434,7 @@ export const WARRIOR_EFFECTS = {
   },
   rageBoost: {
     id: 'rageBoost',
-    name: '怒气强化',
+    name: '罡气激荡',
     type: 'buff',
     duration: 8000,
     maxStacks: 1,

@@ -1,6 +1,6 @@
 // 伙伴 P1/P2 验证：名册 + 出战/待命/解散 + 序列化
 import { chromium } from 'playwright';
-const URL = process.env.GAME_URL || 'http://localhost:3002';
+const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
   headless: true,

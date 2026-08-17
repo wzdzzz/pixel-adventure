@@ -21,6 +21,7 @@
  */
 
 import { compareRelations } from '../data/factions.js';
+import { getClassLabel } from '../config/themeConfig.js';
 
 export class DialogueEngine {
   constructor(scene, { memory, factions, actionRegistry, dialogueLoader }) {
@@ -243,7 +244,7 @@ export class DialogueEngine {
     if (typeof text !== 'string') return '';
     return text.replace(/\{(\w+)\}/g, (_m, key) => {
       const ctx = this._buildCtx();
-      if (key === 'playerName') return ctx.player?.classType || '冒险者';
+      if (key === 'playerName') return ctx.player ? getClassLabel(ctx.player.classType) : '道友';
       if (key === 'relation') {
         const rel = this.factions?.getRelation(this.activeNpc?.faction, this.activeNpc?.id);
         return rel?.label || '中立';

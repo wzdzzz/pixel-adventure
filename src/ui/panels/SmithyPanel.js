@@ -4,6 +4,7 @@ import { RECIPES } from '../../data/recipes.js';
 import { GEMS } from '../../data/gems.js';
 import itemData from '../../data/items.json';
 import SystemRegistry from '../../core/SystemRegistry.js';
+import { RARITY_LABELS, THEME_CONFIG } from '../../config/themeConfig.js';
 
 /**
  * 强化/分解小窗口（modal in PanelScene）
@@ -85,7 +86,7 @@ export const SmithyPanel = {
           `下一级: +${enh+1}`,
           `成功率: ${(rate*100).toFixed(0)}%   失败不降级`,
           `材料: ${matName} ×${cost.count} (持有 ${heldMat})`,
-          `金币: ${cost.gold} (持有 ${heldGold})`
+          `${THEME_CONFIG.currency}: ${cost.gold} (持有 ${heldGold})`
         ];
         if (errText) { lines.push(''); lines.push(`⚠ ${errText}`); }
         info.setText(lines.join('\n'));
@@ -186,12 +187,12 @@ export const SmithyPanel = {
     c.add([dim, panel, title]);
 
     const rarityList = [
-      { key:'common',    label:'普通',  color:'#cccccc' },
-      { key:'uncommon',  label:'优秀',  color:'#44cc44' },
-      { key:'rare',      label:'稀有',  color:'#4488ff' },
-      { key:'epic',      label:'史诗',  color:'#bb44ff' },
-      { key:'legendary', label:'传说',  color:'#ffaa44' },
-      { key:'mythic',    label:'神话',  color:'#ff4444' }
+      { key:'common',    label:RARITY_LABELS.common,    color:'#cccccc' },
+      { key:'uncommon',  label:RARITY_LABELS.uncommon,  color:'#44cc44' },
+      { key:'rare',      label:RARITY_LABELS.rare,      color:'#4488ff' },
+      { key:'epic',      label:RARITY_LABELS.epic,      color:'#bb44ff' },
+      { key:'legendary', label:RARITY_LABELS.legendary, color:'#ffaa44' },
+      { key:'mythic',    label:RARITY_LABELS.mythic,    color:'#ff4444' }
     ];
 
     const rowY = cy - 90;
@@ -290,7 +291,7 @@ export const SmithyPanel = {
   _enhanceErrText(reason) {
     return ({
       no_material: '材料不足',
-      no_gold: '金币不足',
+      no_gold: `${THEME_CONFIG.currency}不足`,
       maxed: '已达最高强化等级',
       not_equipment: '不是装备'
     })[reason] || '强化失败';
@@ -374,9 +375,9 @@ export const SmithyPanel = {
     const refreshCost = () => {
       const cost = reforgeSys.getCost(lockedIndices.size);
       const lines = [
-        `锁定: ${lockedIndices.size} 条${divineMode ? '  [神圣模式]' : ''}`,
+        `锁定: ${lockedIndices.size} 条${divineMode ? '  [天工模式]' : ''}`,
         `材料: ${_matName(cost.matId)} ×${cost.count} (持有 ${this._countMatInInv(cost.matId)})`,
-        `金币: ${cost.gold} (持有 ${SystemRegistry.get('inventory').gold || 0})`
+        `${THEME_CONFIG.currency}: ${cost.gold} (持有 ${SystemRegistry.get('inventory').gold || 0})`
       ];
       cost.lockedExtras.forEach(e => {
         lines.push(`+ ${_matName(e.matId)} ×${e.count} (持有 ${this._countMatInInv(e.matId)})`);
@@ -391,15 +392,16 @@ export const SmithyPanel = {
     };
     refreshCost();
 
-    // 神圣洗练切换
+    // 天工洗练切换
     const divineBg = this.add.rectangle(cx, cy + 130, 280, 22, 0x332244)
       .setStrokeStyle(1, 0x9966ff).setInteractive({ useHandCursor: true });
-    const divineTxt = this.add.text(cx, cy + 130, '☐ 神圣洗练（消耗神铸之心，T1 概率 ×3）', {
+    const divineLabel = `天工洗练（消耗${MATERIALS.divine_heart.name}，T1 概率 ×3）`;
+    const divineTxt = this.add.text(cx, cy + 130, `☐ ${divineLabel}`, {
       fontSize:'13px', color:'#cc99ff', fontFamily:'Courier New'
     }).setOrigin(0.5);
     divineBg.on('pointerdown', () => {
       divineMode = !divineMode;
-      divineTxt.setText((divineMode ? '☑' : '☐') + ' 神圣洗练（消耗神铸之心，T1 概率 ×3）');
+      divineTxt.setText(`${divineMode ? '☑' : '☐'} ${divineLabel}`);
       refreshCost();
     });
     c.add([divineBg, divineTxt]);
@@ -414,10 +416,10 @@ export const SmithyPanel = {
       not_equipment: '该物品不是装备',
       no_affixes: '该装备没有词条',
       too_many_locks: '最多锁定 2 条',
-      no_material: '混沌精华不足',
-      no_gold: '金币不足',
-      no_material_extra: '灵魂结晶不足',
-      no_divine_heart: '神铸之心不足'
+      no_material: `${MATERIALS.chaos_essence.name}不足`,
+      no_gold: `${THEME_CONFIG.currency}不足`,
+      no_material_extra: `${MATERIALS.soul_crystal.name}不足`,
+      no_divine_heart: `${MATERIALS.divine_heart.name}不足`
     };
 
     okBg.on('pointerdown', () => {
@@ -498,7 +500,7 @@ export const SmithyPanel = {
           // 已镶嵌
           const gem = GEMS[s.gemId];
           const val = gem ? gem.baseValue * (s.gemLevel || 1) : 0;
-          const statLabel = { attack:'攻击', spellPower:'法强', maxHp:'生命', critRate:'暴击' }[gem?.stat] || gem?.stat || '';
+          const statLabel = { attack:'攻击', spellPower:'术法强度', maxHp:'气血', critRate:'暴击' }[gem?.stat] || gem?.stat || '';
           const valText = gem?.stat === 'critRate' ? `+${val.toFixed(1)}%` : `+${val}`;
           const gemName = `${gem?.icon || '◆'} ${gem?.name || s.gemId} Lv.${s.gemLevel}  ${valText} ${statLabel}`;
           const lbl = this.add.text(cx - 100, y, gemName, {
@@ -563,7 +565,7 @@ export const SmithyPanel = {
         .filter(({ s }) => s && s.type === 'gem');
 
       if (gemEntries.length === 0) {
-        const empty = this.add.text(cx, cy - 50, '背包没有宝石', {
+        const empty = this.add.text(cx, cy - 50, '行囊中没有灵玉', {
           fontSize:'14px', color:'#888899', fontFamily:'Courier New'
         }).setOrigin(0.5);
         c.add(empty);
@@ -572,7 +574,7 @@ export const SmithyPanel = {
           const y = cy - 110 + i * 26;
           const gem = GEMS[s.id];
           const val = gem ? gem.baseValue * (s.level || 1) : 0;
-          const statLabel = { attack:'攻击', spellPower:'法强', maxHp:'生命', critRate:'暴击' }[gem?.stat] || '';
+          const statLabel = { attack:'攻击', spellPower:'术法强度', maxHp:'气血', critRate:'暴击' }[gem?.stat] || '';
           const valText = gem?.stat === 'critRate' ? `+${val.toFixed(1)}%` : `+${val}`;
           const txt = this.add.text(cx - 180, y, `${s.icon || '◆'} ${s.name}  ${valText}${statLabel}  ×${s.quantity}`, {
             fontSize:'14px', color:'#cccccc', fontFamily:'Courier New',
@@ -662,7 +664,7 @@ export const SmithyPanel = {
           const levelTag = `Lv.${s.level || 1}`;
           const gem = GEMS[s.id];
           const val = gem ? gem.baseValue * (s.level || 1) : 0;
-          const statLabel = { attack:'攻击', spellPower:'法强', maxHp:'生命', critRate:'暴击' }[gem?.stat] || '';
+          const statLabel = { attack:'攻击', spellPower:'术法强度', maxHp:'气血', critRate:'暴击' }[gem?.stat] || '';
           const valText = gem?.stat === 'critRate' ? `+${val.toFixed(1)}%` : `+${val}`;
           const txt = this.add.text(listLeft + 10, y, `${s.icon || '◆'} ${s.name} ${levelTag}  ${valText}${statLabel}  ×${s.quantity}`, {
             fontSize:'14px', color: isSel ? '#aaffaa' : '#cccccc', fontFamily:'Courier New'
@@ -748,7 +750,7 @@ export const SmithyPanel = {
       const c = this.add.container(0, 0).setDepth(50);
       const dim = this.add.rectangle(cx, cy, w, h, 0, 0.6).setInteractive();
       const panel = this.add.rectangle(cx, cy, panelW, panelH, 0x1a1a2e, 0.98).setStrokeStyle(2, 0x88ddaa);
-      const title = this.add.text(cx, cy - panelH / 2 + 25, '装备制作', {
+      const title = this.add.text(cx, cy - panelH / 2 + 25, '炼器', {
         fontSize:'17px', color:'#88ddaa', fontFamily:'Courier New', fontStyle:'bold'
       }).setOrigin(0.5);
       const hint = this.add.text(cx, cy - panelH / 2 + 50, '选择配方制作装备，材料不足时按钮禁用', {
@@ -798,7 +800,7 @@ export const SmithyPanel = {
           const color = held >= m.count ? '' : '!';
           return `${m.matId}×${m.count}(${held})${color}`;
         }).join('  ');
-        const detail = this.add.text(listLeft + 15, y + 10, `${matsText} | ${rcp.gold}金`, {
+        const detail = this.add.text(listLeft + 15, y + 10, `${matsText} | ${rcp.gold}${THEME_CONFIG.currency}`, {
           fontSize:'12px', color: enabled ? '#aaaaaa' : '#666666', fontFamily:'Courier New'
         }).setOrigin(0, 0.5);
 

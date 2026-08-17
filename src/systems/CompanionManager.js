@@ -16,6 +16,8 @@
  *   companionStanceChanged {npcId,stance} / rosterChanged ()
  */
 
+import { NPCS } from '../data/npcs.js';
+
 const FOLLOW_RANGE = 70;     // 距离 > 此值开始跟随
 const STOP_RANGE = 44;       // 距离 < 此值停下（滞后阈值，避免边界抖动）
 const RUSH_RANGE = 240;      // 距离 > 此值加速追赶
@@ -51,7 +53,7 @@ export class CompanionManager {
   recruit(npc) {
     if (!npc || !npc.id) return false;
     if (this.roster.has(npc.id)) {
-      this.scene.events.emit('showMessage', `${npc.name} 已在你的队伍中`, '#ffaa44');
+      this.scene.events.emit('showMessage', `${npc.name} 已与你同行`, '#ffaa44');
       return false;
     }
     npc.persistent = true;
@@ -66,13 +68,13 @@ export class CompanionManager {
     this.roster.set(npc.id, entry);
 
     this.scene.events.emit('companionRecruited', { npcId: npc.id, name: entry.name });
-    this.scene.events.emit('showMessage', `${entry.name} 加入了你的队伍`, '#44ff88');
+    this.scene.events.emit('showMessage', `${entry.name} 愿与你同行`, '#44ff88');
 
     if (!this.activeId) {
       this._activate(npc);
     } else {
       this._benchInstance(npc);
-      this.scene.events.emit('showMessage', '（待命中，可在队伍面板让其出战）', '#88cc88');
+      this.scene.events.emit('showMessage', '（候命中，可在同行面板让其出战）', '#88cc88');
     }
     this.scene.events.emit('rosterChanged');
     return true;
@@ -88,14 +90,17 @@ export class CompanionManager {
       this._restoreAi(npc);
       npc.persistent = false;
       if (npc.config) npc.config.persistent = false;
-      try { npc.destroy?.(); } catch (e) { /* 忽略 */ }
-      this.scene.npcRegistry?.instances?.delete(npcId);
+      if (this.scene.npcRegistry?.despawn) {
+        this.scene.npcRegistry.despawn(npcId);
+      } else {
+        try { npc.destroy?.(); } catch (e) { /* 忽略 */ }
+      }
     }
     // 允许再次招募：重置 stage / 清 recruited flag
     this.scene.npcMemory?.setFlag(npcId, 'recruited', false);
     this.roster.delete(npcId);
     this.scene.events.emit('companionDismissed', { npcId });
-    this.scene.events.emit('showMessage', `${entry.name} 离开了你的队伍`, '#ffaa44');
+    this.scene.events.emit('showMessage', `${entry.name} 结束了同行`, '#ffaa44');
     this.scene.events.emit('rosterChanged');
     return true;
   }
@@ -145,7 +150,7 @@ export class CompanionManager {
     const name = c.name || this.roster.get(c.id)?.name || '伙伴';
     if (c.sprite?.body) c.sprite.body.setVelocity(0, 0);
     this.bench(this.activeId);
-    this.scene.events.emit('showMessage', `${name} 倒下了，已收回队伍（篝火可恢复）`, '#ff8888');
+    this.scene.events.emit('showMessage', `${name} 倒下了，已回到同行名册（篝火可恢复）`, '#ff8888');
   }
 
   /** 设置姿态（active 立即生效，benched 记录待出战生效）。 */
@@ -431,14 +436,19 @@ export class CompanionManager {
     if (!data) return;
     // 兼容老档：单 companion {companionId}
     if (data.companionId && !data.roster) {
-      this.roster.set(data.companionId, { npcId: data.companionId, name: data.companionId, stance: 'follow', recruitedAt: 0 });
+      this.roster.set(data.companionId, {
+        npcId: data.companionId,
+        name: NPCS[data.companionId]?.name || data.companionId,
+        stance: 'follow',
+        recruitedAt: 0,
+      });
       this._pendingActiveId = data.companionId;
       return;
     }
     for (const e of (data.roster || [])) {
       if (!e?.npcId) continue;
       this.roster.set(e.npcId, {
-        npcId: e.npcId, name: e.name || e.npcId,
+        npcId: e.npcId, name: NPCS[e.npcId]?.name || e.name || e.npcId,
         stance: STANCE_DETECTION[e.stance] ? e.stance : 'follow',
         recruitedAt: e.recruitedAt ?? this.roster.size,
       });

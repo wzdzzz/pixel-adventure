@@ -13,15 +13,15 @@
 
 /** 敌人中文名（赏金/任务文本用；enemyConfig 无内置中文名） */
 export const ENEMY_NAMES = {
-  slime: '史莱姆',
-  goblin: '哥布林',
-  spider: '巨蛛',
-  skeleton: '骷髅',
-  bat: '蝙蝠',
-  orc_warrior: '兽人战士',
-  fire_mage: '火法师',
-  giant_skeleton: '巨型骷髅',
-  skeleton_king: '骷髅王',
+  slime: '浊水精',
+  goblin: '山魈',
+  spider: '噬魂蛛',
+  skeleton: '阴兵',
+  bat: '吸灵蝠',
+  orc_warrior: '妖族力士',
+  fire_mage: '业火邪修',
+  giant_skeleton: '尸傀将军',
+  skeleton_king: '白骨鬼王',
 };
 
 /** 可作为赏金目标的敌人（排除 Boss）+ 每个赏金的默认击杀数（按 tier） */
@@ -39,46 +39,46 @@ export const questData = [
   // ── 主线引导：开局即可接 ──
   {
     id: 'ow_first_hunt',
-    title: '初出茅庐',
+    title: '坊外除祟',
     type: 'main',
-    description: '城外的史莱姆是新手最好的磨刀石。清理一些，证明你的实力。',
+    description: '栖云坊市外的浊水精频频侵扰商路。清理一些，向悬赏堂证明你的本事。',
     autoAvailable: true,
     objectives: [
-      { id: 'kill_slimes_intro', text: '击败史莱姆', type: 'kill', target: 'slime', required: 5 },
+      { id: 'kill_slimes_intro', text: '击败浊水精', type: 'kill', target: 'slime', required: 5 },
     ],
     rewards: { xp: 80, gold: 60 },
   },
   {
     id: 'ow_goblin_threat',
-    title: '哥布林的威胁',
+    title: '山魈作乱',
     type: 'main',
-    description: '哥布林正在城镇周边聚集，趁它们成势之前削减其数量。',
+    description: '山魈正在青岚竹海边缘聚集，趁它们侵入坊市前削减其数量。',
     autoAvailable: true,
     objectives: [
-      { id: 'kill_goblins', text: '击败哥布林', type: 'kill', target: 'goblin', required: 6 },
+      { id: 'kill_goblins', text: '击败山魈', type: 'kill', target: 'goblin', required: 6 },
     ],
     rewards: { xp: 140, gold: 100 },
   },
   {
     id: 'ow_bone_legion',
-    title: '白骨军团',
+    title: '阴兵过境',
     type: 'main',
-    description: '废墟中游荡的骷髅越来越多，把它们送回安息。',
+    description: '太虚宗遗址的阴兵日渐增多，其中还有尸傀将军统领。破去阴煞，让它们归于沉寂。',
     autoAvailable: true,
     objectives: [
-      { id: 'kill_skeletons', text: '击败骷髅', type: 'kill', target: 'skeleton', required: 6 },
-      { id: 'kill_giant', text: '击败巨型骷髅', type: 'kill', target: 'giant_skeleton', required: 1 },
+      { id: 'kill_skeletons', text: '击败阴兵', type: 'kill', target: 'skeleton', required: 6 },
+      { id: 'kill_giant', text: '击败尸傀将军', type: 'kill', target: 'giant_skeleton', required: 1 },
     ],
     rewards: { xp: 260, gold: 180 },
   },
   {
     id: 'ow_slay_king',
-    title: '讨伐骷髅王',
+    title: '镇压白骨鬼王',
     type: 'main',
-    description: '骷髅王盘踞于 Boss 区域。击败它，终结这片土地的不死之患。',
+    description: '白骨鬼王盘踞在镇界禁制深处。击败它，暂时平息云荒灵脉的阴煞之患。',
     autoAvailable: true,
     objectives: [
-      { id: 'kill_king', text: '击败骷髅王', type: 'kill', target: 'skeleton_king', required: 1 },
+      { id: 'kill_king', text: '击败白骨鬼王', type: 'kill', target: 'skeleton_king', required: 1 },
     ],
     rewards: { xp: 600, gold: 500 },
   },
@@ -86,12 +86,12 @@ export const questData = [
   // ── 支线：收集 ──
   {
     id: 'ow_stock_potions',
-    title: '补给储备',
+    title: '行囊备药',
     type: 'side',
-    description: '冒险离不开药水。备齐一些以应对险境。',
+    description: '游历六境难免负伤，备齐回春药再踏出坊市。',
     autoAvailable: true,
     objectives: [
-      { id: 'collect_potions', text: '持有治疗药水', type: 'collect', target: 'potion', required: 3 },
+      { id: 'collect_potions', text: '持有回春药', type: 'collect', target: 'potion', required: 3 },
     ],
     rewards: { xp: 50, gold: 40 },
   },

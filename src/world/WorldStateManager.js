@@ -7,9 +7,13 @@
  * 无 Phaser 依赖。
  */
 export class WorldStateManager {
+  static createSeed() {
+    return Math.floor(Math.random() * 2147483646) + 1;
+  }
+
   constructor(seed) {
     /** 世界种子 */
-    this.seed = seed;
+    this.seed = seed ?? WorldStateManager.createSeed();
     /** 已探索的 chunk (Set of "chunkX,chunkY" keys) */
     this.exploredChunks = new Set();
     /** 已击杀的实体 (Map: entityId → timestamp) */

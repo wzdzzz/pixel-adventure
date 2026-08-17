@@ -31,66 +31,66 @@ export const AFFIXES = {
   attack_speed_t3: { id:'attack_speed_t3', name:'攻击速度', pool:'weapon_common', tier:3, stat:'attackSpeed', valueRange:[0.03, 0.06], minRarity:'uncommon', weight:12, isFlat:false },
 
   // ── armor_common ──────────────────────
-  hp_pct_t1:       { id:'hp_pct_t1', name:'生命',     pool:'armor_common', tier:1, stat:'maxHp',    valueRange:[0.10, 0.16], minRarity:'epic',     weight:5, isFlat:false },
-  hp_pct_t2:       { id:'hp_pct_t2', name:'生命',     pool:'armor_common', tier:2, stat:'maxHp',    valueRange:[0.06, 0.10], minRarity:'rare',     weight:10, isFlat:false },
-  hp_pct_t3:       { id:'hp_pct_t3', name:'生命',     pool:'armor_common', tier:3, stat:'maxHp',    valueRange:[0.03, 0.06], minRarity:'uncommon', weight:15, isFlat:false },
-  hp_flat_t2:      { id:'hp_flat_t2', name:'生命值',   pool:'armor_common', tier:2, stat:'maxHp',    valueRange:[40, 80],     minRarity:'rare',     weight:10, isFlat:true },
-  hp_flat_t3:      { id:'hp_flat_t3', name:'生命值',   pool:'armor_common', tier:3, stat:'maxHp',    valueRange:[15, 35],     minRarity:'uncommon', weight:15, isFlat:true },
+  hp_pct_t1:       { id:'hp_pct_t1', name:'气血',     pool:'armor_common', tier:1, stat:'maxHp',    valueRange:[0.10, 0.16], minRarity:'epic',     weight:5, isFlat:false },
+  hp_pct_t2:       { id:'hp_pct_t2', name:'气血',     pool:'armor_common', tier:2, stat:'maxHp',    valueRange:[0.06, 0.10], minRarity:'rare',     weight:10, isFlat:false },
+  hp_pct_t3:       { id:'hp_pct_t3', name:'气血',     pool:'armor_common', tier:3, stat:'maxHp',    valueRange:[0.03, 0.06], minRarity:'uncommon', weight:15, isFlat:false },
+  hp_flat_t2:      { id:'hp_flat_t2', name:'气血',     pool:'armor_common', tier:2, stat:'maxHp',    valueRange:[40, 80],     minRarity:'rare',     weight:10, isFlat:true },
+  hp_flat_t3:      { id:'hp_flat_t3', name:'气血',     pool:'armor_common', tier:3, stat:'maxHp',    valueRange:[15, 35],     minRarity:'uncommon', weight:15, isFlat:true },
 
   defense_pct_t2:  { id:'defense_pct_t2', name:'防御',  pool:'armor_common', tier:2, stat:'defense',  valueRange:[0.10, 0.18], minRarity:'rare',     weight:8, isFlat:false },
   defense_flat_t3: { id:'defense_flat_t3', name:'防御', pool:'armor_common', tier:3, stat:'defense',  valueRange:[3, 8],       minRarity:'uncommon', weight:12, isFlat:true },
 
-  hp_regen_t2:     { id:'hp_regen_t2', name:'生命回复', pool:'armor_common', tier:2, stat:'hpRegen', valueRange:[0.5, 1.5],   minRarity:'rare',     weight:6, isFlat:true },
+  hp_regen_t2:     { id:'hp_regen_t2', name:'气血恢复', pool:'armor_common', tier:2, stat:'hpRegen', valueRange:[0.5, 1.5],   minRarity:'rare',     weight:6, isFlat:true },
 
   // ── accessory ─────────────────────────
-  str_t2:    { id:'str_t2', name:'力量',  pool:'accessory', tier:2, stat:'_base_str', valueRange:[3, 6], minRarity:'rare',     weight:8, isFlat:true },
-  str_t3:    { id:'str_t3', name:'力量',  pool:'accessory', tier:3, stat:'_base_str', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
-  agi_t2:    { id:'agi_t2', name:'敏捷',  pool:'accessory', tier:2, stat:'_base_agi', valueRange:[3, 6], minRarity:'rare',     weight:8, isFlat:true },
-  agi_t3:    { id:'agi_t3', name:'敏捷',  pool:'accessory', tier:3, stat:'_base_agi', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
-  int_t2:    { id:'int_t2', name:'智力',  pool:'accessory', tier:2, stat:'_base_int', valueRange:[3, 6], minRarity:'rare',     weight:8, isFlat:true },
-  int_t3:    { id:'int_t3', name:'智力',  pool:'accessory', tier:3, stat:'_base_int', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
-  con_t3:    { id:'con_t3', name:'体质',  pool:'accessory', tier:3, stat:'_base_con', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
+  str_t2:    { id:'str_t2', name:'力道',  pool:'accessory', tier:2, stat:'_base_str', valueRange:[3, 6], minRarity:'rare',     weight:8, isFlat:true },
+  str_t3:    { id:'str_t3', name:'力道',  pool:'accessory', tier:3, stat:'_base_str', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
+  agi_t2:    { id:'agi_t2', name:'身法',  pool:'accessory', tier:2, stat:'_base_agi', valueRange:[3, 6], minRarity:'rare',     weight:8, isFlat:true },
+  agi_t3:    { id:'agi_t3', name:'身法',  pool:'accessory', tier:3, stat:'_base_agi', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
+  int_t2:    { id:'int_t2', name:'悟性',  pool:'accessory', tier:2, stat:'_base_int', valueRange:[3, 6], minRarity:'rare',     weight:8, isFlat:true },
+  int_t3:    { id:'int_t3', name:'悟性',  pool:'accessory', tier:3, stat:'_base_int', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
+  con_t3:    { id:'con_t3', name:'体魄',  pool:'accessory', tier:3, stat:'_base_con', valueRange:[1, 3], minRarity:'uncommon', weight:12, isFlat:true },
   cdr_t1:    { id:'cdr_t1', name:'冷却缩减', pool:'accessory', tier:1, stat:'cdr', valueRange:[5, 10], minRarity:'epic',     weight:4, isFlat:true },
   cdr_t2:    { id:'cdr_t2', name:'冷却缩减', pool:'accessory', tier:2, stat:'cdr', valueRange:[2, 5],  minRarity:'rare',     weight:8, isFlat:true },
   move_speed_t3: { id:'move_speed_t3', name:'移动速度', pool:'accessory', tier:3, stat:'moveSpeed', valueRange:[0.03, 0.07], minRarity:'uncommon', weight:10, isFlat:false },
 
   // ── warrior 专属 ──────────────────────
-  rage_gain_t2:  { id:'rage_gain_t2', name:'怒气获取', pool:'warrior', tier:2, stat:'rageGain', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false },
+  rage_gain_t2:  { id:'rage_gain_t2', name:'罡气获取', pool:'warrior', tier:2, stat:'rageGain', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false },
   lifesteal_t2:  { id:'lifesteal_t2', name:'吸血',   pool:'warrior', tier:2, stat:'lifesteal', valueRange:[0.04, 0.08], minRarity:'rare', weight:6, isFlat:true },
   lifesteal_t3:  { id:'lifesteal_t3', name:'吸血',   pool:'warrior', tier:3, stat:'lifesteal', valueRange:[0.01, 0.04], minRarity:'uncommon', weight:10, isFlat:true },
 
   // ── archer 专属 ───────────────────────
-  ranged_dmg_t2: { id:'ranged_dmg_t2', name:'远程伤害', pool:'archer', tier:2, stat:'rangedDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false },
-  agi_pct_t2:    { id:'agi_pct_t2', name:'敏捷',     pool:'archer', tier:2, stat:'_base_agi', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true },
+  ranged_dmg_t2: { id:'ranged_dmg_t2', name:'飞剑伤害', pool:'archer', tier:2, stat:'rangedDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false },
+  agi_pct_t2:    { id:'agi_pct_t2', name:'身法',     pool:'archer', tier:2, stat:'_base_agi', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true },
 
   // ── mage 专属 ─────────────────────────
-  spell_dmg_t2:  { id:'spell_dmg_t2', name:'法术伤害', pool:'mage', tier:2, stat:'spellDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false },
-  mana_regen_t2: { id:'mana_regen_t2', name:'法力恢复', pool:'mage', tier:2, stat:'manaRegen', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false },
-  int_pct_t2:    { id:'int_pct_t2', name:'智力',    pool:'mage', tier:2, stat:'_base_int', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true },
+  spell_dmg_t2:  { id:'spell_dmg_t2', name:'术法伤害', pool:'mage', tier:2, stat:'spellDmg', valueRange:[0.08, 0.14], minRarity:'rare', weight:8, isFlat:false },
+  mana_regen_t2: { id:'mana_regen_t2', name:'灵力恢复', pool:'mage', tier:2, stat:'manaRegen', valueRange:[0.10, 0.20], minRarity:'rare', weight:8, isFlat:false },
+  int_pct_t2:    { id:'int_pct_t2', name:'悟性',    pool:'mage', tier:2, stat:'_base_int', valueRange:[5, 10], minRarity:'rare', weight:8, isFlat:true },
 
   // ── 触发型词条（Phase 2）──────────────────
   // stat 统一标记为 '_trigger'，rollAffixes 按 stat dedupe → 一件装备至多一条触发词条
   // EquipmentSystem.getStatBonuses 应跳过 _trigger（不进任何属性通道），由 TriggerSystem 单独读取
   fire_on_hit_t2: {
-    id:'fire_on_hit_t2', name:'火焰附魔',
+    id:'fire_on_hit_t2', name:'离火附灵',
     pool:'weapon_common', tier:2, stat:'_trigger',
     isFlat:false, valueRange:[1,1], minRarity:'rare', weight:5,
     trigger: { event:'onHit', chance:0.20, effect:'spawn_fireball', power:0.5 }
   },
   heal_on_kill_t2: {
-    id:'heal_on_kill_t2', name:'吸魂',
+    id:'heal_on_kill_t2', name:'摄魂归元',
     pool:'armor_common', tier:2, stat:'_trigger',
     isFlat:false, valueRange:[1,1], minRarity:'rare', weight:5,
     trigger: { event:'onKill', chance:1.0, effect:'heal_pct', power:0.05 }
   },
   cdr_on_skill_t2: {
-    id:'cdr_on_skill_t2', name:'技能加速',
+    id:'cdr_on_skill_t2', name:'行气流转',
     pool:'accessory', tier:2, stat:'_trigger',
     isFlat:false, valueRange:[1,1], minRarity:'rare', weight:5,
     trigger: { event:'onSkillCast', chance:1.0, effect:'reduce_cd', power:500 }
   },
   lifesteal_on_crit_t2: {
-    id:'lifesteal_on_crit_t2', name:'血怒',
+    id:'lifesteal_on_crit_t2', name:'燃血',
     pool:'weapon_common', tier:2, stat:'_trigger',
     isFlat:false, valueRange:[1,1], minRarity:'rare', weight:4,
     trigger: { event:'onCrit', chance:1.0, effect:'lifesteal_pct', power:0.30 }

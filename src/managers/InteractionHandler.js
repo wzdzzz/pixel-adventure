@@ -7,6 +7,7 @@ import itemData from '../data/items.json';
 import { getEffectTemplate } from '../data/statusEffects.js';
 import { getLevelSuppression } from '../data/monsterScaling.js';
 import { ACCIDENTAL_HIT_AGGRO_THRESHOLD } from '../data/factions.js';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 
 export const InteractionHandler = {
   handleChestProximity(chest) {
@@ -22,7 +23,7 @@ export const InteractionHandler = {
       const gs = this.registry.get('gameState');
       if (gs.keysCollected <= 0) {
         // Show "need key" message
-        this.showQuickMessage('需要一把钥匙才能打开！');
+        this.showQuickMessage('需要一枚禁制令牌才能打开！');
         return;
       }
       // Consume a key
@@ -100,7 +101,7 @@ export const InteractionHandler = {
         color: '#ffdd44', fontSize: 14, bold: true
       });
       if (chest.reward.healAmount > 0) {
-        this.floatingText.spawn(cx, cy - 16, `+${chest.reward.healAmount} HP`, {
+        this.floatingText.spawn(cx, cy - 16, `+${chest.reward.healAmount} 气血`, {
           color: '#66ff66', fontSize: 12, prefix: ''
         });
       }
@@ -149,8 +150,8 @@ export const InteractionHandler = {
     if (this.floatingText) {
       const cx = shrine.sprite.x, cy = shrine.sprite.y - 18;
       const txt = def.kind === 'buff' ? def.buff.description
-        : def.kind === 'heal' ? '生命已恢复'
-        : `+${def.reward.gold}金 +${def.reward.xp}经验`;
+        : def.kind === 'heal' ? '气血已恢复'
+        : `+${def.reward.gold}${THEME_CONFIG.currency} +${def.reward.xp}${THEME_CONFIG.experience}`;
       this.floatingText.spawn(cx, cy, txt, { color: '#ffee99', fontSize: 13, bold: true });
     }
   },
@@ -165,7 +166,7 @@ export const InteractionHandler = {
   handlePortalInteract() {
     if (!this.portalActivated) {
       const gs = this.registry.get('gameState');
-      this.showQuickMessage(`需要 ${this.portalRequiredKeys} 把钥匙！(当前: ${gs.keysCollected})`);
+      this.showQuickMessage(`需要 ${this.portalRequiredKeys} 枚禁制令牌！(当前: ${gs.keysCollected})`);
       return;
     }
 

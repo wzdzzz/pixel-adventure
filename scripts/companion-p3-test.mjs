@@ -1,6 +1,6 @@
 // 伙伴 P3 验证：招募 2 个 → 队伍面板渲染 + 出战/待命/解散/姿态（含友伤 stage 全流程）
 import { chromium } from 'playwright';
-const URL = process.env.GAME_URL || 'http://localhost:3002';
+const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
   headless: true,
@@ -85,7 +85,7 @@ console.log('\n=== page errors:', pageErrors.length, '===');
 pageErrors.slice(0, 6).forEach((e) => console.log('  -', e.slice(0, 160)));
 
 const pass = recruit.foundBoth && recruit.rosterSize === 2 && recruit.activeId &&
-  ui.activeTab === 'party' && ui.listTitle === '队伍 (2)' &&
+  ui.activeTab === 'party' && ui.listTitle === '同行 (2)' &&
   ops.swapped && ops.afterSwap !== ops.prevActive && ops.stance === 'aggressive' && ops.afterBench === null &&
   pageErrors.length === 0;
 console.log('\n结果:', pass ? '✅ P3 队伍 UI 通过' : '❌ 有未通过项');

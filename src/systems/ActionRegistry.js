@@ -1,4 +1,5 @@
 import itemData from '../data/items.json';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * ActionRegistry — 对话/事件统一 action 派发器
@@ -86,12 +87,12 @@ export class ActionRegistry {
       // open_shop:shop_id 或 open_shop（用 npc.shopId）
       const shopId = args[0] || ctx?.npc?.shopId;
       if (!shopId) {
-        scene?.events?.emit('showMessage', '没有商店 ID', '#ff8888');
+        scene?.events?.emit('showMessage', '没有商铺 ID', '#ff8888');
         return;
       }
       const svc = scene?.shopService;
       if (!svc) {
-        scene?.events?.emit('showMessage', '商店服务未初始化', '#ff8888');
+        scene?.events?.emit('showMessage', '商铺服务未初始化', '#ff8888');
         return;
       }
       // 先关掉对话再开商店
@@ -106,14 +107,14 @@ export class ActionRegistry {
       } else {
         // 通过 registry 指定默认标签（PanelScene.create 读取），并暂停游戏
         scene.registry?.set('panelDefaultTab', tab);
-        if (scene.pauseGame) scene.pauseGame();
+        if (scene.pauseGame) scene.pauseGame('panel');
         scene.scene.launch('PanelScene');
         scene.scene.bringToTop('PanelScene');
       }
     };
     this.register('open_enhance', (_args, ctx) => {
       ctx?.dialogueEngine?.stop();
-      scene?.events?.emit('showMessage', '从背包右键装备 → 强化（铁匠界面 Phase 5）', '#ffaa44');
+      scene?.events?.emit('showMessage', '从行囊右键装备即可淬炼', '#ffaa44');
       openPanelTab('inventory')();
     });
     this.register('open_reforge', (_args, ctx) => {
@@ -131,12 +132,12 @@ export class ActionRegistry {
     this.register('open_trainer', (args, ctx) => {
       const trainerId = args[0] || ctx?.npc?.trainerId;
       if (!trainerId) {
-        scene?.events?.emit('showMessage', '没有训练师 ID', '#ff8888');
+        scene?.events?.emit('showMessage', '没有教习 ID', '#ff8888');
         return;
       }
       const svc = scene?.trainerService;
       if (!svc) {
-        scene?.events?.emit('showMessage', '训练师服务未初始化', '#ff8888');
+        scene?.events?.emit('showMessage', '传功服务未初始化', '#ff8888');
         return;
       }
       ctx?.dialogueEngine?.stop();
@@ -215,7 +216,7 @@ export class ActionRegistry {
       if (!inv || amt <= 0) return;
       inv.gold = (inv.gold || 0) + amt;
       scene.events.emit('goldChanged', inv.gold);
-      scene.events.emit('showMessage', `获得 ${amt} 金币`, '#ffdd44');
+      scene.events.emit('showMessage', `获得 ${amt} ${THEME_CONFIG.currency}`, '#ffdd44');
     });
 
     // take_gold:amount
@@ -224,7 +225,7 @@ export class ActionRegistry {
       const inv = scene?.inventory;
       if (!inv || amt <= 0) return;
       if ((inv.gold || 0) < amt) {
-        scene.events.emit('showMessage', '金币不足', '#ff8888');
+        scene.events.emit('showMessage', `${THEME_CONFIG.currency}不足`, '#ff8888');
         return false;
       }
       inv.gold -= amt;
@@ -237,7 +238,7 @@ export class ActionRegistry {
       if (!player) return;
       const amount = args[0] ? parseInt(args[0]) : player.maxHp;
       player.heal(amount);
-      scene.events.emit('showMessage', `恢复 ${amount} 生命`, '#44ff88');
+      scene.events.emit('showMessage', `恢复 ${amount} 气血`, '#44ff88');
     });
 
     // learn_skill:nodeId — 免费解锁某技能节点
@@ -289,7 +290,7 @@ export class ActionRegistry {
       const inv = scene.inventory;
       if (cost > 0) {
         if ((inv?.gold || 0) < cost) {
-          scene.events.emit('showMessage', `招募需要 ${cost} 金币`, '#ff8888');
+          scene.events.emit('showMessage', `同行需要 ${cost} ${THEME_CONFIG.currency}`, '#ff8888');
           return;
         }
         inv.gold -= cost;

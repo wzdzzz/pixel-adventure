@@ -89,7 +89,7 @@ export class QuestSystem {
         id,
         title: `赏金：${name}`,
         type: 'bounty',
-        description: `讨伐 ${required} 只${name}，向冒险公会领取赏金。`,
+        description: `讨伐 ${required} 只${name}，回悬赏堂领取报酬。`,
         objectives: [{ id: `${id}_obj`, text: `击败${name}`, type: 'kill', target: t.id, required, current: 0 }],
         rewards: {
           xp: Math.round(required * 16 * (1 + lvl * 0.1)),
@@ -216,9 +216,22 @@ export class QuestSystem {
     data.forEach(saved => {
       let quest = this.quests.find(q => q.id === saved.id);
       if (!quest && saved.dynamic) {
+        const objectives = saved.dynamic.objectives.map(o => ({
+          ...o,
+          text: o.type === 'kill' && ENEMY_NAMES[o.target]
+            ? `击败${ENEMY_NAMES[o.target]}`
+            : o.text,
+          current: 0,
+        }));
+        const primary = objectives.find(o => o.type === 'kill' && ENEMY_NAMES[o.target]);
+        const enemyName = primary ? ENEMY_NAMES[primary.target] : null;
         quest = {
           id: saved.id, ...saved.dynamic,
-          objectives: saved.dynamic.objectives.map(o => ({ ...o, current: 0 })),
+          ...(enemyName ? {
+            title: `赏金：${enemyName}`,
+            description: `讨伐 ${primary.required} 只${enemyName}，回悬赏堂领取报酬。`,
+          } : {}),
+          objectives,
           status: 'available',
         };
         this.quests.push(quest);

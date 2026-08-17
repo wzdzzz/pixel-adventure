@@ -131,8 +131,8 @@ export class ReforgeSystem {
     SystemRegistry.get('equipmentSystem').applyBonuses();
     this.scene.events.emit('inventoryUpdated', inv.slots);
     this.scene.events.emit('showMessage',
-      gotT1 ? (divine ? '神圣洗练成功！触发 T1 词条' : '洗练完成 — T1 觉醒')
-            : (divine ? '神圣洗练完成' : '洗练完成'),
+      gotT1 ? (divine ? '天工洗练成功！触发 T1 词条' : '洗练完成 — T1 觉醒')
+            : (divine ? '天工洗练完成' : '洗练完成'),
       gotT1 ? '#ffaa44' : '#66ccff');
     return { result:'success', gotT1, divine };
   }

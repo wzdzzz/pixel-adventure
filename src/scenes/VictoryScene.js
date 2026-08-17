@@ -80,14 +80,14 @@ export class VictoryScene extends Phaser.Scene {
 
     // 统计信息
     const keysCollected = gameState ? gameState.keysCollected : 0;
-    this.add.text(width / 2, height / 2 + 60, `收集钥匙: ${keysCollected}`, {
+    this.add.text(width / 2, height / 2 + 60, `禁制令牌: ${keysCollected}`, {
       fontSize: '16px',
       fill: '#ff69b4',
       fontFamily: 'Courier New'
     }).setOrigin(0.5);
 
     // 重新开始提示
-    const restartText = this.add.text(width / 2, height / 2 + 120, '点击屏幕重新开始冒险', {
+    const restartText = this.add.text(width / 2, height / 2 + 120, '点击屏幕重返云荒', {
       fontSize: '18px',
       fill: '#aaaaaa',
       fontFamily: 'Courier New'

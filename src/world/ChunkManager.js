@@ -1,4 +1,6 @@
-/** Chunk 流式管理 — 负责 Tilemap 的创建/销毁 + 分帧加载调度 + 实体管理 */
+import { WORLD_CHUNK_PX, WORLD_CONFIG, chunkKey, worldToChunk } from './worldConfig.js';
+
+/** Chunk 流式管理 — 负责 Tilemap 的创建/销毁 + 分帧加载调度 + 实体描述符 */
 export class ChunkManager {
   /**
    * @param {Phaser.Scene} scene
@@ -29,7 +31,35 @@ export class ChunkManager {
     this.unloadRadius = 2;
 
     /** 一个 chunk 的像素边长 (32 tiles × 32px) */
-    this.CHUNK_PX = 1024;
+    this.CHUNK_PX = WORLD_CHUNK_PX;
+  }
+
+  _getChunksInRadius(centerX, centerY, radius) {
+    const chunks = [];
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const chunkX = centerX + dx;
+        const chunkY = centerY + dy;
+        if (!this.generator.isInBounds(chunkX, chunkY)) continue;
+        chunks.push({ chunkX, chunkY, distance: Math.max(Math.abs(dx), Math.abs(dy)) });
+      }
+    }
+    return chunks.sort((a, b) => a.distance - b.distance);
+  }
+
+  _emitPlayerChunkChanged(chunkX, chunkY) {
+    this.worldState?.markChunkExplored?.(chunkKey(chunkX, chunkY));
+    this.scene.events.emit('player-chunk-changed', { chunkX, chunkY });
+  }
+
+  _loadChunkNow(chunkX, chunkY) {
+    const chunkData = this.createChunk(chunkX, chunkY);
+    if (!chunkData) return null;
+    if (chunkData.ready) return chunkData;
+    this._loadChunkEntities(chunkX, chunkY);
+    chunkData.ready = true;
+    this.scene.events.emit('chunk-loaded', { chunkX, chunkY, chunkData });
+    return chunkData;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -42,8 +72,8 @@ export class ChunkManager {
    * @param {number} playerY - 玩家世界 Y 坐标（像素）
    */
   update(playerX, playerY) {
-    const cx = Math.floor(playerX / this.CHUNK_PX);
-    const cy = Math.floor(playerY / this.CHUNK_PX);
+    const { chunkX: cx, chunkY: cy } = worldToChunk(playerX, playerY);
+    if (!this.generator.isInBounds(cx, cy)) return;
 
     // 玩家仍在同一 chunk → 只处理队列，不重算
     if (cx === this.lastPlayerChunkX && cy === this.lastPlayerChunkY) {
@@ -54,22 +84,23 @@ export class ChunkManager {
     // 玩家进入了新 chunk → 更新缓存并重新计算加载/卸载
     this.lastPlayerChunkX = cx;
     this.lastPlayerChunkY = cy;
+    this._emitPlayerChunkChanged(cx, cy);
+
+    // 玩家脚下的 chunk 必须立即具备地形、碰撞和实体；邻居再分帧加载。
+    const currentKey = chunkKey(cx, cy);
+    const currentChunk = this.activeChunks.get(currentKey);
+    if (!currentChunk?.ready) {
+      this.loadQueue = this.loadQueue.filter(q => q.chunkX !== cx || q.chunkY !== cy);
+      this._loadChunkNow(cx, cy);
+    }
 
     // --- 收集需要加载的 chunk（loadRadius 范围内） ---
-    const neededKeys = new Set();
-    for (let dy = -this.loadRadius; dy <= this.loadRadius; dy++) {
-      for (let dx = -this.loadRadius; dx <= this.loadRadius; dx++) {
-        const nx = cx + dx;
-        const ny = cy + dy;
-        const key = `${nx},${ny}`;
-        neededKeys.add(key);
-
-        // 跳过已激活或已在加载队列中的 chunk
-        if (this.activeChunks.has(key)) continue;
-        if (this.loadQueue.some(q => q.chunkX === nx && q.chunkY === ny)) continue;
-
-        this.loadQueue.push({ chunkX: nx, chunkY: ny, step: 0 });
-      }
+    const neededChunks = this._getChunksInRadius(cx, cy, this.loadRadius);
+    for (const { chunkX, chunkY } of neededChunks) {
+      const key = chunkKey(chunkX, chunkY);
+      if (this.activeChunks.has(key)) continue;
+      if (this.loadQueue.some(q => q.chunkX === chunkX && q.chunkY === chunkY)) continue;
+      this.loadQueue.push({ chunkX, chunkY, step: 0 });
     }
 
     // --- 收集需要卸载的 chunk（超出 unloadRadius） ---
@@ -105,7 +136,7 @@ export class ChunkManager {
     // --- 卸载：全部立即处理 ---
     while (this.unloadQueue.length > 0) {
       const { chunkX, chunkY } = this.unloadQueue.pop();
-      const key = `${chunkX},${chunkY}`;
+      const key = chunkKey(chunkX, chunkY);
       if (!this.activeChunks.has(key)) continue;
 
       this.scene.events.emit('chunk-unloaded', { chunkX, chunkY });
@@ -123,16 +154,8 @@ export class ChunkManager {
       this.createChunk(item.chunkX, item.chunkY);
       item.step = 1;
     } else if (item.step === 1) {
-      // Step 1: 加载实体描述
-      this._loadChunkEntities(item.chunkX, item.chunkY);
-
-      const key = `${item.chunkX},${item.chunkY}`;
-      const chunkData = this.activeChunks.get(key);
-      this.scene.events.emit('chunk-loaded', {
-        chunkX: item.chunkX,
-        chunkY: item.chunkY,
-        chunkData
-      });
+      // Step 1: 加载实体描述并发出一次 ready 通知。
+      this._loadChunkNow(item.chunkX, item.chunkY);
 
       // 完成，从队列移除
       this.loadQueue.shift();
@@ -146,13 +169,13 @@ export class ChunkManager {
   /**
    * 为已创建 tilemap 的 chunk 加载实体生成清单。
    * 根据 WorldStateManager 过滤已击杀/已开启的实体。
-   * 实际的 Phaser GameObject 创建由后续 EntityManager (Phase 5+6) 负责。
+   * 实际的 Phaser GameObject 创建由 MainGameScene 的 chunk-loaded 监听负责。
    *
    * @param {number} chunkX
    * @param {number} chunkY
    */
   _loadChunkEntities(chunkX, chunkY) {
-    const key = `${chunkX},${chunkY}`;
+    const key = chunkKey(chunkX, chunkY);
     const chunkData = this.activeChunks.get(key);
     if (!chunkData) return;
 
@@ -178,23 +201,22 @@ export class ChunkManager {
 
     chunkData.entities = filtered;
 
-    // 标记该 chunk 为已探索
-    this.worldState?.markChunkExplored?.(key);
+    // 探索记录由玩家实际所在 chunk 写入；加载相邻 chunk 不代表已探索。
   }
 
   /**
    * 卸载 chunk 的实体数据。
-   * 实际 Phaser GameObject 的回收由后续 EntityPool/EntityManager (Phase 5) 处理。
+   * 实际 Phaser GameObject 的回收由 MainGameScene 的 chunk-unloaded 监听负责。
    *
    * @param {number} chunkX
    * @param {number} chunkY
    */
   _unloadChunkEntities(chunkX, chunkY) {
-    const key = `${chunkX},${chunkY}`;
+    const key = chunkKey(chunkX, chunkY);
     const chunkData = this.activeChunks.get(key);
     if (!chunkData) return;
 
-    // 清空实体描述列表（GameObject 回收在 Phase 5 实现）
+    // GameObject 已由 chunk-unloaded 监听回收，这里只清空描述符。
     chunkData.entities = [];
   }
 
@@ -223,14 +245,17 @@ export class ChunkManager {
    * @param {number} destY - 目标世界 Y 坐标（像素）
    */
   teleportReset(destX, destY) {
+    const { chunkX: cx, chunkY: cy } = worldToChunk(destX, destY);
+    if (!this.generator.isInBounds(cx, cy)) return false;
+
     // 清空队列
     this.loadQueue.length = 0;
     this.unloadQueue.length = 0;
 
-    // 销毁所有活跃 chunk（仅 tilemap，实体已由 _despawnAllWorldEntities 清理）
+    // chunk-unloaded 先回收实体/NPC，再销毁 Tilemap。
     for (const [key] of this.activeChunks) {
       const [cx, cy] = key.split(',').map(Number);
-      // 不需要 emit chunk-unloaded，实体已经清理完了
+      this.scene.events.emit('chunk-unloaded', { chunkX: cx, chunkY: cy });
       this.destroyChunk(cx, cy);
     }
 
@@ -238,22 +263,13 @@ export class ChunkManager {
     this.lastPlayerChunkX = null;
     this.lastPlayerChunkY = null;
 
-    // 在新位置同步加载所有需要的 chunk
-    const cx = Math.floor(destX / this.CHUNK_PX);
-    const cy = Math.floor(destY / this.CHUNK_PX);
-    for (let dy = -this.loadRadius; dy <= this.loadRadius; dy++) {
-      for (let dx = -this.loadRadius; dx <= this.loadRadius; dx++) {
-        const nx = cx + dx;
-        const ny = cy + dy;
-        // Step 0: 创建 tilemap
-        this.createChunk(nx, ny);
-        // Step 1: 加载实体描述
-        this._loadChunkEntities(nx, ny);
-        // 通知场景
-        const key = `${nx},${ny}`;
-        const chunkData = this.activeChunks.get(key);
-        this.scene.events.emit('chunk-loaded', { chunkX: nx, chunkY: ny, chunkData });
-      }
+    // 目标 chunk 同步可用，邻居继续走分帧队列，避免传送帧一次创建 9 个 tilemap。
+    this._emitPlayerChunkChanged(cx, cy);
+    this._loadChunkNow(cx, cy);
+
+    for (const { chunkX, chunkY } of this._getChunksInRadius(cx, cy, this.loadRadius)) {
+      if (chunkX === cx && chunkY === cy) continue;
+      this.loadQueue.push({ chunkX, chunkY, step: 0 });
     }
 
     // 更新缓存为新位置
@@ -261,6 +277,7 @@ export class ChunkManager {
     this.lastPlayerChunkY = cy;
 
     console.log(`[ChunkManager] 传送重置完成 → chunk(${cx},${cy})`);
+    return true;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -274,10 +291,7 @@ export class ChunkManager {
    * @returns {{ chunkX: number, chunkY: number }}
    */
   getPlayerChunk(playerX, playerY) {
-    return {
-      chunkX: Math.floor(playerX / this.CHUNK_PX),
-      chunkY: Math.floor(playerY / this.CHUNK_PX)
-    };
+    return worldToChunk(playerX, playerY);
   }
 
   /**
@@ -299,32 +313,37 @@ export class ChunkManager {
    * @returns {object} chunk 数据对象
    */
   createChunk(chunkX, chunkY) {
-    const key = `${chunkX},${chunkY}`;
+    if (!this.generator.isInBounds(chunkX, chunkY)) return null;
+    const key = chunkKey(chunkX, chunkY);
     if (this.activeChunks.has(key)) {
       return this.activeChunks.get(key);
     }
 
     const terrain = this.generator.generateChunkTerrain(chunkX, chunkY);
-    const worldX = chunkX * 1024;
-    const worldY = chunkY * 1024;
+    const worldX = chunkX * WORLD_CHUNK_PX;
+    const worldY = chunkY * WORLD_CHUNK_PX;
 
     // --- Ground 层 (depth -2) ---
     const groundMap = this.scene.make.tilemap({
       data: terrain.ground,
-      tileWidth: 32,
-      tileHeight: 32
+      tileWidth: WORLD_CONFIG.tileSize,
+      tileHeight: WORLD_CONFIG.tileSize
     });
-    const groundTileset = groundMap.addTilesetImage('world_tileset', 'world_tileset', 32, 32);
+    const groundTileset = groundMap.addTilesetImage(
+      'world_tileset', 'world_tileset', WORLD_CONFIG.tileSize, WORLD_CONFIG.tileSize
+    );
     const groundLayer = groundMap.createLayer(0, groundTileset, worldX, worldY);
     groundLayer.setDepth(-2);
 
     // --- Wall 层 (depth 0, 带碰撞) ---
     const wallMap = this.scene.make.tilemap({
       data: terrain.walls,
-      tileWidth: 32,
-      tileHeight: 32
+      tileWidth: WORLD_CONFIG.tileSize,
+      tileHeight: WORLD_CONFIG.tileSize
     });
-    const wallTileset = wallMap.addTilesetImage('world_tileset', 'world_tileset', 32, 32);
+    const wallTileset = wallMap.addTilesetImage(
+      'world_tileset', 'world_tileset', WORLD_CONFIG.tileSize, WORLD_CONFIG.tileSize
+    );
     const wallLayer = wallMap.createLayer(0, wallTileset, worldX, worldY);
     wallLayer.setDepth(0);
     wallLayer.setCollisionByExclusion([-1]);
@@ -332,10 +351,12 @@ export class ChunkManager {
     // --- Decoration 层 (depth -1) ---
     const decoMap = this.scene.make.tilemap({
       data: terrain.decorations,
-      tileWidth: 32,
-      tileHeight: 32
+      tileWidth: WORLD_CONFIG.tileSize,
+      tileHeight: WORLD_CONFIG.tileSize
     });
-    const decoTileset = decoMap.addTilesetImage('world_tileset', 'world_tileset', 32, 32);
+    const decoTileset = decoMap.addTilesetImage(
+      'world_tileset', 'world_tileset', WORLD_CONFIG.tileSize, WORLD_CONFIG.tileSize
+    );
     const decoLayer = decoMap.createLayer(0, decoTileset, worldX, worldY);
     decoLayer.setDepth(-1);
 
@@ -343,7 +364,8 @@ export class ChunkManager {
       groundMap, groundLayer,
       wallMap, wallLayer,
       decoMap, decoLayer,
-      entities: []
+      entities: [],
+      ready: false,
     };
 
     this.activeChunks.set(key, chunkData);
@@ -357,14 +379,14 @@ export class ChunkManager {
    * @param {number} chunkY
    */
   destroyChunk(chunkX, chunkY) {
-    const key = `${chunkX},${chunkY}`;
+    const key = chunkKey(chunkX, chunkY);
     const chunkData = this.activeChunks.get(key);
     if (!chunkData) return;
 
     // 先销毁所有关联的物理碰撞器（必须在 layer 销毁之前）
     if (chunkData.colliders) {
       for (const collider of chunkData.colliders) {
-        if (collider) collider.destroy();
+        if (collider?.world) collider.destroy();
       }
       chunkData.colliders = [];
     }
@@ -387,7 +409,7 @@ export class ChunkManager {
    * @returns {object|null}
    */
   getChunk(chunkX, chunkY) {
-    return this.activeChunks.get(`${chunkX},${chunkY}`) || null;
+    return this.activeChunks.get(chunkKey(chunkX, chunkY)) || null;
   }
 
   /**
@@ -397,7 +419,7 @@ export class ChunkManager {
    * @returns {boolean}
    */
   hasChunk(chunkX, chunkY) {
-    return this.activeChunks.has(`${chunkX},${chunkY}`);
+    return this.activeChunks.has(chunkKey(chunkX, chunkY));
   }
 
   /**
@@ -407,7 +429,7 @@ export class ChunkManager {
    * @returns {Phaser.Tilemaps.TilemapLayer|null}
    */
   getWallLayer(chunkX, chunkY) {
-    const chunkData = this.activeChunks.get(`${chunkX},${chunkY}`);
+    const chunkData = this.activeChunks.get(chunkKey(chunkX, chunkY));
     return chunkData ? chunkData.wallLayer : null;
   }
 

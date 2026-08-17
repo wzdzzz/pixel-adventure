@@ -2,7 +2,7 @@
   "items": {
     "coin": {
       "id": "coin",
-      "name": "金币",
+      "name": "灵石",
       "type": "currency",
       "texture": "coin",
       "rarity": "common",
@@ -11,7 +11,7 @@
       "level": 1,
       "sellPrice": 0,
       "value": 10,
-      "description": "闪闪发光的金币",
+      "description": "云荒修士间通用的下品灵石",
       "effect": {
         "type": "score",
         "amount": 10
@@ -19,7 +19,7 @@
     },
     "key": {
       "id": "key",
-      "name": "钥匙",
+      "name": "禁制令牌",
       "type": "quest",
       "texture": "key",
       "rarity": "uncommon",
@@ -28,7 +28,7 @@
       "level": 1,
       "sellPrice": 0,
       "value": 1,
-      "description": "可以打开特定的门",
+      "description": "可以解开特定门扉上的禁制",
       "effect": {
         "type": "key",
         "amount": 1
@@ -36,7 +36,7 @@
     },
     "artifact": {
       "id": "artifact",
-      "name": "远古神器",
+      "name": "镇界古印",
       "type": "quest",
       "texture": "artifact",
       "rarity": "legendary",
@@ -45,7 +45,7 @@
       "level": 1,
       "sellPrice": 0,
       "value": 100,
-      "description": "传说中的神器，获得即可胜利",
+      "description": "古宗遗留的镇界古印，是平息灵潮的关键",
       "effect": {
         "type": "artifact",
         "amount": 1
@@ -53,7 +53,7 @@
     },
     "potion": {
       "id": "potion",
-      "name": "回复药水",
+      "name": "回春散",
       "type": "consumable",
       "texture": "potion",
       "rarity": "common",
@@ -62,7 +62,7 @@
       "level": 1,
       "sellPrice": 5,
       "value": 25,
-      "description": "恢复25点生命值",
+      "description": "服用后恢复25点气血",
       "effect": {
         "type": "heal",
         "amount": 25
@@ -70,7 +70,7 @@
     },
     "mana_potion": {
       "id": "mana_potion",
-      "name": "回蓝药水",
+      "name": "聚灵散",
       "type": "consumable",
       "texture": "mana_potion",
       "rarity": "common",
@@ -79,7 +79,7 @@
       "level": 1,
       "sellPrice": 5,
       "value": 30,
-      "description": "恢复30点法力值",
+      "description": "服用后恢复30点灵力",
       "effect": {
         "type": "restore_mana",
         "amount": 30
@@ -87,7 +87,7 @@
     },
     "heart": {
       "id": "heart",
-      "name": "生命之心",
+      "name": "养元丹",
       "type": "consumable",
       "texture": "heart",
       "rarity": "uncommon",
@@ -96,7 +96,7 @@
       "level": 1,
       "sellPrice": 10,
       "value": 50,
-      "description": "恢复50点生命值",
+      "description": "药力温厚，可恢复50点气血",
       "effect": {
         "type": "heal",
         "amount": 50
@@ -104,7 +104,7 @@
     },
     "iron_sword": {
       "id": "iron_sword",
-      "name": "铁剑",
+      "name": "玄铁重刀",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "heavy",
@@ -114,7 +114,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 15,
-      "description": "一把普通的铁剑，适合初学者使用",
+      "description": "玄铁锻成的入门重兵，适合初习炼体者",
       "setId": "warrior_legacy",
       "baseStats": {
         "attack": 5
@@ -126,7 +126,7 @@
     },
     "rusty_dagger": {
       "id": "rusty_dagger",
-      "name": "锈蚀匕首",
+      "name": "缺口飞剑",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "light",
@@ -136,7 +136,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 10,
-      "description": "一把生锈的匕首，但仍然锋利",
+      "description": "剑锋虽有缺口，御使起来依然轻快",
       "setId": "archer_legacy",
       "baseStats": {
         "attack": 3,
@@ -149,7 +149,7 @@
     },
     "apprentice_staff": {
       "id": "apprentice_staff",
-      "name": "学徒法杖",
+      "name": "入门符笔",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "magic",
@@ -159,7 +159,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 12,
-      "description": "魔法学徒使用的基础法杖",
+      "description": "术修入门常用的符笔，可引导少量灵力",
       "setId": "mage_legacy",
       "baseStats": {
         "spellPower": 4,
@@ -172,7 +172,7 @@
     },
     "wooden_shield": {
       "id": "wooden_shield",
-      "name": "木盾",
+      "name": "桃木护符",
       "type": "equipment",
       "slot": "offhand",
       "texture": "shield_icon",
@@ -181,7 +181,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 10,
-      "description": "简陋但实用的木制盾牌",
+      "description": "桃木刻成的护符，可抵御寻常冲击",
       "setId": "guardian_set",
       "baseStats": {
         "defense": 3
@@ -193,7 +193,7 @@
     },
     "leather_cap": {
       "id": "leather_cap",
-      "name": "皮帽",
+      "name": "青麻发冠",
       "type": "equipment",
       "slot": "helmet",
       "texture": "helmet_icon",
@@ -202,7 +202,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 8,
-      "description": "柔软的皮革帽子，提供基本防护",
+      "description": "青麻与软皮缝制的发冠，轻便耐用",
       "setId": "archer_legacy",
       "baseStats": {
         "defense": 1
@@ -214,7 +214,7 @@
     },
     "cloth_robe": {
       "id": "cloth_robe",
-      "name": "布甲",
+      "name": "素纹法袍",
       "type": "equipment",
       "slot": "armor",
       "texture": "armor_icon",
@@ -223,7 +223,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 12,
-      "description": "厚实的布制铠甲，聊胜于无",
+      "description": "以厚布制成的素纹法袍，能护住周身要害",
       "setId": "mage_legacy",
       "baseStats": {
         "defense": 2,
@@ -236,7 +236,7 @@
     },
     "worn_boots": {
       "id": "worn_boots",
-      "name": "旧靴",
+      "name": "旧布云履",
       "type": "equipment",
       "slot": "boots",
       "texture": "boots_icon",
@@ -245,7 +245,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 6,
-      "description": "磨损的旧靴子，但仍能加快脚步",
+      "description": "已有磨损的布履，行走时仍算轻便",
       "setId": "warrior_legacy",
       "baseStats": {
         "moveSpeed": 5
@@ -257,7 +257,7 @@
     },
     "copper_ring": {
       "id": "copper_ring",
-      "name": "铜戒指",
+      "name": "黄铜戒",
       "type": "equipment",
       "slot": "ring1",
       "texture": "ring_icon",
@@ -266,7 +266,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 5,
-      "description": "简单的铜制戒指，微微泛光",
+      "description": "坊市常见的黄铜戒，内圈刻有浅淡灵纹",
       "setId": "warrior_legacy",
       "baseStats": {
         "critRate": 0.5
@@ -276,7 +276,7 @@
     },
     "bone_necklace": {
       "id": "bone_necklace",
-      "name": "骨项链",
+      "name": "兽骨坠",
       "type": "equipment",
       "slot": "necklace",
       "texture": "necklace_icon",
@@ -285,7 +285,7 @@
       "maxStack": 1,
       "level": 2,
       "sellPrice": 20,
-      "description": "用野兽骨头串成的项链，蕴含原始力量",
+      "description": "妖兽骨打磨成的挂坠，残留着一丝血气",
       "setId": "warrior_legacy",
       "baseStats": {
         "attack": 2,
@@ -299,7 +299,7 @@
     },
     "steel_blade": {
       "id": "steel_blade",
-      "name": "钢刃",
+      "name": "百炼重剑",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "heavy",
@@ -309,7 +309,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 35,
-      "description": "精锻的钢制大剑，锋利无比",
+      "description": "经百次锻打成形的重剑，剑势沉稳",
       "baseStats": {
         "attack": 8
       },
@@ -320,7 +320,7 @@
     },
     "chain_mail": {
       "id": "chain_mail",
-      "name": "锁子甲",
+      "name": "玄铁护身甲",
       "type": "equipment",
       "slot": "armor",
       "texture": "armor_icon",
@@ -329,7 +329,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 40,
-      "description": "铁环交织而成的锁子甲，防御力出色",
+      "description": "细密玄铁环编成的护身甲，坚韧可靠",
       "setId": "guardian_set",
       "baseStats": {
         "defense": 5,
@@ -342,7 +342,7 @@
     },
     "iron_helm": {
       "id": "iron_helm",
-      "name": "铁盔",
+      "name": "玄铁护冠",
       "type": "equipment",
       "slot": "helmet",
       "texture": "helmet_icon",
@@ -351,7 +351,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 25,
-      "description": "坚固的铁制头盔，保护头部要害",
+      "description": "玄铁打造的护冠，可守住头颈要害",
       "setId": "warrior_legacy",
       "baseStats": {
         "defense": 3
@@ -364,7 +364,7 @@
     },
     "shadow_dagger": {
       "id": "shadow_dagger",
-      "name": "暗影匕首",
+      "name": "玄影飞剑",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "light",
@@ -374,7 +374,7 @@
       "maxStack": 1,
       "level": 5,
       "sellPrice": 80,
-      "description": "暗影之力铸就的匕首，攻击如鬼魅般迅捷",
+      "description": "剑身乌沉无光，御使时迅疾难辨",
       "setId": "archer_legacy",
       "baseStats": {
         "attack": 6,
@@ -389,7 +389,7 @@
     },
     "flame_staff": {
       "id": "flame_staff",
-      "name": "烈焰法杖",
+      "name": "赤焰法印",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "magic",
@@ -399,7 +399,7 @@
       "maxStack": 1,
       "level": 5,
       "sellPrice": 85,
-      "description": "蕴含烈焰之力的法杖，灼烧一切敌人",
+      "description": "封存离火灵力的法印，可催发灼热术法",
       "setId": "mage_legacy",
       "baseStats": {
         "spellPower": 10,
@@ -412,7 +412,7 @@
     },
     "guardian_plate": {
       "id": "guardian_plate",
-      "name": "守护者板甲",
+      "name": "镇山护身铠",
       "type": "equipment",
       "slot": "armor",
       "texture": "armor_icon",
@@ -421,7 +421,7 @@
       "maxStack": 1,
       "level": 5,
       "sellPrice": 90,
-      "description": "古代守护者遗留的板甲，坚不可摧",
+      "description": "古宗力士遗留的护身铠，厚重如山",
       "setId": "warrior_legacy",
       "baseStats": {
         "defense": 10,
@@ -435,7 +435,7 @@
     },
     "swift_boots": {
       "id": "swift_boots",
-      "name": "疾风之靴",
+      "name": "流云履",
       "type": "equipment",
       "slot": "boots",
       "texture": "boots_icon",
@@ -444,7 +444,7 @@
       "maxStack": 1,
       "level": 4,
       "sellPrice": 60,
-      "description": "注入风之精华的靴子，穿上后健步如飞",
+      "description": "鞋面绘有流云纹，行走时身轻步疾",
       "setId": "archer_legacy",
       "baseStats": {
         "moveSpeed": 15,
@@ -457,7 +457,7 @@
     },
     "ranger_vest": {
       "id": "ranger_vest",
-      "name": "游侠皮甲",
+      "name": "青羽软甲",
       "type": "equipment",
       "slot": "armor",
       "texture": "armor_icon",
@@ -466,7 +466,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 10,
-      "description": "轻便的皮革甲胄，适合灵活作战",
+      "description": "以柔韧兽皮制成的软甲，便于御剑腾挪",
       "setId": "archer_legacy",
       "baseStats": {
         "defense": 1,
@@ -479,7 +479,7 @@
     },
     "hunter_ring": {
       "id": "hunter_ring",
-      "name": "猎人之戒",
+      "name": "定神戒",
       "type": "equipment",
       "slot": "ring1",
       "texture": "ring_icon",
@@ -488,7 +488,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 5,
-      "description": "猎人传承的戒指，提升精准度",
+      "description": "戒面刻有定神纹，可令神识更加专注",
       "setId": "archer_legacy",
       "baseStats": {
         "critRate": 0.5
@@ -500,7 +500,7 @@
     },
     "fang_necklace": {
       "id": "fang_necklace",
-      "name": "兽牙项链",
+      "name": "兽牙玉佩",
       "type": "equipment",
       "slot": "necklace",
       "texture": "necklace_icon",
@@ -509,7 +509,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 8,
-      "description": "以猛兽獠牙串成的项链，增强敏捷",
+      "description": "嵌有妖兽利齿的玉佩，可助身法流转",
       "setId": "archer_legacy",
       "baseStats": {
         "attack": 1,
@@ -522,7 +522,7 @@
     },
     "mage_hat": {
       "id": "mage_hat",
-      "name": "法师尖帽",
+      "name": "青纹法冠",
       "type": "equipment",
       "slot": "helmet",
       "texture": "helmet_icon",
@@ -531,7 +531,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 8,
-      "description": "法师的标志性尖帽，增强魔力",
+      "description": "绘有聚灵青纹的法冠，可辅助施术",
       "setId": "mage_legacy",
       "baseStats": {
         "spellPower": 2
@@ -543,7 +543,7 @@
     },
     "arcane_slippers": {
       "id": "arcane_slippers",
-      "name": "奥术便鞋",
+      "name": "聚灵云履",
       "type": "equipment",
       "slot": "boots",
       "texture": "boots_icon",
@@ -552,7 +552,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 6,
-      "description": "注入微弱魔力的便鞋，轻便舒适",
+      "description": "以聚灵丝线缝制的云履，轻便舒适",
       "setId": "mage_legacy",
       "baseStats": {
         "moveSpeed": 5,
@@ -565,7 +565,7 @@
     },
     "crystal_ring": {
       "id": "crystal_ring",
-      "name": "水晶指环",
+      "name": "灵晶戒",
       "type": "equipment",
       "slot": "ring1",
       "texture": "ring_icon",
@@ -574,7 +574,7 @@
       "maxStack": 1,
       "level": 1,
       "sellPrice": 5,
-      "description": "嵌有微型水晶的指环，增幅法力",
+      "description": "嵌有细小灵晶的戒指，可增幅术法",
       "setId": "mage_legacy",
       "baseStats": {
         "spellPower": 1
@@ -586,7 +586,7 @@
     },
     "guardian_helm": {
       "id": "guardian_helm",
-      "name": "守护头盔",
+      "name": "玄罡发冠",
       "type": "equipment",
       "slot": "helmet",
       "texture": "helmet_icon",
@@ -595,7 +595,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 25,
-      "description": "守护者部队配发的头盔，厚实可靠",
+      "description": "镇界修士制式发冠，内衬玄罡护片",
       "setId": "guardian_set",
       "baseStats": {
         "defense": 4,
@@ -608,7 +608,7 @@
     },
     "guardian_greaves": {
       "id": "guardian_greaves",
-      "name": "守护胫甲",
+      "name": "玄罡云履",
       "type": "equipment",
       "slot": "boots",
       "texture": "boots_icon",
@@ -617,7 +617,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 20,
-      "description": "沉重的铁质胫甲，牢牢保护小腿",
+      "description": "暗藏玄铁护片的云履，可稳住下盘",
       "setId": "guardian_set",
       "baseStats": {
         "defense": 3,
@@ -630,7 +630,7 @@
     },
     "guardian_signet": {
       "id": "guardian_signet",
-      "name": "守护印戒",
+      "name": "玄罡印戒",
       "type": "equipment",
       "slot": "ring1",
       "texture": "ring_icon",
@@ -639,7 +639,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 15,
-      "description": "刻有守护者徽记的印戒，坚固异常",
+      "description": "刻有玄罡印记的戒指，可固守气血",
       "setId": "guardian_set",
       "baseStats": {
         "defense": 1,
@@ -652,7 +652,7 @@
     },
     "guardian_amulet": {
       "id": "guardian_amulet",
-      "name": "守护护符",
+      "name": "玄罡玉佩",
       "type": "equipment",
       "slot": "necklace",
       "texture": "necklace_icon",
@@ -661,7 +661,7 @@
       "maxStack": 1,
       "level": 3,
       "sellPrice": 18,
-      "description": "守护者的信物，蕴含坚韧之力",
+      "description": "镇界修士佩戴的玉佩，灵纹厚重坚韧",
       "setId": "guardian_set",
       "baseStats": {
         "defense": 2,
@@ -675,7 +675,7 @@
     },
     "skull_king_crown": {
       "id": "skull_king_crown",
-      "name": "骷髅王冠",
+      "name": "白骨法冠",
       "type": "equipment",
       "slot": "helmet",
       "texture": "helmet_icon",
@@ -684,7 +684,7 @@
       "maxStack": 1,
       "level": 7,
       "sellPrice": 200,
-      "description": "骷髅王的王冠，散发着不祥的强大力量",
+      "description": "白骨鬼王遗落的法冠，阴煞之气仍未散尽",
       "baseStats": {
         "defense": 6,
         "attack": 4,
@@ -699,7 +699,7 @@
     },
     "lava_blade": {
       "id": "lava_blade",
-      "name": "熔岩之刃",
+      "name": "焚岳重刀",
       "type": "equipment",
       "slot": "weapon",
       "weaponType": "heavy",
@@ -709,7 +709,7 @@
       "maxStack": 1,
       "level": 7,
       "sellPrice": 500,
-      "description": "以熔岩铸就的传说之剑，斩断一切阻碍",
+      "description": "以地火反复淬炼的重刀，挥动时热浪灼人",
       "baseStats": {
         "attack": 18,
         "critDmg": 0.3
@@ -722,7 +722,7 @@
     },
     "iron_shard": {
       "id": "iron_shard",
-      "name": "铁矿碎片",
+      "name": "玄铁屑",
       "type": "material",
       "texture": "potion",
       "rarity": "common",
@@ -731,11 +731,11 @@
       "level": 1,
       "sellPrice": 2,
       "value": 0,
-      "description": "低级强化材料"
+      "description": "炼器余下的玄铁碎屑，可用于低阶淬炼"
     },
     "enhance_stone": {
       "id": "enhance_stone",
-      "name": "强化石",
+      "name": "淬灵石",
       "type": "material",
       "texture": "potion",
       "rarity": "uncommon",
@@ -744,11 +744,11 @@
       "level": 1,
       "sellPrice": 20,
       "value": 0,
-      "description": "中级强化材料"
+      "description": "蕴有精纯灵力的矿石，可用于中阶淬炼"
     },
     "ancient_core": {
       "id": "ancient_core",
-      "name": "远古核心",
+      "name": "古阵枢",
       "type": "material",
       "texture": "potion",
       "rarity": "rare",
@@ -757,11 +757,11 @@
       "level": 1,
       "sellPrice": 100,
       "value": 0,
-      "description": "高级强化材料"
+      "description": "古老阵法的残存枢核，可用于高阶淬炼"
     },
     "chaos_essence": {
       "id": "chaos_essence",
-      "name": "混沌精华",
+      "name": "混元灵髓",
       "type": "material",
       "texture": "potion",
       "rarity": "rare",
@@ -770,11 +770,11 @@
       "level": 1,
       "sellPrice": 80,
       "value": 0,
-      "description": "洗练装备词条所需的混沌之力"
+      "description": "灵机未分的稀有灵髓，可用于洗练器物词条"
     },
     "soul_crystal": {
       "id": "soul_crystal",
-      "name": "灵魂结晶",
+      "name": "魂晶",
       "type": "material",
       "texture": "potion",
       "rarity": "epic",
@@ -783,11 +783,11 @@
       "level": 1,
       "sellPrice": 200,
       "value": 0,
-      "description": "锁定词条用，凝聚着英魂之力"
+      "description": "凝聚残魂之力的晶石，可在洗练时锁定词条"
     },
     "refining_stone": {
       "id": "refining_stone",
-      "name": "精炼石",
+      "name": "炼器灵砂",
       "type": "material",
       "texture": "potion",
       "rarity": "uncommon",
@@ -796,11 +796,11 @@
       "level": 1,
       "sellPrice": 15,
       "value": 0,
-      "description": "中级制作材料"
+      "description": "炼器时用于调和材质的细密灵砂"
     },
     "star_fragment": {
       "id": "star_fragment",
-      "name": "星辰碎片",
+      "name": "星髓",
       "type": "material",
       "texture": "potion",
       "rarity": "rare",
@@ -809,11 +809,11 @@
       "level": 1,
       "sellPrice": 120,
       "value": 0,
-      "description": "宝石升级所需的星辰之力"
+      "description": "凝聚星辉的矿髓，可用于提升灵玉品阶"
     },
     "divine_heart": {
       "id": "divine_heart",
-      "name": "神铸之心",
+      "name": "天工道心",
       "type": "material",
       "texture": "potion",
       "rarity": "legendary",
@@ -822,11 +822,11 @@
       "level": 1,
       "sellPrice": 500,
       "value": 0,
-      "description": "神祇遗留的核心 — 神圣洗练 / 神器制作所需"
+      "description": "上古炼器宗师留下的道韵结晶，可炼制灵宝"
     },
     "world_core": {
       "id": "world_core",
-      "name": "世界核心",
+      "name": "界源灵核",
       "type": "material",
       "texture": "potion",
       "rarity": "mythic",
@@ -835,11 +835,11 @@
       "level": 1,
       "sellPrice": 1500,
       "value": 0,
-      "description": "蕴含世界本源 — 神话级装备制作所需"
+      "description": "蕴含一方天地本源的灵核，可炼制仙品器物"
     },
     "red_gem": {
       "id": "red_gem",
-      "name": "红宝石 Lv.1",
+      "name": "赤霞灵玉 · 1阶",
       "type": "gem",
       "texture": "potion",
       "color": "red",
@@ -851,11 +851,11 @@
       "maxStack": 99,
       "sellPrice": 5,
       "value": 0,
-      "description": "镶嵌到装备孔位 +3 攻击"
+      "description": "镶入装备孔位，攻击 +3"
     },
     "blue_gem": {
       "id": "blue_gem",
-      "name": "蓝宝石 Lv.1",
+      "name": "沧溟灵玉 · 1阶",
       "type": "gem",
       "texture": "potion",
       "color": "blue",
@@ -867,11 +867,11 @@
       "maxStack": 99,
       "sellPrice": 5,
       "value": 0,
-      "description": "镶嵌到装备孔位 +4 法术强度"
+      "description": "镶入装备孔位，术法强度 +4"
     },
     "green_gem": {
       "id": "green_gem",
-      "name": "绿宝石 Lv.1",
+      "name": "青木灵玉 · 1阶",
       "type": "gem",
       "texture": "potion",
       "color": "green",
@@ -883,11 +883,11 @@
       "maxStack": 99,
       "sellPrice": 5,
       "value": 0,
-      "description": "镶嵌到装备孔位 +15 生命值"
+      "description": "镶入装备孔位，气血 +15"
     },
     "yellow_gem": {
       "id": "yellow_gem",
-      "name": "黄宝石 Lv.1",
+      "name": "金阳灵玉 · 1阶",
       "type": "gem",
       "texture": "potion",
       "color": "yellow",
@@ -899,13 +899,13 @@
       "maxStack": 99,
       "sellPrice": 5,
       "value": 0,
-      "description": "镶嵌到装备孔位 +1.5% 暴击率"
+      "description": "镶入装备孔位，暴击率 +1.5%"
     }
   },
   "enemies": {
     "slime": {
       "id": "slime",
-      "name": "史莱姆",
+      "name": "浊水精",
       "texture": "enemy",
       "hp": 30,
       "damage": 10,
@@ -917,7 +917,7 @@
     },
     "skeleton": {
       "id": "skeleton",
-      "name": "骷髅兵",
+      "name": "阴兵",
       "texture": "enemy",
       "hp": 50,
       "damage": 14,
@@ -929,7 +929,7 @@
     },
     "goblin": {
       "id": "goblin",
-      "name": "哥布林",
+      "name": "山魈",
       "texture": "enemy",
       "hp": 35,
       "damage": 12,
@@ -941,7 +941,7 @@
     },
     "spider": {
       "id": "spider",
-      "name": "蜘蛛",
+      "name": "噬魂蛛",
       "texture": "enemy",
       "hp": 25,
       "damage": 8,
@@ -953,7 +953,7 @@
     },
     "bat": {
       "id": "bat",
-      "name": "蝙蝠",
+      "name": "吸灵蝠",
       "texture": "enemy",
       "hp": 20,
       "damage": 6,
@@ -965,7 +965,7 @@
     },
     "orc_warrior": {
       "id": "orc_warrior",
-      "name": "兽人战士",
+      "name": "妖族力士",
       "texture": "enemy",
       "hp": 70,
       "damage": 18,
@@ -977,7 +977,7 @@
     },
     "fire_mage": {
       "id": "fire_mage",
-      "name": "火焰法师",
+      "name": "业火邪修",
       "texture": "enemy",
       "hp": 45,
       "damage": 16,
@@ -989,7 +989,7 @@
     },
     "giant_skeleton": {
       "id": "giant_skeleton",
-      "name": "巨型骷髅",
+      "name": "尸傀将军",
       "texture": "enemy",
       "hp": 100,
       "damage": 22,
@@ -1001,7 +1001,7 @@
     },
     "skeleton_king": {
       "id": "skeleton_king",
-      "name": "骷髅王",
+      "name": "白骨鬼王",
       "texture": "enemy",
       "hp": 150,
       "damage": 25,
@@ -1015,12 +1015,12 @@
   "npcs": {
     "elder": {
       "id": "elder",
-      "name": "村长",
+      "name": "坊市执事",
       "texture": "npc",
       "dialogues": [
-        "欢迎来到这个危险的地方，冒险者！",
-        "小心那些红色的怪物，它们会攻击你。",
-        "收集钥匙可以打开宝箱，找到神器就能离开这里！"
+        "初到云荒，行路务必谨慎。",
+        "妖祟身带赤光时最为凶险，切勿冒进。",
+        "收集禁制令牌可以开启宝匣，找到镇界古印便能稳定此地灵脉。"
       ]
     }
   }

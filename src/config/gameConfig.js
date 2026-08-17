@@ -13,6 +13,7 @@ export const GAME_CONFIG = {
   PHYSICS: {
     GRAVITY: 0,
     PLAYER_SPEED: 200,
+    PLAYER_MAX_SPEED: 1000,
     PLAYER_DRAG: 800,
     ENEMY_SPEED: 80
   },
@@ -42,10 +43,19 @@ export function createPhaserConfig(scenes) {
     pixelArt: true,
     roundPixels: true,
     backgroundColor: '#0e0e1a',
+    fps: {
+      target: 60,
+      min: 20,
+      deltaHistory: 1,
+      smoothStep: true
+    },
     physics: {
       default: 'arcade',
       arcade: {
         gravity: { y: GAME_CONFIG.PHYSICS.GRAVITY },
+        // Rendering can run above 60 Hz. A fixed 60 Hz physics step makes movement
+        // alternate between stationary frames and position jumps on high-refresh displays.
+        fixedStep: false,
         debug: false
       }
     },
@@ -61,7 +71,7 @@ export function createPhaserConfig(scenes) {
       width: GAME_CONFIG.WIDTH,
       height: GAME_CONFIG.HEIGHT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      min: { width: 640, height: 360 },
+      min: { width: 320, height: 180 },
       max: { width: 1920, height: 1080 }
     }
   };

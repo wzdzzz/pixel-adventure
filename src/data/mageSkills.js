@@ -19,8 +19,8 @@ export const MAGE_SKILLS = {
   // ─── 1. 火球术 ───
   fireball: {
     id: 'fireball',
-    name: '火球术',
-    description: '发射火球，造成{dmg}%攻击力伤害，25%概率灼烧目标',
+    name: '离火咒',
+    description: '凝聚离火攻向目标，造成{dmg}%攻击力伤害，25%概率灼烧目标',
     icon: '🔥',
     resource: 'mana',
     baseCost: 15,
@@ -44,8 +44,8 @@ export const MAGE_SKILLS = {
   // ─── 2. 冰霜新星 ───
   frostNova: {
     id: 'frostNova',
-    name: '冰霜新星',
-    description: '释放冰霜冲击波，{dur}秒内每0.3秒造成{dmg}%伤害并减速',
+    name: '寒霜环',
+    description: '向周围释放寒霜灵气，{dur}秒内每0.3秒造成{dmg}%伤害并使敌人迟滞',
     icon: '❄️',
     resource: 'mana',
     baseCost: 25,
@@ -68,8 +68,8 @@ export const MAGE_SKILLS = {
   // ─── 3. 闪现 ───
   blink: {
     id: 'blink',
-    name: '闪现',
-    description: '瞬间移动到前方，途中造成{dmg}%攻击力伤害',
+    name: '缩地符',
+    description: '催动符箓瞬移至前方，途中造成{dmg}%攻击力伤害',
     icon: '✨',
     resource: 'mana',
     baseCost: 12,
@@ -92,8 +92,8 @@ export const MAGE_SKILLS = {
   // ─── 4. 寒冰箭 ───
   iceBolt: {
     id: 'iceBolt',
-    name: '寒冰箭',
-    description: '发射冰箭造成{dmg}%伤害，减速目标40%持续3秒',
+    name: '玄冰刺',
+    description: '凝成玄冰尖刺造成{dmg}%伤害，使目标迟滞40%，持续3秒',
     icon: '🧊',
     resource: 'mana',
     baseCost: 18,
@@ -117,8 +117,8 @@ export const MAGE_SKILLS = {
   // ─── 5. 奥术飞弹 ───
   arcaneMissile: {
     id: 'arcaneMissile',
-    name: '奥术飞弹',
-    description: '发射跟踪飞弹，造成{dmg}%攻击力伤害',
+    name: '灵光指',
+    description: '弹出一道追踪灵光，造成{dmg}%攻击力伤害',
     icon: '💫',
     resource: 'mana',
     baseCost: 14,
@@ -139,8 +139,8 @@ export const MAGE_SKILLS = {
   // ─── 6. 魔法护盾 ───
   magicShield: {
     id: 'magicShield',
-    name: '魔法护盾',
-    description: '召唤魔法屏障，减伤{dr}%，持续{dur}秒',
+    name: '护体灵盾',
+    description: '结成护体灵盾，受到的伤害降低{dr}%，持续{dur}秒',
     icon: '🔮',
     resource: 'mana',
     baseCost: 20,
@@ -162,8 +162,8 @@ export const MAGE_SKILLS = {
   // ─── 7. 火焰风暴 ───
   flameStorm: {
     id: 'flameStorm',
-    name: '火焰风暴',
-    description: '召唤火焰风暴，{dur}秒内每0.25秒造成{dmg}%伤害',
+    name: '焚风阵',
+    description: '布下焚风阵，{dur}秒内每0.25秒造成{dmg}%伤害',
     icon: '🌋',
     resource: 'mana',
     baseCost: 35,
@@ -187,8 +187,8 @@ export const MAGE_SKILLS = {
   // ─── 8. 冰冻术 ───
   freeze: {
     id: 'freeze',
-    name: '冰冻术',
-    description: '冻结目标，造成{dmg}%伤害并眩晕{stun}秒',
+    name: '凝冰诀',
+    description: '凝冰封住目标，造成{dmg}%伤害并使其眩晕{stun}秒',
     icon: '🥶',
     resource: 'mana',
     baseCost: 22,
@@ -214,8 +214,8 @@ export const MAGE_SKILLS = {
   // ─── 9. 奥术增幅 ───
   arcaneAmplify: {
     id: 'arcaneAmplify',
-    name: '奥术增幅',
-    description: '增幅魔力，攻击力+{atkBonus}%，法力回复+50%，持续{dur}秒',
+    name: '聚灵诀',
+    description: '聚拢周身灵气，攻击力提升{atkBonus}%，灵力回复提升50%，持续{dur}秒',
     icon: '⭐',
     resource: 'none',
     baseCost: 0,
@@ -237,8 +237,8 @@ export const MAGE_SKILLS = {
   // ─── 10. 陨石术 ───
   meteor: {
     id: 'meteor',
-    name: '陨石术',
-    description: '召唤陨石砸落，造成{dmg}%攻击力范围伤害并灼烧',
+    name: '天火坠',
+    description: '引动天火坠落，造成{dmg}%攻击力范围伤害并灼烧敌人',
     icon: '☄️',
     resource: 'mana',
     baseCost: 30,
@@ -265,8 +265,8 @@ export const MAGE_SKILLS = {
   // ─── 11. 暴风雪 ───
   blizzard: {
     id: 'blizzard',
-    name: '暴风雪',
-    description: '召唤暴风雪，{dur}秒内每0.3秒造成{dmg}%伤害并减速',
+    name: '风雪封山',
+    description: '唤来风雪封锁区域，{dur}秒内每0.3秒造成{dmg}%伤害并使敌人迟滞',
     icon: '🌨️',
     resource: 'mana',
     baseCost: 35,
@@ -290,8 +290,8 @@ export const MAGE_SKILLS = {
   // ─── 12. 元素爆发（大招）───
   elementalBurst: {
     id: 'elementalBurst',
-    name: '元素爆发',
-    description: '释放全部元素之力，攻击+{atkBonus}%，法术减CD 30%，持续{dur}秒',
+    name: '五行迸发',
+    description: '释放五行灵气，攻击力提升{atkBonus}%，术法冷却缩短30%，持续{dur}秒',
     icon: '🌈',
     resource: 'mana',
     baseCost: 45,
@@ -318,8 +318,8 @@ export const MAGE_SKILLS = {
 export const MAGE_PASSIVES = {
   manaWell: {
     id: 'manaWell',
-    name: '法力之泉',
-    description: '最大法力提升15%',
+    name: '灵泉',
+    description: '最大灵力提升15%',
     icon: '💧',
     maxLevel: 3,
     category: 'passive',
@@ -330,8 +330,8 @@ export const MAGE_PASSIVES = {
   },
   spellMastery: {
     id: 'spellMastery',
-    name: '法术精通',
-    description: '法术伤害提升10%',
+    name: '术法通明',
+    description: '术法伤害提升10%',
     icon: '📖',
     maxLevel: 3,
     category: 'passive',
@@ -342,8 +342,8 @@ export const MAGE_PASSIVES = {
   },
   icyVeins: {
     id: 'icyVeins',
-    name: '寒冰之血',
-    description: '冰系技能减速效果增强20%',
+    name: '玄阴脉',
+    description: '冰系术法的迟滞效果增强20%',
     icon: '🩵',
     maxLevel: 3,
     category: 'passive',
@@ -354,7 +354,7 @@ export const MAGE_PASSIVES = {
   },
   pyromaniac: {
     id: 'pyromaniac',
-    name: '纵火专家',
+    name: '离火亲和',
     description: '灼烧伤害提升25%',
     icon: '🔥',
     maxLevel: 3,
@@ -366,8 +366,8 @@ export const MAGE_PASSIVES = {
   },
   arcaneFocus: {
     id: 'arcaneFocus',
-    name: '奥术专注',
-    description: '施法时减伤10%',
+    name: '凝神',
+    description: '施展术法时受到的伤害降低10%',
     icon: '🔮',
     maxLevel: 3,
     category: 'passive',
@@ -379,8 +379,8 @@ export const MAGE_PASSIVES = {
   },
   manaShield: {
     id: 'manaShield',
-    name: '法力护盾',
-    description: '受伤时消耗法力抵消20%伤害',
+    name: '灵力护体',
+    description: '受伤时消耗灵力抵消20%伤害',
     icon: '🛡️',
     maxLevel: 3,
     category: 'passive',
@@ -408,7 +408,7 @@ export const MAGE_EFFECTS = {
   },
   frostSlow: {
     id: 'frostSlow',
-    name: '冰霜减速',
+    name: '寒霜迟滞',
     type: 'debuff',
     duration: 3000,
     maxStacks: 1,
@@ -417,7 +417,7 @@ export const MAGE_EFFECTS = {
   },
   arcaneWeakness: {
     id: 'arcaneWeakness',
-    name: '奥术虚弱',
+    name: '灵息紊乱',
     type: 'debuff',
     duration: 4000,
     maxStacks: 1,
@@ -426,7 +426,7 @@ export const MAGE_EFFECTS = {
   },
   manaBoost: {
     id: 'manaBoost',
-    name: '法力涌动',
+    name: '灵力涌动',
     type: 'buff',
     duration: 6000,
     maxStacks: 1,

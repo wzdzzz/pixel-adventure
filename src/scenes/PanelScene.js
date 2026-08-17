@@ -12,7 +12,7 @@ import audioEngine from '../systems/AudioEngine.js';
 function clamp01(v) { v = Number(v); if (!isFinite(v)) return 0; return Math.max(0, Math.min(1, v)); }
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'party', 'settings'];
-const TAB_LABELS = ['角色', '背包', '技能', '日志', '队伍', '设置'];
+const TAB_LABELS = ['角色', '行囊', '传承', '游历录', '同行', '设置'];
 const TAB_ICONS = ['👤', '🎒', '⚔', '📜', '👥', '⚙'];
 const TAB_KEYS = ['C', 'B', 'X', 'L', 'T', ''];
 
@@ -277,7 +277,7 @@ export class PanelScene extends Phaser.Scene {
       onComplete: () => {
         this.scene.stop('PanelScene');
         if (this.gameScene && this.gameScene.resumeGame) {
-          this.gameScene.resumeGame();
+          this.gameScene.resumeGame('panel');
         }
       }
     });
@@ -309,13 +309,13 @@ export class PanelScene extends Phaser.Scene {
       ['物品快捷栏', 'F1 / F2 / F3 / F4'],
       ['交互', 'E'],
       ['角色面板', 'C（再按关闭）'],
-      ['背包面板', 'B（再按关闭）'],
-      ['技能面板', 'X（再按关闭）'],
-      ['日志面板', 'L（再按关闭）'],
+      ['行囊面板', 'B（再按关闭）'],
+      ['传承面板', 'X（再按关闭）'],
+      ['游历录', 'L（再按关闭）'],
       ['面板总开关', 'TAB'],
       ['关闭面板/菜单', 'ESC'],
       ['全屏切换', 'F'],
-      ['右键菜单', '鼠标右键（背包/装备操作）'],
+      ['右键菜单', '鼠标右键（行囊/装备操作）'],
     ];
 
     bindings.forEach((pair, i) => {

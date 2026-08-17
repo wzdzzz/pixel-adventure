@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { THEME_CONFIG } from '../config/themeConfig.js';
 import { AssetManager, TEXTURES, CHARACTERS } from '../assets/AssetManager.js';
 
 export class BootScene extends Phaser.Scene {
@@ -45,7 +46,7 @@ export class BootScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
 
-    const titleText = this.add.text(width / 2, height / 2 - 60, '像素冒险', {
+    const titleText = this.add.text(width / 2, height / 2 - 60, THEME_CONFIG.title, {
       fontSize: '36px',
       fill: '#00ff00',
       fontFamily: 'Courier New',

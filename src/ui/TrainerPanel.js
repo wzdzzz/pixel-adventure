@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getClassLabel, THEME_CONFIG } from '../config/themeConfig.js';
 
 /**
  * TrainerPanel — 训练师 UI（in-scene overlay，与 ShopPanel/DialoguePanel 同模式）
@@ -28,7 +29,7 @@ export class TrainerPanel {
     this.border = this.displayScene.add.rectangle(0, 0, W + 6, H + 6, 0, 0)
       .setStrokeStyle(1, 0x66ccff, 0.3);
 
-    this.titleText = this.displayScene.add.text(0, -H / 2 + 22, '训练师', {
+    this.titleText = this.displayScene.add.text(0, -H / 2 + 22, '传功教习', {
       fontSize: '24px', fill: '#66ccff', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5, 0);
 
@@ -41,7 +42,7 @@ export class TrainerPanel {
     }).setOrigin(0.5, 0.5);
 
     // 重置按钮
-    this.resetBtn = this.displayScene.add.text(0, H / 2 - 30, '[ 重置天赋 ]', {
+    this.resetBtn = this.displayScene.add.text(0, H / 2 - 30, '[ 重悟传承 ]', {
       fontSize: '16px', fill: '#ff8888', fontFamily: 'Courier New', fontStyle: 'bold'
     }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
     this.resetBtn.on('pointerover', () => this.resetBtn.setFill('#ffcccc'));
@@ -94,10 +95,10 @@ export class TrainerPanel {
     this.visible = true;
     this.container.setVisible(true);
     const cfg = this.service.getConfig();
-    this.titleText.setText(`${npc?.name || cfg?.name || '训练师'}`);
+    this.titleText.setText(`${npc?.name || cfg?.name || '传功教习'}`);
     const player = this.scene.player;
     const ls = this.scene.levelSystem;
-    this.subText.setText(`职业：${player?.classType || '?'}   等级：${ls?.level || 1}   技能点：${ls?.skillPoints || 0}`);
+    this.subText.setText(`路数：${getClassLabel(player?.classType)}   修为等级：${ls?.level || 1}   ${THEME_CONFIG.skillPoint}：${ls?.skillPoints || 0}`);
     this.refresh();
     if (this.scene.player) this.scene.player.canInteract = false;
     this.scene.uiBlocking = true;
@@ -118,7 +119,7 @@ export class TrainerPanel {
     const cfg = this.service.getConfig();
     if (!cfg) return;
     const ls = this.scene.levelSystem;
-    this.subText.setText(`职业：${this.scene.player?.classType || '?'}   等级：${ls?.level || 1}   技能点：${ls?.skillPoints || 0}`);
+    this.subText.setText(`路数：${getClassLabel(this.scene.player?.classType)}   修为等级：${ls?.level || 1}   ${THEME_CONFIG.skillPoint}：${ls?.skillPoints || 0}`);
     this._clearRows();
     this._renderSkills();
     this._refreshGold();
@@ -128,7 +129,7 @@ export class TrainerPanel {
     const gold = this.scene.inventory?.gold ?? 0;
     const cfg = this.service.getConfig();
     const cost = cfg?.talentResetCost || 5000;
-    this.goldText.setText(`金币：${gold} G    （重置天赋需 ${cost} G）`);
+    this.goldText.setText(`${THEME_CONFIG.currency}：${gold}    （重悟传承需 ${cost}）`);
   }
 
   _clearRows() {
@@ -143,7 +144,7 @@ export class TrainerPanel {
     const rowH = 42;
     const tree = this.scene.skillTreeSystem;
     if (!cfg.skills.length) {
-      const t = this.displayScene.add.text(0, baseY, '（该训练师暂无可教技能）', {
+      const t = this.displayScene.add.text(0, baseY, '（该教习暂无可授传承）', {
         fontSize: '14px', fill: '#777777', fontFamily: 'Courier New'
       }).setOrigin(0.5, 0);
       this.container.add(t);
@@ -163,7 +164,7 @@ export class TrainerPanel {
         maxed: '#888888', unlocked: '#aaffaa', available: '#ffffff', locked: '#777777'
       };
       const color = check.ok ? '#ffffff' : colorMap[state] || '#777777';
-      const text = `${name}${rankInfo} ${stateLabel}\n  ${desc}  [Lv${entry.levelReq} / ${entry.goldCost}G]`;
+      const text = `${name}${rankInfo} ${stateLabel}\n  ${desc}  [Lv${entry.levelReq} / ${entry.goldCost}${THEME_CONFIG.currency}]`;
       const row = this.displayScene.add.text(-360, baseY + i * rowH, text, {
         fontSize: '13px', fill: color, fontFamily: 'Courier New'
       }).setOrigin(0, 0);

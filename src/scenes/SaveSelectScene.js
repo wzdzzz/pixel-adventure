@@ -123,7 +123,7 @@ export class SaveSelectScene extends Phaser.Scene {
       detailObjs.push(levelText);
 
       // 关卡 + 分数
-      const stageText = this.add.text(x, y - h / 2 + 184, info.levelName || `第 ${info.currentLevel + 1} 关`, {
+      const stageText = this.add.text(x, y - h / 2 + 184, info.levelName || '云荒游历', {
         fontSize: '14px', color: '#aaccff', fontFamily: 'Courier New'
       }).setOrigin(0.5);
       detailObjs.push(stageText);
@@ -288,10 +288,8 @@ export class SaveSelectScene extends Phaser.Scene {
     if (this.returnTo === 'MainGameScene') {
       // 从游戏内打开 → 关闭场景，恢复游戏
       const game = this.scene.get('MainGameScene');
-      if (game && game.scene.isPaused()) {
-        game.scene.resume();
-      }
       this.scene.stop();
+      game?.resumeGame?.('save-select');
     } else if (this.returnTo === 'MainMenuScene') {
       this.scene.stop();
       // MainMenu 仍在运行，无需重启

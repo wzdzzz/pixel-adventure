@@ -6,11 +6,11 @@
 export default {
   greet: {
     start: {
-      speaker: '赏金官 老雷',
-      text: '冒险者？公会的委托板上总缺人手。看看有什么活计吧。',
+      speaker: '悬赏执事雷九',
+      text: '新来的散修？悬赏堂正缺人手，看看有哪桩差事合适。',
       options: [
-        { text: '查看任务板', action: 'open_quest_log' },
-        { text: '刷新今日委托', action: 'refresh_bounties' },
+        { text: '查看悬赏榜', action: 'open_quest_log' },
+        { text: '刷新今日悬赏', action: 'refresh_bounties' },
         { text: '失陪了', goto: 'end' }
       ]
     },

@@ -1,6 +1,6 @@
 // 伙伴 P4 验证：存档恢复逻辑（deserialize+restoreInstances）+ 篝火复活 + 老档兼容
 import { chromium } from 'playwright';
-const URL = process.env.GAME_URL || 'http://localhost:3002';
+const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
   headless: true,

@@ -1,5 +1,6 @@
 import { formatEquipTooltip, getSetCount } from './InventoryPanel.js';
 import SystemRegistry from '../../core/SystemRegistry.js';
+import { EQUIPMENT_SLOT_LABELS, STAT_LABELS } from '../../config/themeConfig.js';
 
 export const CharacterPanel = {
   createCharacterTab() {
@@ -38,14 +39,14 @@ export const CharacterPanel = {
     const rowGap = 70;
     const colGap = 85;
     const slotMapping = [
-      { slot: 'weapon',   x: -colGap, y: -rowGap * 1.5, label: '武器' },
-      { slot: 'helmet',   x: 0,       y: -rowGap * 1.5, label: '头盔' },
-      { slot: 'armor',    x: colGap,  y: -rowGap * 1.5, label: '护甲' },
-      { slot: 'offhand',  x: -colGap, y: -rowGap * 0.5, label: '副手' },
-      { slot: 'necklace', x: colGap,  y: -rowGap * 0.5, label: '项链' },
-      { slot: 'ring1',    x: -colGap, y: rowGap * 0.5,  label: '戒指' },
-      { slot: 'ring2',    x: colGap,  y: rowGap * 0.5,  label: '戒指' },
-      { slot: 'boots',    x: 0,       y: rowGap * 1.5,  label: '靴子' }
+      { slot: 'weapon',   x: -colGap, y: -rowGap * 1.5 },
+      { slot: 'helmet',   x: 0,       y: -rowGap * 1.5 },
+      { slot: 'armor',    x: colGap,  y: -rowGap * 1.5 },
+      { slot: 'offhand',  x: -colGap, y: -rowGap * 0.5 },
+      { slot: 'necklace', x: colGap,  y: -rowGap * 0.5 },
+      { slot: 'ring1',    x: -colGap, y: rowGap * 0.5 },
+      { slot: 'ring2',    x: colGap,  y: rowGap * 0.5 },
+      { slot: 'boots',    x: 0,       y: rowGap * 1.5 }
     ];
 
     this.equipSlotUI = {};
@@ -63,7 +64,7 @@ export const CharacterPanel = {
       const icon = this.add.text(sx, sy, '', {
         fontSize: '18px', fontFamily: 'Courier New'
       }).setOrigin(0.5).setVisible(false);
-      const label = this.add.text(sx, sy + 24, def.label, {
+      const label = this.add.text(sx, sy + 24, EQUIPMENT_SLOT_LABELS[def.slot], {
         fontSize: '12px', fill: '#555566', fontFamily: 'Courier New'
       }).setOrigin(0.5);
 
@@ -138,7 +139,7 @@ export const CharacterPanel = {
     container.add(statsTitle);
 
     const stats = ['con', 'str', 'int', 'agi', 'per', 'lck'];
-    const statNames = ['体质(CON)', '力量(STR)', '智力(INT)', '敏捷(AGI)', '感知(PER)', '幸运(LCK)'];
+    const statNames = stats.map(stat => `${STAT_LABELS[stat]} (${stat.toUpperCase()})`);
     this.charStatValues = {};
     this.charStatPlusButtons = {};
 
@@ -191,10 +192,10 @@ export const CharacterPanel = {
     container.add(this.derivedContainer);
 
     const derivedStats = [
-      { key: 'hp', label: 'HP' },
-      { key: 'stamina', label: '体力' },
+      { key: 'hp', label: '气血' },
+      { key: 'stamina', label: '行气' },
       { key: 'attack', label: '攻击' },
-      { key: 'spellPower', label: '法强' },
+      { key: 'spellPower', label: '术法强度' },
       { key: 'critRate', label: '暴击率' },
       { key: 'tenacity', label: '韧性' },
       { key: 'armorPen', label: '破甲' },
@@ -397,12 +398,12 @@ export const CharacterPanel = {
 
     const primaryStat = player.classConfig?.primaryAttackStat || 'str';
     const tooltips = {
-      con: `体质 (CON) = ${val}\n+${val * 10} 最大生命\n+${(val * 0.05).toFixed(2)}/s 生命恢复\n+${(val * 0.5).toFixed(1)} 韧性`,
-      str: `力量 (STR) = ${val}` + (primaryStat === 'str' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${(val * 0.2).toFixed(1)} 韧性\n+${(val * 0.3).toFixed(1)} 破甲`,
-      int: `智力 (INT) = ${val}\n+${val * 15} 最大魔力\n+${val} 法术强度` + (primaryStat === 'int' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${(val * 0.2).toFixed(1)}% 冷却缩减`,
-      agi: `敏捷 (AGI) = ${val}` + (primaryStat === 'agi' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${val}% 攻击速度\n+${val * 20 + 40} 移动速度`,
-      per: `感知 (PER) = ${val}\n+${(val * 0.5).toFixed(1)}% 暴击率\n+${(val * 0.5).toFixed(1)} 破甲`,
-      lck: `幸运 (LCK) = ${val}\n+${(Math.sqrt(val) * 1).toFixed(1)}% 掉落加成`
+      con: `体魄 (CON) = ${val}\n+${val * 10} 最大气血\n+${(val * 0.05).toFixed(2)}/s 气血恢复\n+${(val * 0.5).toFixed(1)} 韧性`,
+      str: `力道 (STR) = ${val}` + (primaryStat === 'str' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${(val * 0.2).toFixed(1)} 韧性\n+${(val * 0.3).toFixed(1)} 破甲`,
+      int: `悟性 (INT) = ${val}\n+${val * 15} 最大灵力\n+${val} 术法强度` + (primaryStat === 'int' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${(val * 0.2).toFixed(1)}% 冷却缩减`,
+      agi: `身法 (AGI) = ${val}` + (primaryStat === 'agi' ? `\n+${val * 2} 攻击（主属性）` : '') + `\n+${val}% 攻击速度\n+${val * 20 + 40} 移动速度`,
+      per: `神识 (PER) = ${val}\n+${(val * 0.5).toFixed(1)}% 暴击率\n+${(val * 0.5).toFixed(1)} 破甲`,
+      lck: `机缘 (LCK) = ${val}\n+${(Math.sqrt(val) * 1).toFixed(1)}% 掉落加成`
     };
 
     this.tooltipText.setText(tooltips[stat] || '');

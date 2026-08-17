@@ -1,13 +1,13 @@
 /**
  * 装备制作配方
  *
- * 每个 recipe 描述一份装备的制作所需材料、金币、玩家等级。
+ * 每个 recipe 描述一份装备的制作所需材料、灵石、玩家等级。
  * CraftingSystem 通过 RECIPES 查表，消耗材料后调用 EquipmentGenerator 生成实例。
  */
 export const RECIPES = {
   steel_blade_recipe: {
     id: 'steel_blade_recipe',
-    name: '钢剑配方',
+    name: '百炼重剑图谱',
     resultId: 'steel_blade',
     resultRarity: 'rare',
     resultLevel: 5,
@@ -20,7 +20,7 @@ export const RECIPES = {
   },
   guardian_plate_recipe: {
     id: 'guardian_plate_recipe',
-    name: '守护板甲配方',
+    name: '镇山护身铠图谱',
     resultId: 'guardian_plate',
     resultRarity: 'rare',
     resultLevel: 8,
@@ -34,7 +34,7 @@ export const RECIPES = {
   },
   shadow_dagger_recipe: {
     id: 'shadow_dagger_recipe',
-    name: '影刃配方',
+    name: '玄影飞剑图谱',
     resultId: 'shadow_dagger',
     resultRarity: 'rare',
     resultLevel: 5,
@@ -47,7 +47,7 @@ export const RECIPES = {
   },
   flame_staff_recipe: {
     id: 'flame_staff_recipe',
-    name: '火焰法杖配方',
+    name: '赤焰法印图谱',
     resultId: 'flame_staff',
     resultRarity: 'epic',
     resultLevel: 10,
@@ -61,7 +61,7 @@ export const RECIPES = {
   },
   copper_ring_recipe: {
     id: 'copper_ring_recipe',
-    name: '铜戒配方',
+    name: '黄铜戒图谱',
     resultId: 'copper_ring',
     resultRarity: 'rare',
     resultLevel: 6,
@@ -74,7 +74,7 @@ export const RECIPES = {
   },
   bone_necklace_recipe: {
     id: 'bone_necklace_recipe',
-    name: '骨项链配方',
+    name: '兽骨坠图谱',
     resultId: 'bone_necklace',
     resultRarity: 'epic',
     resultLevel: 12,
@@ -86,10 +86,10 @@ export const RECIPES = {
     requiredLevel: 12
   },
 
-  // ── 神器配方（Mythic Tier）────────────────
+  // ── 仙品图谱（Mythic Tier）────────────────
   divine_blade_recipe: {
     id: 'divine_blade_recipe',
-    name: '神圣巨剑配方',
+    name: '焚岳重刀图谱',
     resultId: 'lava_blade',
     resultRarity: 'mythic',
     resultLevel: 15,
@@ -104,7 +104,7 @@ export const RECIPES = {
   },
   world_guardian_recipe: {
     id: 'world_guardian_recipe',
-    name: '世界守护者配方',
+    name: '镇界玄罡图谱',
     resultId: 'guardian_plate',
     resultRarity: 'mythic',
     resultLevel: 15,
@@ -118,7 +118,7 @@ export const RECIPES = {
   },
   abyss_ring_recipe: {
     id: 'abyss_ring_recipe',
-    name: '深渊之戒配方',
+    name: '归墟玄戒图谱',
     resultId: 'copper_ring',
     resultRarity: 'mythic',
     resultLevel: 15,
@@ -132,7 +132,7 @@ export const RECIPES = {
   },
   void_robe_recipe: {
     id: 'void_robe_recipe',
-    name: '虚空法袍配方',
+    name: '太虚法印图谱',
     resultId: 'flame_staff',
     resultRarity: 'mythic',
     resultLevel: 15,

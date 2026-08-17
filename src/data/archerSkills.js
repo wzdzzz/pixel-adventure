@@ -19,8 +19,8 @@ export const ARCHER_SKILLS = {
   // ─── 1. 穿透射击 ───
   piercingShot: {
     id: 'piercingShot',
-    name: '穿透射击',
-    description: '射出强力一箭，造成{dmg}%攻击力伤害，穿透敌人防御',
+    name: '贯虹剑',
+    description: '御使飞剑贯敌而过，造成{dmg}%攻击力伤害，无视部分防御',
     icon: '🏹',
     resource: 'stamina',
     baseCost: 15,
@@ -44,8 +44,8 @@ export const ARCHER_SKILLS = {
   // ─── 2. 连射 ───
   rapidFire: {
     id: 'rapidFire',
-    name: '连射',
-    description: '快速射出多箭，{dur}秒内每0.2秒造成{dmg}%攻击力伤害',
+    name: '连珠剑诀',
+    description: '接连御使飞剑，{dur}秒内每0.2秒造成{dmg}%攻击力伤害',
     icon: '🎯',
     resource: 'stamina',
     baseCost: 25,
@@ -68,8 +68,8 @@ export const ARCHER_SKILLS = {
   // ─── 3. 闪避翻滚 ───
   evasiveRoll: {
     id: 'evasiveRoll',
-    name: '闪避翻滚',
-    description: '快速翻滚闪避，途中无敌，造成{dmg}%攻击力伤害',
+    name: '流云步',
+    description: '踏步疾行闪避，途中不受伤害，并造成{dmg}%攻击力伤害',
     icon: '💨',
     resource: 'stamina',
     baseCost: 12,
@@ -92,8 +92,8 @@ export const ARCHER_SKILLS = {
   // ─── 4. 蓄力射击 ───
   chargedShot: {
     id: 'chargedShot',
-    name: '蓄力射击',
-    description: '按住蓄力后释放，最长{chargeTime}秒，伤害随蓄力倍增（最高{dmg}%）',
+    name: '蓄势飞剑',
+    description: '按住蓄势后御剑，最长{chargeTime}秒，伤害随蓄势倍增（最高{dmg}%）',
     icon: '⚡',
     resource: 'stamina',
     baseCost: 20,
@@ -120,8 +120,8 @@ export const ARCHER_SKILLS = {
   // ─── 5. 毒箭 ───
   poisonArrow: {
     id: 'poisonArrow',
-    name: '毒箭',
-    description: '射出毒箭造成{dmg}%伤害，使目标中毒5秒',
+    name: '青瘴剑',
+    description: '御使淬入瘴毒的飞剑造成{dmg}%伤害，使目标中毒5秒',
     icon: '☠️',
     resource: 'stamina',
     baseCost: 18,
@@ -145,8 +145,8 @@ export const ARCHER_SKILLS = {
   // ─── 6. 多重射击 ───
   multiShot: {
     id: 'multiShot',
-    name: '多重射击',
-    description: '扇形射出多箭，造成{dmg}%攻击力伤害，击退敌人',
+    name: '分光剑',
+    description: '飞剑分光成扇形攻出，造成{dmg}%攻击力伤害并击退敌人',
     icon: '🌟',
     resource: 'stamina',
     baseCost: 22,
@@ -172,8 +172,8 @@ export const ARCHER_SKILLS = {
   // ─── 7. 猎人印记 ───
   huntersMark: {
     id: 'huntersMark',
-    name: '猎人印记',
-    description: '标记目标，使其受到伤害增加{dmgAmp}%，持续{dur}秒',
+    name: '锁魂剑印',
+    description: '以剑印锁定目标，使其受到的伤害增加{dmgAmp}%，持续{dur}秒',
     icon: '🔍',
     resource: 'stamina',
     baseCost: 15,
@@ -197,8 +197,8 @@ export const ARCHER_SKILLS = {
   // ─── 8. 鹰眼 ───
   eagleEye: {
     id: 'eagleEye',
-    name: '鹰眼',
-    description: '集中精神，暴击率+{critBonus}%，攻击力+{atkBonus}%，持续{dur}秒',
+    name: '天眼诀',
+    description: '凝聚神识，暴击率提升{critBonus}%，攻击力提升{atkBonus}%，持续{dur}秒',
     icon: '🦅',
     resource: 'none',
     baseCost: 0,
@@ -220,8 +220,8 @@ export const ARCHER_SKILLS = {
   // ─── 9. 影遁 ───
   shadowStep: {
     id: 'shadowStep',
-    name: '影遁',
-    description: '隐入阴影，移速+{spdBonus}%，下次攻击伤害+50%，持续{dur}秒',
+    name: '无影遁',
+    description: '敛息遁形，移动速度提升{spdBonus}%，下次攻击伤害提升50%，持续{dur}秒',
     icon: '🌑',
     resource: 'stamina',
     baseCost: 20,
@@ -243,8 +243,8 @@ export const ARCHER_SKILLS = {
   // ─── 10. 翻滚射击 ───
   rollingShot: {
     id: 'rollingShot',
-    name: '翻滚射击',
-    description: '向后翻滚并射击，造成{dmg}%伤害，减速目标2秒',
+    name: '回身御剑',
+    description: '向后撤步并御剑反击，造成{dmg}%伤害，使目标迟滞2秒',
     icon: '🔄',
     resource: 'stamina',
     baseCost: 18,
@@ -271,8 +271,8 @@ export const ARCHER_SKILLS = {
   // ─── 11. 致命射击 ───
   deadlyShot: {
     id: 'deadlyShot',
-    name: '致命射击',
-    description: '瞄准弱点射击，造成{dmg}%伤害，目标低于30%生命时伤害翻倍',
+    name: '绝命一剑',
+    description: '直取破绽造成{dmg}%伤害，目标气血低于30%时伤害翻倍',
     icon: '💀',
     resource: 'stamina',
     baseCost: 30,
@@ -296,8 +296,8 @@ export const ARCHER_SKILLS = {
   // ─── 12. 箭雨（大招）───
   arrowRain: {
     id: 'arrowRain',
-    name: '箭雨',
-    description: '召唤箭雨覆盖区域，{dur}秒内每0.3秒造成{dmg}%攻击力伤害',
+    name: '万剑归雨',
+    description: '召来飞剑如雨覆盖区域，{dur}秒内每0.3秒造成{dmg}%攻击力伤害',
     icon: '🌧️',
     resource: 'stamina',
     baseCost: 40,
@@ -326,7 +326,7 @@ export const ARCHER_SKILLS = {
 export const ARCHER_PASSIVES = {
   steadyAim: {
     id: 'steadyAim',
-    name: '精准瞄准',
+    name: '抱元守一',
     description: '暴击伤害提升15%',
     icon: '🎯',
     maxLevel: 3,
@@ -338,7 +338,7 @@ export const ARCHER_PASSIVES = {
   },
   nimbleFeet: {
     id: 'nimbleFeet',
-    name: '轻捷步伐',
+    name: '踏风',
     description: '移动速度提升10%',
     icon: '👟',
     maxLevel: 3,
@@ -350,7 +350,7 @@ export const ARCHER_PASSIVES = {
   },
   keenEye: {
     id: 'keenEye',
-    name: '锐利之眼',
+    name: '剑心通明',
     description: '暴击率提升5%',
     icon: '👁️',
     maxLevel: 3,
@@ -362,7 +362,7 @@ export const ARCHER_PASSIVES = {
   },
   poisonMastery: {
     id: 'poisonMastery',
-    name: '毒素精通',
+    name: '淬毒术',
     description: '毒素伤害提升20%，持续时间+2秒',
     icon: '🧪',
     maxLevel: 3,
@@ -374,7 +374,7 @@ export const ARCHER_PASSIVES = {
   },
   evasion: {
     id: 'evasion',
-    name: '闪避本能',
+    name: '御风',
     description: '10%概率完全闪避攻击',
     icon: '💫',
     maxLevel: 3,
@@ -387,8 +387,8 @@ export const ARCHER_PASSIVES = {
   },
   windRunner: {
     id: 'windRunner',
-    name: '疾风跑者',
-    description: '翻滚后2秒内攻速提升20%',
+    name: '乘风诀',
+    description: '施展流云步后2秒内攻击速度提升20%',
     icon: '🌪️',
     maxLevel: 3,
     category: 'passive',
@@ -417,7 +417,7 @@ export const ARCHER_EFFECTS = {
   },
   huntersMark: {
     id: 'huntersMark',
-    name: '猎人印记',
+    name: '锁魂剑印',
     type: 'debuff',
     duration: 6000,
     maxStacks: 1,
@@ -426,7 +426,7 @@ export const ARCHER_EFFECTS = {
   },
   slow: {
     id: 'slow',
-    name: '减速',
+    name: '迟滞',
     type: 'debuff',
     duration: 2000,
     maxStacks: 1,
@@ -435,7 +435,7 @@ export const ARCHER_EFFECTS = {
   },
   armorBreak: {
     id: 'armorBreak',
-    name: '破甲',
+    name: '碎罡',
     type: 'debuff',
     duration: 3000,
     maxStacks: 1,

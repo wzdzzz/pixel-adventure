@@ -24,7 +24,7 @@
 export const NPCS = {
   blacksmith_tom: {
     id: 'blacksmith_tom',
-    name: '铁匠汤姆',
+    name: '炼器师顾炉',
     sprite: 'npc',
     faction: 'townfolk',
     essential: true,
@@ -47,7 +47,7 @@ export const NPCS = {
   // ─── 赏金官：发布开放世界委托 / 刷新赏金 ───
   bounty_officer: {
     id: 'bounty_officer',
-    name: '赏金官 老雷',
+    name: '悬赏执事雷九',
     sprite: 'npc',
     faction: 'townfolk',
     essential: true,
@@ -60,7 +60,7 @@ export const NPCS = {
   // ─── 训练师：教技能 + 重置天赋 ───
   warrior_trainer_npc: {
     id: 'warrior_trainer_npc',
-    name: '战士导师·铁拳',
+    name: '体修教习石崇山',
     sprite: 'npc',
     faction: 'townfolk',
     essential: true,
@@ -75,7 +75,7 @@ export const NPCS = {
   // ─── 测试同伴：游侠艾琳（招募 500 金） ───
   companion_rogue: {
     id: 'companion_rogue',
-    name: '游侠艾琳',
+    name: '剑修沈青萝',
     sprite: 'npc',
     faction: 'ally',
     essential: true,
@@ -101,7 +101,7 @@ export const NPCS = {
   // ─── 第二个同伴：佣兵巴克（招募 800 金，重甲近战） ───
   companion_warrior: {
     id: 'companion_warrior',
-    name: '佣兵巴克',
+    name: '体修岳沉山',
     sprite: 'npc',
     faction: 'ally',
     essential: true,
@@ -127,7 +127,7 @@ export const NPCS = {
   // ─── 测试卫兵：戳一下守卫就翻脸（faction = town_guard） ───
   town_guard_01: {
     id: 'town_guard_01',
-    name: '城镇卫兵',
+    name: '执法修士',
     sprite: 'npc',
     faction: 'town_guard',
     essential: false,

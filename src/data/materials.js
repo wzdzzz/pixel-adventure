@@ -8,15 +8,15 @@
  * Phase 1 仅启用 enhance 用途的材料；其他 Phase 2/3 用途占位。
  */
 export const MATERIALS = {
-  iron_shard:      { id:'iron_shard',      name:'铁矿碎片',   tier:1, color:'#999999', icon:'⛓️', desc:'低级强化材料' },
-  enhance_stone:   { id:'enhance_stone',   name:'强化石',     tier:2, color:'#4488ff', icon:'💠', desc:'中级强化材料' },
-  ancient_core:    { id:'ancient_core',    name:'远古核心',   tier:3, color:'#bb44ff', icon:'🔮', desc:'高级强化材料' },
-  refining_stone:  { id:'refining_stone',  name:'精炼石',     tier:2, color:'#66aacc', icon:'🪨', desc:'中级制作材料' },
-  chaos_essence:   { id:'chaos_essence',   name:'混沌精华',   tier:2, color:'#cc44aa', icon:'🌀', desc:'洗练装备词条所需的混沌之力' },
-  soul_crystal:    { id:'soul_crystal',    name:'灵魂结晶',   tier:3, color:'#aa66ff', icon:'💎', desc:'锁定词条用，凝聚着英魂之力' },
-  star_fragment:   { id:'star_fragment',   name:'星辰碎片',   tier:3, color:'#ffdd66', icon:'⭐', desc:'宝石升级所需的星辰之力' },
-  divine_heart:    { id:'divine_heart',    name:'神铸之心',   tier:4, color:'#ffaa33', icon:'❤️‍🔥', desc:'神圣洗练 / 神器制作所需' },
-  world_core:      { id:'world_core',      name:'世界核心',   tier:5, color:'#ff66ff', icon:'🌐', desc:'蕴含世界本源 — 神话级装备制作所需' }
+  iron_shard:      { id:'iron_shard',      name:'玄铁屑',     tier:1, color:'#999999', icon:'⛓️', desc:'炼器余下的玄铁碎屑，可用于低阶淬炼' },
+  enhance_stone:   { id:'enhance_stone',   name:'淬灵石',     tier:2, color:'#4488ff', icon:'💠', desc:'蕴有精纯灵力的矿石，可用于中阶淬炼' },
+  ancient_core:    { id:'ancient_core',    name:'古阵枢',     tier:3, color:'#bb44ff', icon:'🔮', desc:'古老阵法的残存枢核，可用于高阶淬炼' },
+  refining_stone:  { id:'refining_stone',  name:'炼器灵砂',   tier:2, color:'#66aacc', icon:'🪨', desc:'炼器时用于调和材质的细密灵砂' },
+  chaos_essence:   { id:'chaos_essence',   name:'混元灵髓',   tier:2, color:'#cc44aa', icon:'🌀', desc:'灵机未分的稀有灵髓，可用于洗练器物词条' },
+  soul_crystal:    { id:'soul_crystal',    name:'魂晶',       tier:3, color:'#aa66ff', icon:'💎', desc:'凝聚残魂之力的晶石，可在洗练时锁定词条' },
+  star_fragment:   { id:'star_fragment',   name:'星髓',       tier:3, color:'#ffdd66', icon:'⭐', desc:'凝聚星辉的矿髓，可用于提升灵玉品阶' },
+  divine_heart:    { id:'divine_heart',    name:'天工道心',   tier:4, color:'#ffaa33', icon:'❤️‍🔥', desc:'上古炼器宗师留下的道韵结晶，可炼制灵宝' },
+  world_core:      { id:'world_core',      name:'界源灵核',   tier:5, color:'#ff66ff', icon:'🌐', desc:'蕴含一方天地本源的灵核，可炼制仙品器物' }
 };
 
 /** 装备品质 → 分解产物（材料 ID + 数量） */
@@ -29,7 +29,7 @@ export const DECOMPOSE_TABLE = {
   mythic:    [{ matId:'ancient_core', count: 2 }]
 };
 
-/** 强化等级 → 所需材料 + 金币（每次尝试） */
+/** 强化等级 → 所需材料 + 灵石（每次尝试，字段名保持 gold 兼容） */
 export function getEnhanceCost(currentLevel) {
   const next = currentLevel + 1;
   if (next <= 5)  return { matId:'iron_shard',    count: next * 2,        gold: next * 50 };

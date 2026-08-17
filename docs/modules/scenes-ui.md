@@ -255,3 +255,5 @@ ESC：游戏内菜单（保存/退主菜单/继续）
 
 ### 关闭
 M / ESC 键关闭，恢复游戏。
+
+开放世界的完整创建、流式加载、传送和销毁时序见 [world-map-lifecycle.md](world-map-lifecycle.md)。

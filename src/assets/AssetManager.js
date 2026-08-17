@@ -8,8 +8,8 @@ export const CHARACTERS = {
     display: { w: 36, h: 52 },
     anims: {
       idle: { frames: [0, 1, 2, 13], rate: 4, repeat: -1 },
-      walk: { frames: [5, 6, 7], rate: 8, repeat: -1 },
-      walk_up: { frames: [29, 30, 31, 32], rate: 8, repeat: -1 },
+      walk: { frames: [5, 6, 7], rate: 12, repeat: -1 },
+      walk_up: { frames: [29, 30, 31, 32], rate: 12, repeat: -1 },
       attack: { frames: [15, 35], rate: 10, repeat: 0 },
       hurt: { frames: [16], rate: 1, repeat: 0 },
       die: { frames: [37, 39], rate: 3, repeat: 0 }

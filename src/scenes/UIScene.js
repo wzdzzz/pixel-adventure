@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
+import { RESOURCE_LABELS, THEME_CONFIG } from '../config/themeConfig.js';
 import { TEXTURES } from '../assets/AssetManager.js';
 import { Tooltip } from '../ui/Tooltip.js';
 import itemData from '../data/items.json';
 import { BIOMES, getDifficultyAtChunk } from '../world/biomes/biomeConfig.js';
 import { WORLD_LAYOUT } from '../world/WorldLayout.js';
+import { WORLD_CHUNK_PX, WORLD_CONFIG } from '../world/worldConfig.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -180,7 +182,7 @@ export class UIScene extends Phaser.Scene {
     this.xpBarBg = this.add.rectangle(baseX + 30, baseY + 76, 180, 6, 0x222233).setOrigin(0, 0.5).setDepth(2);
     this.xpBarBg.setStrokeStyle(1, 0x333344);
     this.xpBar = this.add.rectangle(baseX + 31, baseY + 76, 0, 4, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
-    this.xpText = this.add.text(baseX + 215, baseY + 76, 'XP: 0/40', {
+    this.xpText = this.add.text(baseX + 215, baseY + 76, `${THEME_CONFIG.experience}: 0/40`, {
       fontSize: '12px', fill: '#9988cc', fontFamily: 'Courier New'
     }).setOrigin(0, 0.5).setDepth(3);
 
@@ -306,8 +308,7 @@ export class UIScene extends Phaser.Scene {
         const level = engine.getSkillLevel(id);
         const desc = player._skillModule?.getSkillDescription?.(id, level) || skill.description || '';
         const cdSec = (skill.cooldown / 1000).toFixed(1);
-        const resourceLabels = { stamina: '体力', rage: '怒气', mana: '魔力', none: '' };
-        const r = resourceLabels[skill.resource] || '';
+        const r = RESOURCE_LABELS[skill.resource] || '';
         const costLine = skill.resource === 'none'
           ? `冷却: ${cdSec}s`
           : `冷却: ${cdSec}s   ${r}: ${skill.cost}`;
@@ -629,7 +630,7 @@ export class UIScene extends Phaser.Scene {
     if (!this.xpBar) return;
     const percentage = xpRequired > 0 ? xp / xpRequired : 0;
     this.xpBar.width = Math.max(0, 178 * percentage);
-    this.xpText.setText(`XP: ${xp}/${xpRequired}`);
+    this.xpText.setText(`${THEME_CONFIG.experience}: ${xp}/${xpRequired}`);
   }
 
   createQuestTracker() {
@@ -730,8 +731,8 @@ export class UIScene extends Phaser.Scene {
     const mapX = 15;       // 左上角起始 X
     const mapY = 15;       // 左上角起始 Y
     const cellSize = 10;   // 每个 chunk 格子像素
-    const gridCount = 16;  // 16×16 chunks
-    const mapSize = cellSize * gridCount; // 160px
+    const gridCount = WORLD_CONFIG.widthChunks;
+    const mapSize = cellSize * gridCount;
     this._mm = { mapX, mapY, cellSize, gridCount, mapSize };
 
     // 半透明底板
@@ -810,17 +811,16 @@ export class UIScene extends Phaser.Scene {
 
     const px = player.sprite.x;
     const py = player.sprite.y;
-    const CHUNK_PX = 1024;
-    const cx = Math.floor(px / CHUNK_PX);
-    const cy = Math.floor(py / CHUNK_PX);
+    const cx = Math.floor(px / WORLD_CHUNK_PX);
+    const cy = Math.floor(py / WORLD_CHUNK_PX);
 
     const { mapX, mapY, cellSize, gridCount, mapSize } = this._mm;
     const ox = mapX + 2;
     const oy = mapY + 2;
 
     // 更新玩家亮点位置（亚格精度）
-    const fracX = (px / CHUNK_PX) / gridCount; // 0~1
-    const fracY = (py / CHUNK_PX) / gridCount;
+    const fracX = (px / WORLD_CHUNK_PX) / gridCount; // 0~1
+    const fracY = (py / WORLD_CHUNK_PX) / gridCount;
     this._mmPlayerDot.setPosition(
       ox + fracX * mapSize,
       oy + fracY * mapSize
@@ -912,7 +912,7 @@ export class UIScene extends Phaser.Scene {
       this.gameScene.events.emit('goldChanged', inventory.gold);
 
       // 提示
-      const msg = this.add.text(this._uiW / 2, 80, '已添加全部材料 ×9999 + 金币 ×99999', {
+      const msg = this.add.text(this._uiW / 2, 80, `已添加全部材料 ×9999 + ${THEME_CONFIG.currency} ×99999`, {
         fontSize: '16px', color: '#44ff44', fontFamily: 'Courier New',
         fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
       }).setOrigin(0.5).setDepth(9999);

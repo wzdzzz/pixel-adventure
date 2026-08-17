@@ -8,6 +8,7 @@
 import { createNoise2D } from 'simplex-noise';
 import { BIOMES, BIOME_ENEMIES, WORLD_CENTER, WORLD_RADIUS, getDifficultyAtChunk } from './biomes/biomeConfig.js';
 import { getLayoutOverride, getTemplate } from './WorldLayout.js';
+import { WORLD_CONFIG, isChunkInBounds } from './worldConfig.js';
 
 // ─── Tile ID 常量 ──────────────────────────────────────────
 export const TILE_IDS = {
@@ -23,7 +24,7 @@ export const TILE_IDS = {
 };
 
 /** chunk 边长（tile 数） */
-const CHUNK_SIZE = 32;
+const CHUNK_SIZE = WORLD_CONFIG.chunkTiles;
 
 // biome id 列表（排除 forest，forest 用于起始区域特殊判定）
 const OUTER_BIOMES = ['ruins', 'snow', 'desert', 'swamp', 'volcano'];
@@ -136,7 +137,44 @@ export class WorldGenerator {
    * @returns {boolean}
    */
   isInBounds(chunkX, chunkY) {
-    return chunkX >= 0 && chunkX <= 15 && chunkY >= 0 && chunkY <= 15;
+    return isChunkInBounds(chunkX, chunkY);
+  }
+
+  isWalkableTile(terrain, localX, localY) {
+    if (!terrain) return false;
+    if (localX < 0 || localX >= CHUNK_SIZE || localY < 0 || localY >= CHUNK_SIZE) return false;
+
+    const wall = terrain.walls?.[localY]?.[localX];
+    if (wall !== TILE_IDS.EMPTY) return false;
+
+    const ground = terrain.ground?.[localY]?.[localX];
+    return ground !== TILE_IDS.WATER && ground !== TILE_IDS.LAVA_FLOOR && ground !== TILE_IDS.WALL;
+  }
+
+  findNearestWalkableTile(chunkX, chunkY, preferredLocalX = 16, preferredLocalY = 16) {
+    if (!this.isInBounds(chunkX, chunkY)) return null;
+    const terrain = this.generateChunkTerrain(chunkX, chunkY);
+    const startX = Math.max(0, Math.min(CHUNK_SIZE - 1, Math.round(preferredLocalX)));
+    const startY = Math.max(0, Math.min(CHUNK_SIZE - 1, Math.round(preferredLocalY)));
+
+    if (this.isWalkableTile(terrain, startX, startY)) {
+      return { localX: startX, localY: startY, terrain };
+    }
+
+    for (let radius = 1; radius < CHUNK_SIZE; radius++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+          const lx = startX + dx;
+          const ly = startY + dy;
+          if (this.isWalkableTile(terrain, lx, ly)) {
+            return { localX: lx, localY: ly, terrain };
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   // ─── 确定性随机（非噪声） ──────────────────────────────────

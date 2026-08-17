@@ -11,17 +11,17 @@
 export const SETS = {
   warrior_legacy: {
     id: 'warrior_legacy',
-    name: '远征战士套装',
+    name: '玄罡炼体套装',
     pieces: ['iron_sword', 'guardian_plate', 'iron_helm', 'worn_boots', 'copper_ring', 'bone_necklace'],
     bonuses: {
       2: { stat: 'attack',    value: 0.05, isFlat: false, label: '攻击 +5%' },
-      4: { stat: 'maxHp',     value: 0.10, isFlat: false, label: '生命上限 +10%' },
+      4: { stat: 'maxHp',     value: 0.10, isFlat: false, label: '气血上限 +10%' },
       6: { stat: 'attack',    value: 0.20, isFlat: false, label: '攻击 +20%（与 2 件套叠加）' }
     }
   },
   archer_legacy: {
     id: 'archer_legacy',
-    name: '远征游侠套装',
+    name: '流云剑修套装',
     pieces: ['rusty_dagger', 'ranger_vest', 'leather_cap', 'swift_boots', 'hunter_ring', 'fang_necklace'],
     bonuses: {
       2: { stat: 'critRate',  value: 5,    isFlat: true,  label: '暴击率 +5%' },
@@ -31,21 +31,21 @@ export const SETS = {
   },
   mage_legacy: {
     id: 'mage_legacy',
-    name: '远征贤者套装',
+    name: '五行术修套装',
     pieces: ['apprentice_staff', 'cloth_robe', 'mage_hat', 'arcane_slippers', 'crystal_ring', 'flame_staff'],
     bonuses: {
-      2: { stat: 'spellPower', value: 8,   isFlat: true,  label: '法术强度 +8' },
+      2: { stat: 'spellPower', value: 8,   isFlat: true,  label: '术法强度 +8' },
       4: { stat: 'cdr',        value: 10,  isFlat: true,  label: '冷却缩减 +10%' },
-      6: { stat: 'spellPower', value: 0.30, isFlat: false, label: '法术强度 +30%' }
+      6: { stat: 'spellPower', value: 0.30, isFlat: false, label: '术法强度 +30%' }
     }
   },
   guardian_set: {
     id: 'guardian_set',
-    name: '守护者全装',
+    name: '镇界玄罡套装',
     pieces: ['wooden_shield', 'chain_mail', 'guardian_helm', 'guardian_greaves', 'guardian_signet', 'guardian_amulet'],
     bonuses: {
       2: { stat: 'defense',  value: 0.10, isFlat: false, label: '防御 +10%' },
-      4: { stat: 'maxHp',    value: 50,   isFlat: true,  label: '生命值 +50' },
+      4: { stat: 'maxHp',    value: 50,   isFlat: true,  label: '气血 +50' },
       6: { stat: 'defense',  value: 0.30, isFlat: false, label: '防御 +30%' }
     }
   }

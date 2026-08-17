@@ -38,7 +38,7 @@ export class Player extends Actor {
 
     this.sprite.setBounce(0);
     this.sprite.setDrag(GAME_CONFIG.PHYSICS.PLAYER_DRAG);
-    this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_SPEED, GAME_CONFIG.PHYSICS.PLAYER_SPEED);
+    this.sprite.setMaxVelocity(GAME_CONFIG.PHYSICS.PLAYER_MAX_SPEED, GAME_CONFIG.PHYSICS.PLAYER_MAX_SPEED);
     this.sprite.body.pushable = false;
     this.sprite.playerInstance = this;
 
@@ -203,6 +203,7 @@ export class Player extends Actor {
     const input = this.getInputDirection();
     if (input.x !== 0 || input.y !== 0) {
       this.setState(PlayerState.WALK);
+      this.handleWalkState();
       return;
     }
     this.sprite.setVelocity(0, 0);

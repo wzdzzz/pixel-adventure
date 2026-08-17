@@ -7,29 +7,29 @@ export default {
   // ────────── Stage 1: 陌生人 ──────────
   greet: {
     start: {
-      speaker: '铁匠汤姆',
-      text: '一个生面孔啊。这村子可不常来人，你来这干嘛？',
+      speaker: '炼器师顾炉',
+      text: '生面孔啊。栖云坊市不常来散修，你找我有什么事？',
       next: 'menu'
     },
     menu: {
-      speaker: '铁匠汤姆',
-      text: '你想干嘛？',
+      speaker: '炼器师顾炉',
+      text: '说吧，想办什么？',
       options: [
-        { text: '想接点委托', goto: 'offer_quest' },
-        { text: '看看你的货', goto: 'show_shop' },
+        { text: '想接悬赏', goto: 'offer_quest' },
+        { text: '看看你的法器', goto: 'show_shop' },
         { text: '告辞', goto: 'end' }
       ]
     },
     offer_quest: {
-      speaker: '铁匠汤姆',
-      text: '正好，山里铁矿被人霸占着，我打不开锅。帮我搞 5 块铁矿来，我请你喝两杯，再教你点东西。',
+      speaker: '炼器师顾炉',
+      text: '正好，北边矿洞被妖祟占了，我的炉子快断料了。帮我取 5 块玄铁屑来，报酬少不了你的。',
       action: 'accept_quest:tom_intro',
       set: { stage: 'awaiting_ore', relationDelta: 5 },
       next: 'end'
     },
     show_shop: {
-      speaker: '铁匠汤姆',
-      text: '看吧。',
+      speaker: '炼器师顾炉',
+      text: '都在这里，自己挑。',
       action: 'open_shop:tom_shop',
       next: 'end'
     },
@@ -39,29 +39,29 @@ export default {
   // ────────── Stage 2: 等矿 ──────────
   awaiting_ore: {
     start: {
-      speaker: '铁匠汤姆',
-      text: '矿石带回来了吗？',
+      speaker: '炼器师顾炉',
+      text: '玄铁屑带回来了吗？',
       options: [
-        { text: '交付 5×铁矿',
+        { text: '交付 5×玄铁屑',
           if: 'hasItem(iron_ore,5)',
           goto: 'turn_in' },
         { text: '还在找',
           if: '!hasItem(iron_ore,5)',
           goto: 'remind' },
-        { text: '看看你的货', goto: 'show_shop' },
+        { text: '看看你的法器', goto: 'show_shop' },
         { text: '告辞', goto: 'end' }
       ]
     },
     turn_in: {
       action: ['take_item:iron_ore:5', 'turn_in_quest:tom_intro', 'give_gold:200'],
       set: { stage: 'trusted', relationDelta: 20 },
-      speaker: '铁匠汤姆',
-      text: '哈哈，好兄弟！以后想强化装备随时来，给你算便宜点。',
+      speaker: '炼器师顾炉',
+      text: '成色不错。往后想淬炼法器就来找我，给你算便宜些。',
       next: 'end'
     },
     remind: {
-      speaker: '铁匠汤姆',
-      text: '快去吧，矿就在北边山洞。',
+      speaker: '炼器师顾炉',
+      text: '矿洞就在北边，妖祟还守在那里。',
       next: 'end'
     },
     show_shop: {
@@ -74,22 +74,22 @@ export default {
   // ────────── Stage 3: 信任 ──────────
   trusted: {
     start: {
-      speaker: '铁匠汤姆',
-      text: '兄弟！想做点啥？',
+      speaker: '炼器师顾炉',
+      text: '道友，今天想炼些什么？',
       options: [
-        { text: '强化装备', action: 'open_enhance', goto: 'end' },
-        { text: '洗练词条', action: 'open_reforge', goto: 'end' },
-        { text: '镶嵌宝石', action: 'open_gem_inlay', goto: 'end' },
-        { text: '看看你的货', action: 'open_shop:tom_shop', goto: 'end' },
+        { text: '淬炼装备', action: 'open_enhance', goto: 'end' },
+        { text: '重炼词条', action: 'open_reforge', goto: 'end' },
+        { text: '镶嵌灵玉', action: 'open_gem_inlay', goto: 'end' },
+        { text: '看看你的法器', action: 'open_shop:tom_shop', goto: 'end' },
         { text: '送点东西给你', goto: 'gift_menu' },
         { text: '告辞', goto: 'end' }
       ]
     },
     gift_menu: {
-      speaker: '铁匠汤姆',
-      text: '送什么？我最喜欢铁矿和星辰碎片。',
+      speaker: '炼器师顾炉',
+      text: '送什么？玄铁屑和星辰碎片最合我心意。',
       options: [
-        { text: '送 1 块铁矿',
+        { text: '送 1 块玄铁屑',
           if: 'hasItem(iron_ore,1)',
           action: 'gift_item:iron_ore:1',
           goto: 'end' },
