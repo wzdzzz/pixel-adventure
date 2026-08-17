@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { RARITY_LABELS } from '../config/themeConfig.js';
+import { UI_THEME, getRarityTheme } from '../config/uiTheme.js';
 import { PlayerState } from '../entities/Player.js';
 import { Item } from '../entities/Item.js';
 import { InventorySystem } from '../systems/InventorySystem.js';
@@ -758,8 +759,8 @@ export class MainGameScene extends Phaser.Scene {
 
     const label = this.add.text(x, y - 24,
       rare ? '✦ 灵蕴宝匣 [E]' : '按 E 打开', {
-        fontSize: '10px', fill: rare ? '#ffcc44' : '#aaaaaa',
-        fontFamily: 'Courier New'
+        fontSize: '10px', fill: rare ? UI_THEME.text.brass : UI_THEME.text.muted,
+        fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
 
     const chest = {
@@ -798,7 +799,7 @@ export class MainGameScene extends Phaser.Scene {
     }
 
     const label = this.add.text(x, y - 26, used ? `${def.name}（已枯竭）` : `${def.icon} ${def.name} [E]`, {
-      fontSize: '10px', fill: used ? '#777777' : '#ffee99', fontFamily: 'Courier New'
+      fontSize: '10px', fill: used ? UI_THEME.text.disabled : UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
 
     const shrine = { sprite, glow, label, def, used, entityId: spawn.id };
@@ -823,7 +824,7 @@ export class MainGameScene extends Phaser.Scene {
     sprite.bonfireInstance = { id: spawn.id, x, y };
 
     const label = this.add.text(x, y - 24, '按 E 休息', {
-      fontSize: '10px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '10px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
 
     // 火焰闪烁动画
@@ -1273,12 +1274,12 @@ export class MainGameScene extends Phaser.Scene {
         this.levelSystem.addXp(xpAmount, enemy.finalLevel || 1);
       }
 
-      // Show XP floating text
+      // Show cultivation progress floating text
       if (enemy.sprite && xpAmount > 0) {
         const xpText = this.add.text(
           enemy.sprite.x, enemy.sprite.y - 20,
-          `+${xpAmount} XP`, {
-            fontSize: '12px', fill: '#aa88ff', fontFamily: 'Courier New', fontStyle: 'bold'
+          `修为 +${xpAmount}`, {
+            fontSize: '12px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
           }
         ).setOrigin(0.5).setDepth(100);
 
@@ -1323,13 +1324,13 @@ export class MainGameScene extends Phaser.Scene {
 
         // Legendary / Mythic drop notification
         if (drop.itemData.rarity === 'legendary' || drop.itemData.rarity === 'mythic') {
-          const isMythic = drop.itemData.rarity === 'mythic';
+          const rarityTheme = getRarityTheme(drop.itemData.rarity);
           const msg = this.add.text(
             this.cameras.main.width / 2, 60,
             `${RARITY_LABELS[drop.itemData.rarity]}器物掉落: ${drop.itemData.name}`,
             {
-              fontSize: '16px', fill: isMythic ? '#ff4444' : '#ffaa00', fontFamily: 'Courier New',
-              fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+              fontSize: '16px', fill: rarityTheme.text, fontFamily: UI_THEME.font.body,
+              fontStyle: 'bold', stroke: UI_THEME.text.shadow, strokeThickness: 3
             }
           ).setOrigin(0.5).setScrollFactor(0).setDepth(300);
 
@@ -1392,7 +1393,7 @@ export class MainGameScene extends Phaser.Scene {
       const x = actor.sprite.x;
       const y = actor.sprite.y - actor.sprite.displayHeight / 2;
       this.floatingText.spawn(x, y, Math.floor(amount), {
-        color: '#66ff66',
+        color: UI_THEME.text.jadeBright,
         fontSize: 12,
         prefix: '+'
       });
@@ -1444,11 +1445,11 @@ export class MainGameScene extends Phaser.Scene {
         });
       }
 
-      // "LEVEL UP!" floating text
+      // Realm breakthrough floating text
       const lvlText = this.add.text(
         this.cameras.main.width / 2, this.cameras.main.height / 2 - 50,
-        `LEVEL UP! LV.${level}`, {
-          fontSize: '28px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+        `境界突破 · ${level}重`, {
+          fontSize: '28px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.display, fontStyle: 'bold'
         }
       ).setOrigin(0.5).setDepth(201).setScrollFactor(0);
 
@@ -1477,12 +1478,18 @@ export class MainGameScene extends Phaser.Scene {
     });
   }
 
-  showQuickMessage(text) {
+  showQuickMessage(text, color = UI_THEME.text.paper) {
     const msg = this.add.text(
       this.cameras.main.width / 2,
       this.cameras.main.height / 2 - 60,
       text,
-      { fontSize: '14px', fill: '#ffffff', backgroundColor: '#000000aa', padding: { x: 8, y: 4 }, fontFamily: 'Courier New' }
+      {
+        fontSize: '14px',
+        fill: color,
+        backgroundColor: '#0d1714ee',
+        padding: { x: 8, y: 4 },
+        fontFamily: UI_THEME.font.body,
+      }
     ).setOrigin(0.5).setDepth(100).setScrollFactor(0);
 
     this.tweens.add({
@@ -1795,36 +1802,36 @@ export class MainGameScene extends Phaser.Scene {
     const container = this.add.container(0, 0).setDepth(30000).setScrollFactor(0);
 
     // 背景遮罩
-    const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.55)
+    const overlay = this.add.rectangle(w / 2, h / 2, w, h, UI_THEME.colors.shadow, 0.68)
       .setScrollFactor(0).setInteractive();
     container.add(overlay);
 
     // 主面板
     const pw = 360, ph = 220;
-    const panel = this.add.rectangle(w / 2, h / 2, pw, ph, 0x1a1a2e, 0.98)
-      .setScrollFactor(0).setStrokeStyle(2, 0x6666aa);
+    const panel = this.add.rectangle(w / 2, h / 2, pw, ph, UI_THEME.colors.panel, 0.98)
+      .setScrollFactor(0).setStrokeStyle(2, UI_THEME.colors.border);
     container.add(panel);
 
     const title = this.add.text(w / 2, h / 2 - 80, '游戏菜单', {
-      fontSize: '18px', fill: '#ffdd66', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '18px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.display, fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0);
     container.add(title);
 
     // 按钮工厂
     const mkBtn = (y, label, color, onClick) => {
-      const bg = this.add.rectangle(w / 2, y, 240, 36, 0x2a2a3a)
+      const bg = this.add.rectangle(w / 2, y, 240, 36, UI_THEME.colors.panelRaised)
         .setScrollFactor(0).setStrokeStyle(1, color)
         .setInteractive({ useHandCursor: true });
       const txt = this.add.text(w / 2, y, label, {
-        fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
       }).setOrigin(0.5).setScrollFactor(0);
       container.add([bg, txt]);
-      bg.on('pointerover', () => bg.setFillStyle(0x3a3a5a));
-      bg.on('pointerout', () => bg.setFillStyle(0x2a2a3a));
+      bg.on('pointerover', () => bg.setFillStyle(UI_THEME.colors.panelHover));
+      bg.on('pointerout', () => bg.setFillStyle(UI_THEME.colors.panelRaised));
       bg.on('pointerdown', onClick);
     };
 
-    mkBtn(h / 2 - 35, '保存进度...', 0x44ff88, () => {
+    mkBtn(h / 2 - 35, '保存进度...', UI_THEME.colors.jade, () => {
       this._closeExitConfirm();
       // 暂停游戏，打开存档选择
       this.pauseGame('save-select');
@@ -1835,7 +1842,7 @@ export class MainGameScene extends Phaser.Scene {
       this.scene.bringToTop('SaveSelectScene');
     });
 
-    mkBtn(h / 2 + 5, '返回主菜单', 0x66aaff, () => {
+    mkBtn(h / 2 + 5, '返回主菜单', UI_THEME.colors.brass, () => {
       try { SaveSystem.save(this); } catch (e) {}
       this._closeExitConfirm();
       this.scene.stop('UIScene');
@@ -1843,7 +1850,7 @@ export class MainGameScene extends Phaser.Scene {
       this.scene.start('MainMenuScene');
     });
 
-    mkBtn(h / 2 + 45, '继续游戏', 0xaaaaaa, () => this._closeExitConfirm());
+    mkBtn(h / 2 + 45, '继续游戏', UI_THEME.colors.border, () => this._closeExitConfirm());
 
     this._exitConfirm = container;
   }

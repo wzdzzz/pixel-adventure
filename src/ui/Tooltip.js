@@ -14,16 +14,16 @@ export class Tooltip {
     this.delay = options.delay ?? 1000;
     this.maxWidth = options.maxWidth ?? 240;
 
-    this.bg = scene.add.rectangle(0, 0, 100, 40, 0x0a0a18, 0.96)
-      .setOrigin(0, 0).setStrokeStyle(1, 0x6666aa).setDepth(9998)
+    this.bg = scene.add.rectangle(0, 0, 100, 40, UI_THEME.colors.ink, 0.97)
+      .setOrigin(0, 0).setStrokeStyle(1, UI_THEME.colors.brassMuted).setDepth(9998)
       .setScrollFactor(0).setVisible(false);
 
     this.title = scene.add.text(0, 0, '', {
-      fontSize: '14px', color: '#ffdd66', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '14px', color: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     }).setDepth(9999).setScrollFactor(0).setVisible(false);
 
     this.body = scene.add.text(0, 0, '', {
-      fontSize: '13px', color: '#cccccc', fontFamily: 'Courier New',
+      fontSize: '13px', color: UI_THEME.text.paper, fontFamily: UI_THEME.font.body,
       wordWrap: { width: this.maxWidth - 16 }
     }).setDepth(9999).setScrollFactor(0).setVisible(false);
 
@@ -116,3 +116,4 @@ export class Tooltip {
     this.body.destroy();
   }
 }
+import { UI_THEME } from '../config/uiTheme.js';

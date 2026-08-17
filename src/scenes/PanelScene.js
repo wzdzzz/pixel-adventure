@@ -7,23 +7,17 @@ import { SmithyPanel } from '../ui/panels/SmithyPanel.js';
 import { PartyPanel } from '../ui/panels/PartyPanel.js';
 import { Tooltip } from '../ui/Tooltip.js';
 import audioEngine from '../systems/AudioEngine.js';
+import { RARITY_THEME, UI_THEME } from '../config/uiTheme.js';
 
 /** 将值钳制到 [0,1] */
 function clamp01(v) { v = Number(v); if (!isFinite(v)) return 0; return Math.max(0, Math.min(1, v)); }
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'party', 'settings'];
 const TAB_LABELS = ['角色', '行囊', '传承', '游历录', '同行', '设置'];
-const TAB_ICONS = ['👤', '🎒', '⚔', '📜', '👥', '⚙'];
+const TAB_ICONS = ['人', '囊', '法', '录', '伴', '设'];
 const TAB_KEYS = ['C', 'B', 'X', 'L', 'T', ''];
 
-export const RARITY_COLORS = {
-  common:    { bg: 0x3a3a3a, border: 0x666666 },
-  uncommon:  { bg: 0x1a3a1a, border: 0x44bb44 },
-  rare:      { bg: 0x1a1a3a, border: 0x4488ff },
-  epic:      { bg: 0x2a1a3a, border: 0xbb44ff },
-  legendary: { bg: 0x3a2a1a, border: 0xffaa00 },
-  mythic:    { bg: 0x3a1a1a, border: 0xff4444 }
-};
+export const RARITY_COLORS = RARITY_THEME;
 
 export class PanelScene extends Phaser.Scene {
   constructor() {
@@ -60,24 +54,24 @@ export class PanelScene extends Phaser.Scene {
     this.panelTop = this.panelY - this.panelH / 2;
 
     // Panel background
-    this.panelBg = this.add.rectangle(this.panelX, this.panelY, this.panelW, this.panelH, 0x1a1a2e, 0.95)
-      .setStrokeStyle(2, 0x4a4a6a).setDepth(1);
+    this.panelBg = this.add.rectangle(this.panelX, this.panelY, this.panelW, this.panelH, UI_THEME.colors.panel, 0.97)
+      .setStrokeStyle(2, UI_THEME.colors.border).setDepth(1);
 
     // Shared tooltip (used by character + inventory panels)
     this.tooltipContainer = this.add.container(0, 0).setDepth(20).setVisible(false);
-    this.tooltipBg = this.add.rectangle(0, 0, 200, 80, 0x1a1a2e, 0.95)
-      .setStrokeStyle(1, 0x6666aa).setOrigin(0, 0);
+    this.tooltipBg = this.add.rectangle(0, 0, 200, 80, UI_THEME.colors.ink, 0.97)
+      .setStrokeStyle(1, UI_THEME.colors.brassMuted).setOrigin(0, 0);
     this.tooltipText = this.add.text(8, 8, '', {
-      fontSize: '13px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
+      fontSize: '13px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, wordWrap: { width: 184 }
     });
     this.tooltipContainer.add([this.tooltipBg, this.tooltipText]);
 
     // 第二个 tooltip（并排对比用）
     this.tooltipContainer2 = this.add.container(0, 0).setDepth(20).setVisible(false);
-    this.tooltipBg2 = this.add.rectangle(0, 0, 200, 80, 0x1a1a2e, 0.95)
-      .setStrokeStyle(1, 0x6666aa).setOrigin(0, 0);
+    this.tooltipBg2 = this.add.rectangle(0, 0, 200, 80, UI_THEME.colors.ink, 0.97)
+      .setStrokeStyle(1, UI_THEME.colors.brassMuted).setOrigin(0, 0);
     this.tooltipText2 = this.add.text(8, 8, '', {
-      fontSize: '13px', fill: '#cccccc', fontFamily: 'Courier New', wordWrap: { width: 184 }
+      fontSize: '13px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, wordWrap: { width: 184 }
     });
     this.tooltipContainer2.add([this.tooltipBg2, this.tooltipText2]);
 
@@ -170,24 +164,24 @@ export class PanelScene extends Phaser.Scene {
     TABS.forEach((tab, i) => {
       const tabX = this.panelLeft + tabW * i + tabW / 2;
 
-      const bg = this.add.rectangle(tabX, tabY, tabW - 4, tabH - 4, 0x2a2a4e, 1)
-        .setStrokeStyle(1, 0x5a5a8a).setDepth(2);
+      const bg = this.add.rectangle(tabX, tabY, tabW - 4, tabH - 4, UI_THEME.colors.panelRaised, 1)
+        .setStrokeStyle(1, UI_THEME.colors.borderMuted).setDepth(2);
 
       const label = this.add.text(tabX, tabY, `${TAB_ICONS[i]} ${TAB_LABELS[i]}`, {
-        fontSize: '16px', fill: '#aaaacc', fontFamily: 'Courier New'
+        fontSize: '16px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setDepth(3);
 
       const hintChar = TAB_KEYS[i] || '';
       const hint = this.add.text(tabX + tabW / 2 - 14, tabY - tabH / 2 + 4, hintChar, {
-        fontSize: '12px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '12px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.mono
       }).setOrigin(0.5, 0).setDepth(3);
 
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerover', () => {
-        if (this.activeTab !== tab) bg.setFillStyle(0x3a3a5e);
+        if (this.activeTab !== tab) bg.setFillStyle(UI_THEME.colors.panelHover);
       });
       bg.on('pointerout', () => {
-        if (this.activeTab !== tab) bg.setFillStyle(0x2a2a4e);
+        if (this.activeTab !== tab) bg.setFillStyle(UI_THEME.colors.panelRaised);
       });
       bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); this.switchTab(tab); });
 
@@ -200,13 +194,13 @@ export class PanelScene extends Phaser.Scene {
 
     this.tabButtons.forEach(({ bg, label, tab }) => {
       if (tab === tabName) {
-        bg.setFillStyle(0x3a3a6e);
-        bg.setStrokeStyle(2, 0x8888cc);
-        label.setColor('#ffffff');
+        bg.setFillStyle(UI_THEME.colors.panelHover);
+        bg.setStrokeStyle(2, UI_THEME.colors.jadeBright);
+        label.setColor(UI_THEME.text.jadeBright);
       } else {
-        bg.setFillStyle(0x2a2a4e);
-        bg.setStrokeStyle(1, 0x5a5a8a);
-        label.setColor('#aaaacc');
+        bg.setFillStyle(UI_THEME.colors.panelRaised);
+        bg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
+        label.setColor(UI_THEME.text.muted);
       }
     });
 
@@ -250,9 +244,9 @@ export class PanelScene extends Phaser.Scene {
   _showPanelToast(text, color) {
     const w = this._uiW || this.cameras.main.width;
     const msg = this.add.text(w / 2, 60, text, {
-      fontSize: '16px', color: color || '#ffaa44', fontFamily: 'Courier New',
-      fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
-      backgroundColor: '#1a1a2e', padding: { x: 10, y: 6 }
+      fontSize: '16px', color: color || UI_THEME.text.brass, fontFamily: UI_THEME.font.body,
+      fontStyle: 'bold', stroke: UI_THEME.text.shadow, strokeThickness: 3,
+      backgroundColor: '#12201b', padding: { x: 10, y: 6 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9999);
 
     this.tweens.add({
@@ -293,12 +287,12 @@ export class PanelScene extends Phaser.Scene {
 
     const contentBg = this.add.rectangle(
       this.panelX, contentTop + (this.panelH - 60) / 2,
-      this.panelW - 20, this.panelH - 60, 0x12121e, 0.8
-    ).setStrokeStyle(1, 0x3a3a5a);
+      this.panelW - 20, this.panelH - 60, UI_THEME.colors.backdrop, 0.88
+    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(contentBg);
 
-    const title = this.add.text(leftX, topY, '⚙ 操作说明', {
-      fontSize: '16px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+    const title = this.add.text(leftX, topY, '操作说明', {
+      fontSize: '16px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(title);
 
@@ -321,24 +315,24 @@ export class PanelScene extends Phaser.Scene {
     bindings.forEach((pair, i) => {
       const y = topY + 40 + i * 28;
       const action = this.add.text(leftX + 10, y, pair[0], {
-        fontSize: '15px', fill: '#ccccdd', fontFamily: 'Courier New'
+        fontSize: '15px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
       });
       const key = this.add.text(leftX + 220, y, pair[1], {
-        fontSize: '15px', fill: '#88ccff', fontFamily: 'Courier New'
+        fontSize: '15px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.mono
       });
       container.add([action, key]);
     });
 
     const note = this.add.text(leftX + 10, topY + 40 + bindings.length * 28 + 20,
       '（快捷键暂不支持自定义）', {
-        fontSize: '14px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '14px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       });
     container.add(note);
 
     // ── 右栏：音频设置（音量滑条 + 静音） ──
     const audioX = this.panelX + 30;
-    const audioTitle = this.add.text(audioX, topY, '🔊 音频设置', {
-      fontSize: '16px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+    const audioTitle = this.add.text(audioX, topY, '音频设置', {
+      fontSize: '16px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(audioTitle);
 
@@ -355,7 +349,7 @@ export class PanelScene extends Phaser.Scene {
 
     const audioNote = this.add.text(audioX, topY + 270,
       '设置自动保存（独立于存档）', {
-        fontSize: '13px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '13px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       });
     container.add(audioNote);
 
@@ -376,14 +370,14 @@ export class PanelScene extends Phaser.Scene {
     const v0 = clamp01(getVal());
 
     const lbl = this.add.text(x, y - 18, label, {
-      fontSize: '14px', fill: '#ccccdd', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
     });
-    const track = this.add.rectangle(x, y, W, H, 0x2a2a44)
-      .setOrigin(0, 0.5).setStrokeStyle(1, 0x555577);
-    const fill = this.add.rectangle(x, y, W * v0, H, 0x44aaff).setOrigin(0, 0.5);
-    const handle = this.add.circle(x + W * v0, y, 9, 0x88ccff).setStrokeStyle(2, 0xffffff);
+    const track = this.add.rectangle(x, y, W, H, UI_THEME.colors.ink)
+      .setOrigin(0, 0.5).setStrokeStyle(1, UI_THEME.colors.borderMuted);
+    const fill = this.add.rectangle(x, y, W * v0, H, UI_THEME.colors.jade).setOrigin(0, 0.5);
+    const handle = this.add.circle(x + W * v0, y, 9, UI_THEME.colors.jadeBright).setStrokeStyle(2, UI_THEME.colors.paper);
     const valTxt = this.add.text(x + W + 16, y, Math.round(v0 * 100) + '%', {
-      fontSize: '13px', fill: '#88ccff', fontFamily: 'Courier New'
+      fontSize: '13px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.mono
     }).setOrigin(0, 0.5);
 
     const apply = (px) => {
@@ -417,18 +411,18 @@ export class PanelScene extends Phaser.Scene {
 
   /** 创建静音勾选框。 */
   _createMuteToggle(container, x, y) {
-    const box = this.add.rectangle(x, y, 20, 20, audioEngine.muted ? 0x44aaff : 0x222244)
-      .setStrokeStyle(2, 0x6666aa).setInteractive({ useHandCursor: true });
+    const box = this.add.rectangle(x, y, 20, 20, audioEngine.muted ? UI_THEME.colors.jade : UI_THEME.colors.ink)
+      .setStrokeStyle(2, UI_THEME.colors.border).setInteractive({ useHandCursor: true });
     const check = this.add.text(x, y, audioEngine.muted ? '✓' : '', {
-      fontSize: '15px', fill: '#ffffff', fontFamily: 'Courier New'
+      fontSize: '15px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5);
     const lbl = this.add.text(x + 16, y, '静音', {
-      fontSize: '14px', fill: '#ccccdd', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
     }).setOrigin(0, 0.5);
 
     box.on('pointerdown', () => {
       const m = audioEngine.toggleMuted();
-      box.setFillStyle(m ? 0x44aaff : 0x222244);
+      box.setFillStyle(m ? UI_THEME.colors.jade : UI_THEME.colors.ink);
       check.setText(m ? '✓' : '');
       audioEngine.playSfx('ui_click');
     });
@@ -436,7 +430,7 @@ export class PanelScene extends Phaser.Scene {
     container.add([box, check, lbl]);
     return {
       refresh: () => {
-        box.setFillStyle(audioEngine.muted ? 0x44aaff : 0x222244);
+        box.setFillStyle(audioEngine.muted ? UI_THEME.colors.jade : UI_THEME.colors.ink);
         check.setText(audioEngine.muted ? '✓' : '');
       }
     };

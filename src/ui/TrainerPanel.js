@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getClassLabel, THEME_CONFIG } from '../config/themeConfig.js';
+import { UI_THEME } from '../config/uiTheme.js';
 
 /**
  * TrainerPanel — 训练师 UI（in-scene overlay，与 ShopPanel/DialoguePanel 同模式）
@@ -24,33 +25,33 @@ export class TrainerPanel {
     this.container = this.displayScene.add.container(cx, cy)
       .setDepth(9991).setScrollFactor(0).setVisible(false);
 
-    this.bg = this.displayScene.add.rectangle(0, 0, W, H, 0x141420, 0.97)
-      .setStrokeStyle(2, 0x66ccff);
+    this.bg = this.displayScene.add.rectangle(0, 0, W, H, UI_THEME.colors.panel, 0.98)
+      .setStrokeStyle(2, UI_THEME.colors.jade);
     this.border = this.displayScene.add.rectangle(0, 0, W + 6, H + 6, 0, 0)
-      .setStrokeStyle(1, 0x66ccff, 0.3);
+      .setStrokeStyle(1, UI_THEME.colors.jade, 0.3);
 
     this.titleText = this.displayScene.add.text(0, -H / 2 + 22, '传功教习', {
-      fontSize: '24px', fill: '#66ccff', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '24px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     }).setOrigin(0.5, 0);
 
     this.subText = this.displayScene.add.text(0, -H / 2 + 56, '', {
-      fontSize: '14px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5, 0);
 
     this.goldText = this.displayScene.add.text(0, H / 2 - 60, '', {
-      fontSize: '16px', fill: '#ffdd44', fontFamily: 'Courier New'
+      fontSize: '16px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5, 0.5);
 
     // 重置按钮
     this.resetBtn = this.displayScene.add.text(0, H / 2 - 30, '[ 重悟传承 ]', {
-      fontSize: '16px', fill: '#ff8888', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '16px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
-    this.resetBtn.on('pointerover', () => this.resetBtn.setFill('#ffcccc'));
-    this.resetBtn.on('pointerout', () => this.resetBtn.setFill('#ff8888'));
+    this.resetBtn.on('pointerover', () => this.resetBtn.setFill(UI_THEME.text.paper));
+    this.resetBtn.on('pointerout', () => this.resetBtn.setFill(UI_THEME.text.cinnabarBright));
     this.resetBtn.on('pointerdown', () => this.service.resetTalents());
 
     this.hintText = this.displayScene.add.text(0, H / 2 - 8, '[ESC] 关闭', {
-      fontSize: '12px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
     }).setOrigin(0.5, 0.5);
 
     this.container.add([
@@ -145,7 +146,7 @@ export class TrainerPanel {
     const tree = this.scene.skillTreeSystem;
     if (!cfg.skills.length) {
       const t = this.displayScene.add.text(0, baseY, '（该教习暂无可授传承）', {
-        fontSize: '14px', fill: '#777777', fontFamily: 'Courier New'
+        fontSize: '14px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       }).setOrigin(0.5, 0);
       this.container.add(t);
       this.rows.push(t);
@@ -161,16 +162,16 @@ export class TrainerPanel {
       const rankInfo = node ? ` (${node.currentRank}/${node.maxRank})` : '';
       const stateLabel = state === 'maxed' ? '【已学满】' : state === 'unlocked' ? '【已学】' : '';
       const colorMap = {
-        maxed: '#888888', unlocked: '#aaffaa', available: '#ffffff', locked: '#777777'
+        maxed: UI_THEME.text.muted, unlocked: UI_THEME.text.jadeBright, available: UI_THEME.text.paper, locked: UI_THEME.text.disabled
       };
-      const color = check.ok ? '#ffffff' : colorMap[state] || '#777777';
+      const color = check.ok ? UI_THEME.text.paper : colorMap[state] || UI_THEME.text.disabled;
       const text = `${name}${rankInfo} ${stateLabel}\n  ${desc}  [Lv${entry.levelReq} / ${entry.goldCost}${THEME_CONFIG.currency}]`;
       const row = this.displayScene.add.text(-360, baseY + i * rowH, text, {
-        fontSize: '13px', fill: color, fontFamily: 'Courier New'
+        fontSize: '13px', fill: color, fontFamily: UI_THEME.font.body
       }).setOrigin(0, 0);
       if (check.ok) {
         row.setInteractive({ useHandCursor: true });
-        row.on('pointerover', () => row.setBackgroundColor('#2a3a4a'));
+        row.on('pointerover', () => row.setBackgroundColor('#233a31'));
         row.on('pointerout', () => row.setBackgroundColor(null));
         row.on('pointerdown', () => this.service.learn(entry));
       }

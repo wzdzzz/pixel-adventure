@@ -1,4 +1,5 @@
 import { THEME_CONFIG } from '../../config/themeConfig.js';
+import { UI_THEME } from '../../config/uiTheme.js';
 
 export const QuestLogPanel = {
   createQuestLogTab() {
@@ -12,8 +13,8 @@ export const QuestLogPanel = {
     // Content background
     const contentBg = this.add.rectangle(
       this.panelX, contentTop + contentH / 2,
-      contentW, contentH, 0x12121e, 0.8
-    ).setStrokeStyle(1, 0x3a3a5a);
+      contentW, contentH, UI_THEME.colors.backdrop, 0.88
+    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(contentBg);
 
     // Left panel (30%) - quest list
@@ -21,13 +22,13 @@ export const QuestLogPanel = {
     const leftX = this.panelLeft + 10;
     const listBg = this.add.rectangle(
       leftX + leftW / 2, contentTop + contentH / 2,
-      leftW, contentH - 10, 0x1a1a28, 0.9
-    ).setStrokeStyle(1, 0x3a3a4a);
+      leftW, contentH - 10, UI_THEME.colors.panelRaised, 0.9
+    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(listBg);
 
     // Quest list title
     const listTitle = this.add.text(leftX + 10, contentTop + 10, '游历与悬赏', {
-      fontSize: '15px', fill: '#aaaacc', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '15px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(listTitle);
 
@@ -42,33 +43,33 @@ export const QuestLogPanel = {
 
     // Detail panel title
     this.questDetailTitle = this.add.text(rightX + 10, contentTop + 10, '', {
-      fontSize: '17px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '17px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(this.questDetailTitle);
 
     // Quest type badge
     this.questDetailType = this.add.text(rightX + 10, contentTop + 32, '', {
-      fontSize: '13px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(this.questDetailType);
 
     // Description
     this.questDetailDesc = this.add.text(rightX + 10, contentTop + 52, '', {
-      fontSize: '14px', fill: '#aaaaaa', fontFamily: 'Courier New',
+      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body,
       wordWrap: { width: rightW - 30 }
     });
     container.add(this.questDetailDesc);
 
     // Objectives section
     this.questObjTitle = this.add.text(rightX + 10, contentTop + 100, '', {
-      fontSize: '14px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body
     });
     container.add(this.questObjTitle);
 
     this.questObjTexts = [];
     for (let i = 0; i < 5; i++) {
       const objText = this.add.text(rightX + 20, contentTop + 120 + i * 22, '', {
-        fontSize: '14px', fill: '#cccccc', fontFamily: 'Courier New'
+        fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
       });
       this.questObjTexts.push(objText);
       container.add(objText);
@@ -76,21 +77,21 @@ export const QuestLogPanel = {
 
     // Rewards section
     this.questRewardsTitle = this.add.text(rightX + 10, contentTop + 240, '', {
-      fontSize: '14px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body
     });
     container.add(this.questRewardsTitle);
 
     this.questRewardsText = this.add.text(rightX + 20, contentTop + 260, '', {
-      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     });
     container.add(this.questRewardsText);
 
     // 追踪按钮
     const trackBtnY = contentTop + contentH - 30;
-    this.questTrackBtnBg = this.add.rectangle(rightX + rightW / 2, trackBtnY, 120, 26, 0x2a3a2a)
-      .setStrokeStyle(1, 0x44bb44).setInteractive({ useHandCursor: true });
+    this.questTrackBtnBg = this.add.rectangle(rightX + rightW / 2, trackBtnY, 120, 26, UI_THEME.colors.panelRaised)
+      .setStrokeStyle(1, UI_THEME.colors.jade).setInteractive({ useHandCursor: true });
     this.questTrackBtnText = this.add.text(rightX + rightW / 2, trackBtnY, '追踪任务', {
-      fontSize: '14px', fill: '#44bb44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5);
     this.questTrackBtnBg.on('pointerdown', () => {
       if (!this.selectedQuestId) return;
@@ -150,7 +151,7 @@ export const QuestLogPanel = {
 
       // Group header
       const header = this.add.text(leftX + 15, y, group.label, {
-        fontSize: '13px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '13px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       });
       this.questListContainer.add(header);
       y += 18;
@@ -158,19 +159,19 @@ export const QuestLogPanel = {
       group.quests.forEach(quest => {
         const isSelected = quest.id === this.selectedQuestId;
         const isCompleted = quest.status === 'completed';
-        const color = isCompleted ? '#555555' : (quest.type === 'main' ? '#ffaa44' : '#aaaacc');
+        const color = isCompleted ? UI_THEME.text.disabled : (quest.type === 'main' ? UI_THEME.text.brass : UI_THEME.text.muted);
 
         const item = this.add.text(leftX + 20, y,
           `${isCompleted ? '\u2713 ' : '\u25CF '}${quest.title}`, {
-            fontSize: '14px', fill: isSelected ? '#ffffff' : color,
-            fontFamily: 'Courier New',
-            backgroundColor: isSelected ? '#3a3a5e' : undefined,
+            fontSize: '14px', fill: isSelected ? UI_THEME.text.jadeBright : color,
+            fontFamily: UI_THEME.font.body,
+            backgroundColor: isSelected ? '#233a31' : undefined,
             padding: isSelected ? { x: 4, y: 2 } : undefined
           }
         ).setInteractive({ useHandCursor: true });
 
         item.on('pointerdown', () => this.selectQuest(quest.id));
-        item.on('pointerover', () => { if (!isSelected) item.setColor('#ffffff'); });
+        item.on('pointerover', () => { if (!isSelected) item.setColor(UI_THEME.text.paper); });
         item.on('pointerout', () => { if (quest.id !== this.selectedQuestId) item.setColor(color); });
 
         this.questListContainer.add(item);
@@ -222,7 +223,7 @@ export const QuestLogPanel = {
 
     this.questDetailTitle.setText(quest.title);
     this.questDetailType.setText(`${typeLabels[quest.type] || ''} ${statusLabels[quest.status] || ''}`);
-    this.questDetailType.setColor(quest.type === 'main' ? '#ffaa44' : '#8888aa');
+    this.questDetailType.setColor(quest.type === 'main' ? UI_THEME.text.brass : UI_THEME.text.muted);
     this.questDetailDesc.setText(quest.description);
 
     // Objectives
@@ -232,7 +233,7 @@ export const QuestLogPanel = {
         const done = obj.current >= obj.required;
         const prefix = done ? '\u2713' : '\u25CB';
         this.questObjTexts[i].setText(`${prefix} ${obj.text} (${obj.current}/${obj.required})`);
-        this.questObjTexts[i].setColor(done ? '#44bb44' : '#cccccc');
+        this.questObjTexts[i].setColor(done ? UI_THEME.text.jadeBright : UI_THEME.text.paper);
       }
     });
     // Clear remaining objective lines
@@ -258,15 +259,15 @@ export const QuestLogPanel = {
         this.questTrackBtnBg.setVisible(true);
         this.questTrackBtnText.setVisible(true);
         this.questTrackBtnText.setText('接受任务');
-        this.questTrackBtnText.setColor('#44ff88');
-        this.questTrackBtnBg.setStrokeStyle(1, 0x44ff88);
+        this.questTrackBtnText.setColor(UI_THEME.text.jadeBright);
+        this.questTrackBtnBg.setStrokeStyle(1, UI_THEME.colors.jadeBright);
       } else if (quest.status === 'active') {
         this._questBtnMode = 'track';
         this.questTrackBtnBg.setVisible(true);
         this.questTrackBtnText.setVisible(true);
         this.questTrackBtnText.setText(isTracked ? '已追踪' : '追踪任务');
-        this.questTrackBtnText.setColor(isTracked ? '#ffd700' : '#44bb44');
-        this.questTrackBtnBg.setStrokeStyle(1, isTracked ? 0xffd700 : 0x44bb44);
+        this.questTrackBtnText.setColor(isTracked ? UI_THEME.text.brass : UI_THEME.text.jade);
+        this.questTrackBtnBg.setStrokeStyle(1, isTracked ? UI_THEME.colors.brass : UI_THEME.colors.jade);
       } else {
         this._questBtnMode = null;
         this.questTrackBtnBg.setVisible(false);

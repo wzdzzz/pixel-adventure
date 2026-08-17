@@ -1,5 +1,6 @@
 // 伙伴 P3 验证：招募 2 个 → 队伍面板渲染 + 出战/待命/解散/姿态（含友伤 stage 全流程）
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
@@ -13,12 +14,7 @@ page.on('pageerror', (e) => pageErrors.push(e.message));
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(1000);
-await page.mouse.click(960, 540);
-await page.waitForTimeout(400);
-await page.mouse.click(960, 572);
-await page.waitForTimeout(500);
-await page.mouse.click(960, 410);
-await page.waitForTimeout(2800);
+await enterFreshGame(page);
 
 // 招募两个伙伴
 const recruit = await page.evaluate(() => {

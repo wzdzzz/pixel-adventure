@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { RESOURCE_LABELS, THEME_CONFIG } from '../config/themeConfig.js';
+import { UI_THEME } from '../config/uiTheme.js';
 import { TEXTURES } from '../assets/AssetManager.js';
 import { Tooltip } from '../ui/Tooltip.js';
 import itemData from '../data/items.json';
@@ -71,14 +72,16 @@ export class UIScene extends Phaser.Scene {
     const W = 640, H = 24;
     this.bossBar = this.add.container(cx, top).setDepth(50).setScrollFactor(0).setVisible(false);
 
-    const frame = this.add.rectangle(0, 0, W + 8, H + 8, 0x000000, 0.75).setStrokeStyle(2, 0x882222);
-    this.bossBarBg = this.add.rectangle(0, 0, W, H, 0x2a0d0d).setStrokeStyle(1, 0x551111);
-    this.bossBarFill = this.add.rectangle(-W / 2, 0, W, H, 0xcc2222).setOrigin(0, 0.5);
+    const frame = this.add.rectangle(0, 0, W + 8, H + 8, UI_THEME.colors.shadow, 0.82)
+      .setStrokeStyle(2, UI_THEME.colors.cinnabar);
+    this.bossBarBg = this.add.rectangle(0, 0, W, H, UI_THEME.colors.backdrop)
+      .setStrokeStyle(1, UI_THEME.colors.brassMuted);
+    this.bossBarFill = this.add.rectangle(-W / 2, 0, W, H, UI_THEME.colors.cinnabar).setOrigin(0, 0.5);
     this.bossNameText = this.add.text(0, -H / 2 - 12, '', {
-      fontSize: '18px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '18px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.display, fontStyle: 'bold'
     }).setOrigin(0.5);
     this.bossPhaseText = this.add.text(W / 2, -H / 2 - 10, '', {
-      fontSize: '14px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setOrigin(1, 0.5);
     this.bossBar.add([frame, this.bossBarBg, this.bossBarFill, this.bossNameText, this.bossPhaseText]);
     this._bossBarW = W;
@@ -97,8 +100,10 @@ export class UIScene extends Phaser.Scene {
       if (boss !== this._bossRef) return;
       this.bossPhaseText.setText('狂暴 ' + 'I'.repeat(phase));
       // 血条闪一下
-      this.bossBarFill.setFillStyle(0xff8888);
-      this.time.delayedCall(180, () => this.bossBarFill && this.bossBarFill.setFillStyle(0xcc2222));
+      this.bossBarFill.setFillStyle(UI_THEME.colors.cinnabarBright);
+      this.time.delayedCall(180, () => {
+        if (this.bossBarFill) this.bossBarFill.setFillStyle(UI_THEME.colors.cinnabar);
+      });
     });
     const hideBoss = (boss) => {
       if (boss && boss !== this._bossRef) return;
@@ -116,8 +121,8 @@ export class UIScene extends Phaser.Scene {
 
   _showBossDefeatBanner(name) {
     const t = this.add.text(this._uiW / 2, this._uiH / 2 - 80, `${name} 已被击败！`, {
-      fontSize: '40px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 6
+      fontSize: '40px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.display, fontStyle: 'bold',
+      stroke: UI_THEME.text.shadow, strokeThickness: 6
     }).setOrigin(0.5).setDepth(60).setScrollFactor(0);
     this.tweens.add({ targets: t, alpha: 0, y: t.y - 60, duration: 2500, ease: 'Cubic.easeIn', onComplete: () => t.destroy() });
   }
@@ -138,8 +143,8 @@ export class UIScene extends Phaser.Scene {
 
   createHUD() {
     // 左下角状态区域背景
-    this.hudBg = this.add.rectangle(0, this._uiH - 120, 280, 120, 0x000000, 0.7)
-      .setOrigin(0, 0).setDepth(1);
+    this.hudBg = this.add.rectangle(0, this._uiH - 120, 280, 120, UI_THEME.colors.ink, 0.88)
+      .setOrigin(0, 0).setStrokeStyle(1, UI_THEME.colors.borderMuted).setDepth(1);
   }
 
   createHealthBar() {
@@ -149,50 +154,50 @@ export class UIScene extends Phaser.Scene {
 
     // Level display
     this.playerLevelText = this.add.text(baseX, baseY, 'LV.1', {
-      fontSize: '15px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '15px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.mono, fontStyle: 'bold'
     }).setDepth(3);
 
     // HP - 红色
     this.heartIcon = this.add.image(baseX + 10, baseY + 24, TEXTURES.HEART).setScale(0.8).setDepth(2);
-    this.hpBarBg = this.add.rectangle(baseX + 30, baseY + 24, 180, 14, 0x333333).setOrigin(0, 0.5).setDepth(2);
-    this.hpBarBg.setStrokeStyle(1, 0x666666);
-    this.hpGhost = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, 0xffffff, 0.4).setOrigin(0, 0.5).setDepth(2.5);
-    this.hpBar = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, 0xcc3333).setOrigin(0, 0.5).setDepth(3);
+    this.hpBarBg = this.add.rectangle(baseX + 30, baseY + 24, 180, 14, UI_THEME.colors.backdrop).setOrigin(0, 0.5).setDepth(2);
+    this.hpBarBg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
+    this.hpGhost = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, UI_THEME.colors.paper, 0.35).setOrigin(0, 0.5).setDepth(2.5);
+    this.hpBar = this.add.rectangle(baseX + 31, baseY + 24, 178, 12, UI_THEME.colors.cinnabar).setOrigin(0, 0.5).setDepth(3);
     this.hpText = this.add.text(baseX + 215, baseY + 24, '100/100', {
-      fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.mono
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // Stamina bar - 蓝色
-    this.staminaBarBg = this.add.rectangle(baseX + 30, baseY + 44, 180, 10, 0x333333).setOrigin(0, 0.5).setDepth(2);
-    this.staminaBarBg.setStrokeStyle(1, 0x333344);
-    this.staminaBar = this.add.rectangle(baseX + 31, baseY + 44, 178, 8, 0x3388dd).setOrigin(0, 0.5).setDepth(3);
+    // 灵力 / 体力
+    this.staminaBarBg = this.add.rectangle(baseX + 30, baseY + 44, 180, 10, UI_THEME.colors.backdrop).setOrigin(0, 0.5).setDepth(2);
+    this.staminaBarBg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
+    this.staminaBar = this.add.rectangle(baseX + 31, baseY + 44, 178, 8, UI_THEME.colors.jade).setOrigin(0, 0.5).setDepth(3);
     this.staminaText = this.add.text(baseX + 215, baseY + 44, '140/140', {
-      fontSize: '13px', fill: '#5599ee', fontFamily: 'Courier New'
+      fontSize: '13px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.mono
     }).setOrigin(0, 0.5).setDepth(3);
 
-    // Rage bar - 橙色
-    this.rageBarBg = this.add.rectangle(baseX + 30, baseY + 60, 180, 8, 0x333333).setOrigin(0, 0.5).setDepth(2);
-    this.rageBarBg.setStrokeStyle(1, 0x443322);
-    this.rageBar = this.add.rectangle(baseX + 31, baseY + 60, 0, 6, 0xff8822).setOrigin(0, 0.5).setDepth(3);
+    // 怒气
+    this.rageBarBg = this.add.rectangle(baseX + 30, baseY + 60, 180, 8, UI_THEME.colors.backdrop).setOrigin(0, 0.5).setDepth(2);
+    this.rageBarBg.setStrokeStyle(1, UI_THEME.colors.brassMuted);
+    this.rageBar = this.add.rectangle(baseX + 31, baseY + 60, 0, 6, UI_THEME.colors.brass).setOrigin(0, 0.5).setDepth(3);
     this.rageText = this.add.text(baseX + 215, baseY + 60, '0/100', {
-      fontSize: '12px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '12px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.mono
     }).setOrigin(0, 0.5).setDepth(3);
 
     // XP bar
-    this.xpBarBg = this.add.rectangle(baseX + 30, baseY + 76, 180, 6, 0x222233).setOrigin(0, 0.5).setDepth(2);
-    this.xpBarBg.setStrokeStyle(1, 0x333344);
-    this.xpBar = this.add.rectangle(baseX + 31, baseY + 76, 0, 4, 0x9966ff).setOrigin(0, 0.5).setDepth(3);
+    this.xpBarBg = this.add.rectangle(baseX + 30, baseY + 76, 180, 6, UI_THEME.colors.backdrop).setOrigin(0, 0.5).setDepth(2);
+    this.xpBarBg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
+    this.xpBar = this.add.rectangle(baseX + 31, baseY + 76, 0, 4, UI_THEME.colors.jadeBright).setOrigin(0, 0.5).setDepth(3);
     this.xpText = this.add.text(baseX + 215, baseY + 76, `${THEME_CONFIG.experience}: 0/40`, {
-      fontSize: '12px', fill: '#9988cc', fontFamily: 'Courier New'
+      fontSize: '12px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.mono
     }).setOrigin(0, 0.5).setDepth(3);
 
     // Key + Gold below XP
     this.keyIcon = this.add.image(baseX + 30, baseY + 95, TEXTURES.KEY).setScale(0.7).setDepth(2);
     this.keyText = this.add.text(baseX + 45, baseY + 95, 'x0', {
-      fontSize: '14px', fill: '#ff69b4', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.mono
     }).setOrigin(0, 0.5).setDepth(2);
-    this.goldText = this.add.text(baseX + 100, baseY + 95, '💰 0', {
-      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
+    this.goldText = this.add.text(baseX + 100, baseY + 95, `${THEME_CONFIG.currency}: 0`, {
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setOrigin(0, 0.5).setDepth(2);
   }
 
@@ -203,7 +208,7 @@ export class UIScene extends Phaser.Scene {
     // 右上角仅保留关卡名
     const width = this._uiW;
     this.levelText = this.add.text(width - 15, 15, '第一关', {
-      fontSize: '14px', fill: '#7c4dff', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body
     }).setOrigin(1, 0).setDepth(2);
   }
 
@@ -228,26 +233,26 @@ export class UIScene extends Phaser.Scene {
       const skillId = playerSlots[i];
       const base = skillId ? skillDefs[skillId] : null;
 
-      const bg = this.add.rectangle(x, slotY, slotSize, slotSize, 0x1a1a2e, 0.85)
-        .setStrokeStyle(1, base ? 0x5a5a8a : 0x333344).setDepth(4);
+      const bg = this.add.rectangle(x, slotY, slotSize, slotSize, UI_THEME.colors.panel, 0.9)
+        .setStrokeStyle(1, base ? UI_THEME.colors.jade : UI_THEME.colors.borderMuted).setDepth(4);
 
       const icon = this.add.text(x, slotY - 2, base ? base.icon : '', {
-        fontSize: '18px', fontFamily: 'Courier New'
+        fontSize: '18px', fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setDepth(5);
 
       const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `${i + 1}`, {
-        fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New'
+        fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
       }).setDepth(6);
 
-      const cdOverlay = this.add.rectangle(x, slotY, slotSize - 2, 0, 0x000000, 0.6)
+      const cdOverlay = this.add.rectangle(x, slotY, slotSize - 2, 0, UI_THEME.colors.shadow, 0.68)
         .setOrigin(0.5, 1).setDepth(5.5);
 
       const cdText = this.add.text(x, slotY + 2, '', {
-        fontSize: '14px', fill: '#ff6666', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.mono, fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(6).setVisible(false);
 
       const lvText = this.add.text(x + slotSize / 2 - 2, slotY + slotSize / 2 - 2, '', {
-        fontSize: '11px', fill: '#aaccff', fontFamily: 'Courier New'
+        fontSize: '11px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.mono
       }).setOrigin(1, 1).setDepth(6);
 
       this.skillSlots.push({ bg, icon, keyLabel, cdOverlay, cdText, lvText, skillId, x, y: slotY, size: slotSize });
@@ -273,20 +278,20 @@ export class UIScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) {
       const x = itemStartX + i * (slotSize + gap) + slotSize / 2;
 
-      const bg = this.add.rectangle(x, slotY, slotSize, slotSize, 0x1a2a1e, 0.85)
-        .setStrokeStyle(1, 0x3a5a3a).setDepth(4);
+      const bg = this.add.rectangle(x, slotY, slotSize, slotSize, UI_THEME.colors.panel, 0.9)
+        .setStrokeStyle(1, UI_THEME.colors.border).setDepth(4);
 
       const icon = this.add.text(x, slotY - 2, '', {
-        fontSize: '16px', fontFamily: 'Courier New'
+        fontSize: '16px', fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setDepth(5);
 
       const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `F${i + 1}`, {
-        fontSize: '11px', fill: '#88aa88', fontFamily: 'Courier New'
+        fontSize: '11px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.mono
       }).setDepth(6);
 
       const countText = this.add.text(x + slotSize / 2 - 3, slotY + slotSize / 2 - 3, '', {
-        fontSize: '12px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: 2
+        fontSize: '12px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.mono, fontStyle: 'bold',
+        stroke: UI_THEME.text.shadow, strokeThickness: 2
       }).setOrigin(1, 1).setDepth(6);
 
       this.itemSlots.push({ bg, icon, keyLabel, countText, x, y: slotY, size: slotSize });
@@ -380,7 +385,7 @@ export class UIScene extends Phaser.Scene {
       const base = id ? skillDefs[id] : null;
       slot.skillId = id;
       slot.icon.setText(base ? base.icon : '');
-      slot.bg.setStrokeStyle(1, base ? 0x5a5a8a : 0x333344);
+      slot.bg.setStrokeStyle(1, base ? UI_THEME.colors.jade : UI_THEME.colors.borderMuted);
       slot.cdOverlay.setSize(slot.size - 2, 0);
       slot.cdText.setVisible(false);
       slot.lvText.setText('');
@@ -399,7 +404,7 @@ export class UIScene extends Phaser.Scene {
       if (!itemId) {
         slot.icon.setText('');
         slot.countText.setText('');
-        slot.bg.setStrokeStyle(1, 0x3a5a3a);
+        slot.bg.setStrokeStyle(1, UI_THEME.colors.border);
         return;
       }
       // 查背包里该 id 的总数量
@@ -416,11 +421,11 @@ export class UIScene extends Phaser.Scene {
       // 没有 icon 则从 items.json 取
       if (!icon) {
         const data = itemData.items?.[itemId];
-        icon = data?.icon || '🧪';
+        icon = data?.icon || '丹';
       }
       slot.icon.setText(icon);
       slot.countText.setText(`${qty}`);
-      slot.bg.setStrokeStyle(1, qty > 0 ? 0x55aa55 : 0x553333);
+      slot.bg.setStrokeStyle(1, qty > 0 ? UI_THEME.colors.jade : UI_THEME.colors.cinnabar);
     });
   }
 
@@ -429,18 +434,18 @@ export class UIScene extends Phaser.Scene {
     this.buffSlotMax = 8;
     this.buffIconSize = 28;
     for (let i = 0; i < this.buffSlotMax; i++) {
-      const bg = this.add.rectangle(0, 0, this.buffIconSize, this.buffIconSize, 0x1a1a2e, 0.85)
-        .setStrokeStyle(1, 0x66ff88).setDepth(4).setVisible(false);
+      const bg = this.add.rectangle(0, 0, this.buffIconSize, this.buffIconSize, UI_THEME.colors.panel, 0.9)
+        .setStrokeStyle(1, UI_THEME.colors.jade).setDepth(4).setVisible(false);
       const icon = this.add.text(0, 0, '', {
-        fontSize: '16px', fontFamily: 'Courier New'
+        fontSize: '16px', fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setDepth(5).setVisible(false);
       const time = this.add.text(0, 0, '', {
-        fontSize: '12px', color: '#ffffff', fontFamily: 'Courier New',
-        fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+        fontSize: '12px', color: UI_THEME.text.paper, fontFamily: UI_THEME.font.mono,
+        fontStyle: 'bold', stroke: UI_THEME.text.shadow, strokeThickness: 2
       }).setOrigin(0.5, 0.5).setDepth(6).setVisible(false);
       const stacks = this.add.text(0, 0, '', {
-        fontSize: '12px', color: '#ffdd44', fontFamily: 'Courier New',
-        fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+        fontSize: '12px', color: UI_THEME.text.brass, fontFamily: UI_THEME.font.mono,
+        fontStyle: 'bold', stroke: UI_THEME.text.shadow, strokeThickness: 2
       }).setOrigin(1, 0).setDepth(6).setVisible(false);
       this.buffSlots.push({ bg, icon, time, stacks });
     }
@@ -466,13 +471,13 @@ export class UIScene extends Phaser.Scene {
         const x = startX + i * (size + gapB);
         slot.bg.setPosition(x, y).setVisible(true);
         if (b.type === 'debuff' || b.type === 'dot') {
-          slot.bg.setStrokeStyle(1, 0xff6666);
+          slot.bg.setStrokeStyle(1, UI_THEME.colors.cinnabarBright);
         } else if (b.type === 'buff') {
-          slot.bg.setStrokeStyle(1, 0x66ff88);
+          slot.bg.setStrokeStyle(1, UI_THEME.colors.jadeBright);
         } else {
-          slot.bg.setStrokeStyle(1, 0xffdd44);
+          slot.bg.setStrokeStyle(1, UI_THEME.colors.brass);
         }
-        slot.icon.setPosition(x, y - 2).setText(b.icon || '✨').setVisible(true);
+        slot.icon.setPosition(x, y - 2).setText(b.icon || '益').setVisible(true);
         const sec = Math.max(0, b.remaining / 1000);
         slot.time.setPosition(x, y + size / 2 - 5)
           .setText(sec >= 10 ? `${Math.floor(sec)}` : sec.toFixed(1))
@@ -539,7 +544,7 @@ export class UIScene extends Phaser.Scene {
       }
 
       this.gameScene.events.on('goldChanged', (gold) => {
-        if (this.goldText) this.goldText.setText(`💰 ${gold}`);
+        if (this.goldText) this.goldText.setText(`${THEME_CONFIG.currency}: ${gold}`);
       });
 
       // Quest tracking
@@ -575,11 +580,11 @@ export class UIScene extends Phaser.Scene {
     this.hpBar.width = newWidth;
 
     if (percentage > 0.6) {
-      this.hpBar.setFillStyle(0xcc3333);
+      this.hpBar.setFillStyle(UI_THEME.colors.cinnabar);
     } else if (percentage > 0.3) {
-      this.hpBar.setFillStyle(0xdd2222);
+      this.hpBar.setFillStyle(UI_THEME.colors.cinnabarBright);
     } else {
-      this.hpBar.setFillStyle(0xff1111);
+      this.hpBar.setFillStyle(UI_THEME.colors.cinnabarBright);
     }
 
     this.hpText.setText(`${Math.floor(hp)}/${maxHp}`);
@@ -637,19 +642,19 @@ export class UIScene extends Phaser.Scene {
     const width = this._uiW;
     const height = this._uiH;
 
-    this.questTrackerBg = this.add.rectangle(width - 10, height - 90, 200, 60, 0x000000, 0.5)
-      .setOrigin(1, 1).setStrokeStyle(1, 0x333355).setDepth(1);
+    this.questTrackerBg = this.add.rectangle(width - 10, height - 90, 200, 60, UI_THEME.colors.ink, 0.82)
+      .setOrigin(1, 1).setStrokeStyle(1, UI_THEME.colors.borderMuted).setDepth(1);
 
     this.questTrackerTitle = this.add.text(width - 205, height - 145, '', {
-      fontSize: '13px', fill: '#ffaa44', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '13px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     }).setDepth(2);
 
     this.questTrackerObj1 = this.add.text(width - 205, height - 130, '', {
-      fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     }).setDepth(2);
 
     this.questTrackerObj2 = this.add.text(width - 205, height - 115, '', {
-      fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New'
+      fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     }).setDepth(2);
   }
 
@@ -699,21 +704,21 @@ export class UIScene extends Phaser.Scene {
         slot.cdOverlay.setPosition(slot.x, slot.y + (slot.size - 2) / 2);
         slot.cdText.setText(`${(cdInfo.remaining / 1000).toFixed(1)}`);
         slot.cdText.setVisible(true);
-        slot.bg.setStrokeStyle(1, 0x444444);
+        slot.bg.setStrokeStyle(1, UI_THEME.colors.disabled);
       } else {
         slot.cdOverlay.setSize(slot.size - 2, 0);
         slot.cdText.setVisible(false);
 
         const check = engine.canUse(slot.skillId);
         if (check.canUse) {
-          slot.bg.setStrokeStyle(1, 0x66aaff);
+          slot.bg.setStrokeStyle(1, UI_THEME.colors.jadeBright);
         } else {
-          slot.bg.setStrokeStyle(1, 0x664444);
+          slot.bg.setStrokeStyle(1, UI_THEME.colors.cinnabar);
         }
       }
 
       if (engine.activeSkillId === slot.skillId) {
-        slot.bg.setStrokeStyle(2, 0xffdd44);
+        slot.bg.setStrokeStyle(2, UI_THEME.colors.brass);
       }
     }
   }
@@ -736,8 +741,8 @@ export class UIScene extends Phaser.Scene {
     this._mm = { mapX, mapY, cellSize, gridCount, mapSize };
 
     // 半透明底板
-    this._mmBg = this.add.rectangle(mapX, mapY, mapSize + 4, mapSize + 4, 0x000000, 0.7)
-      .setOrigin(0, 0).setStrokeStyle(1, 0x555577).setDepth(8);
+    this._mmBg = this.add.rectangle(mapX, mapY, mapSize + 4, mapSize + 4, UI_THEME.colors.ink, 0.84)
+      .setOrigin(0, 0).setStrokeStyle(1, UI_THEME.colors.border).setDepth(8);
 
     // 用 Graphics 绘制 chunk 格子
     this._mmGfx = this.add.graphics().setDepth(9);
@@ -747,7 +752,7 @@ export class UIScene extends Phaser.Scene {
     this._drawMinimapMarkers();
 
     // 玩家位置指示器（小亮点）
-    this._mmPlayerDot = this.add.circle(0, 0, 3, 0x00ff00).setDepth(11);
+    this._mmPlayerDot = this.add.circle(0, 0, 3, UI_THEME.colors.jadeBright).setDepth(11);
     // 闪烁动画
     this.tweens.add({
       targets: this._mmPlayerDot,
@@ -756,13 +761,13 @@ export class UIScene extends Phaser.Scene {
 
     // 信息文字（地图下方）
     this._mmInfoText = this.add.text(mapX, mapY + mapSize + 10, '', {
-      fontSize: '13px', fill: '#cccccc', fontFamily: 'Courier New',
+      fontSize: '13px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body,
       lineSpacing: 2
     }).setDepth(8);
 
     // 坐标文字
     this._mmCoordText = this.add.text(mapX + mapSize + 4, mapY + mapSize + 10, '', {
-      fontSize: '13px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
     }).setOrigin(1, 0).setDepth(8);
 
     // 缓存上次玩家所在 chunk 以减少重绘
@@ -778,24 +783,24 @@ export class UIScene extends Phaser.Scene {
     const { mapX, mapY, cellSize } = this._mm;
     const ox = mapX + 2; // 底板 padding
 
-    // 城镇 — 白色方块
+    // 城镇 — 纸白方块
     const town = WORLD_LAYOUT.town;
-    g.fillStyle(0xffffff, 0.9);
+    g.fillStyle(UI_THEME.colors.paper, 0.9);
     g.fillRect(ox + town.chunkX * cellSize + 2, mapY + 2 + town.chunkY * cellSize + 2, cellSize - 4, cellSize - 4);
 
-    // 营地 — 黄色小三角
+    // 驿站 — 铜金小三角
     for (const camp of WORLD_LAYOUT.camps) {
       const cx = ox + camp.chunkX * cellSize + cellSize / 2;
       const cy = mapY + 2 + camp.chunkY * cellSize + cellSize / 2;
-      g.fillStyle(0xffdd44, 0.9);
+      g.fillStyle(UI_THEME.colors.brass, 0.9);
       g.fillTriangle(cx, cy - 3, cx - 3, cy + 2, cx + 3, cy + 2);
     }
 
-    // Boss — 红色菱形
+    // 首领 — 朱砂菱形
     for (const boss of WORLD_LAYOUT.bosses) {
       const cx = ox + boss.chunkX * cellSize + cellSize / 2;
       const cy = mapY + 2 + boss.chunkY * cellSize + cellSize / 2;
-      g.fillStyle(0xff3333, 0.9);
+      g.fillStyle(UI_THEME.colors.cinnabarBright, 0.9);
       g.fillTriangle(cx, cy - 4, cx - 3, cy, cx + 3, cy);
       g.fillTriangle(cx, cy + 4, cx - 3, cy, cx + 3, cy);
     }
@@ -866,7 +871,7 @@ export class UIScene extends Phaser.Scene {
       for (let gx = 0; gx < gridCount; gx++) {
         const biomeId = gen ? gen.getBiome(gx, gy) : 'forest';
         const biomeInfo = BIOMES[biomeId];
-        const color = biomeInfo?.color || 0x333333;
+        const color = biomeInfo?.color || UI_THEME.colors.panelRaised;
 
         const explored = ws?.exploredChunks?.has(`${gx},${gy}`);
         const alpha = explored ? 0.85 : 0.25;
@@ -878,20 +883,21 @@ export class UIScene extends Phaser.Scene {
 
     // 当前玩家所在 chunk 高亮边框
     if (playerCx >= 0 && playerCx < gridCount && playerCy >= 0 && playerCy < gridCount) {
-      g.lineStyle(1, 0x00ff00, 0.9);
+      g.lineStyle(1, UI_THEME.colors.jadeBright, 0.9);
       g.strokeRect(ox + playerCx * cellSize, oy + playerCy * cellSize, cellSize - 1, cellSize - 1);
     }
   }
 
   createDebugButton() {
     if (!import.meta.env.DEV) return;
-    const btn = this.add.text(this._uiW - 10, 40, '🛠 +材料', {
-      fontSize: '14px', fill: '#ff6666', fontFamily: 'Courier New',
-      backgroundColor: '#1a1a2e', padding: { x: 6, y: 4 }
+    const btn = this.add.text(this._uiW - 10, 40, '[测] +材料', {
+      fontSize: '14px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body,
+      backgroundColor: `#${UI_THEME.colors.panel.toString(16).padStart(6, '0')}`,
+      padding: { x: 6, y: 4 }
     }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
 
-    btn.on('pointerover', () => btn.setColor('#ffaaaa'));
-    btn.on('pointerout', () => btn.setColor('#ff6666'));
+    btn.on('pointerover', () => btn.setColor(UI_THEME.text.paper));
+    btn.on('pointerout', () => btn.setColor(UI_THEME.text.cinnabarBright));
     btn.on('pointerdown', () => {
       const inventory = this.gameScene?.inventory;
       if (!inventory) return;
@@ -913,8 +919,8 @@ export class UIScene extends Phaser.Scene {
 
       // 提示
       const msg = this.add.text(this._uiW / 2, 80, `已添加全部材料 ×9999 + ${THEME_CONFIG.currency} ×99999`, {
-        fontSize: '16px', color: '#44ff44', fontFamily: 'Courier New',
-        fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+        fontSize: '16px', color: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body,
+        fontStyle: 'bold', stroke: UI_THEME.text.shadow, strokeThickness: 3
       }).setOrigin(0.5).setDepth(9999);
       this.tweens.add({
         targets: msg, alpha: 0, y: msg.y - 30,

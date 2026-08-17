@@ -1,5 +1,6 @@
 // 伙伴 P0 修复验证：招募 / 跟随 / 友伤 / 对话 stage 推进
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
@@ -13,12 +14,7 @@ page.on('pageerror', (e) => pageErrors.push(e.message));
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(1000);
-await page.mouse.click(960, 540);   // 解锁
-await page.waitForTimeout(400);
-await page.mouse.click(960, 572);   // 新建游戏
-await page.waitForTimeout(500);
-await page.mouse.click(960, 410);   // 开始冒险（warrior）
-await page.waitForTimeout(2800);    // 等进游戏 + chunk 生成 NPC
+await enterFreshGame(page);         // 等进游戏 + chunk 生成 NPC
 
 // 1) 招募（给金币 + 走 recruit_companion action 真实路径）
 const recruit = await page.evaluate(() => {

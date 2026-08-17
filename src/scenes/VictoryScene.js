@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { UI_THEME } from '../config/uiTheme.js';
 
 /**
  * 胜利场景
@@ -17,87 +18,90 @@ export class VictoryScene extends Phaser.Scene {
   create() {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+    const { colors, text, font } = UI_THEME;
 
-    // 背景 - 渐变效果
-    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
+    this.add.rectangle(width / 2, height / 2, width, height, colors.ink);
 
-    // 粒子效果背景
-    for (let i = 0; i < 50; i++) {
-      const star = this.add.circle(
-        Phaser.Math.Between(0, width),
-        Phaser.Math.Between(0, height),
-        Phaser.Math.Between(1, 3),
-        0xffff00,
-        Phaser.Math.FloatBetween(0.3, 1)
-      );
+    const landscape = this.add.graphics();
+    landscape.fillStyle(colors.backdrop, 1);
+    landscape.fillPoints([
+      new Phaser.Geom.Point(0, height * 0.75),
+      new Phaser.Geom.Point(width * 0.17, height * 0.55),
+      new Phaser.Geom.Point(width * 0.33, height * 0.7),
+      new Phaser.Geom.Point(width * 0.5, height * 0.4),
+      new Phaser.Geom.Point(width * 0.66, height * 0.69),
+      new Phaser.Geom.Point(width * 0.83, height * 0.52),
+      new Phaser.Geom.Point(width, height * 0.73),
+      new Phaser.Geom.Point(width, height),
+      new Phaser.Geom.Point(0, height),
+    ], true);
+    landscape.fillStyle(colors.panel, 0.9);
+    landscape.fillPoints([
+      new Phaser.Geom.Point(0, height * 0.84),
+      new Phaser.Geom.Point(width * 0.26, height * 0.68),
+      new Phaser.Geom.Point(width * 0.47, height * 0.83),
+      new Phaser.Geom.Point(width * 0.7, height * 0.65),
+      new Phaser.Geom.Point(width, height * 0.82),
+      new Phaser.Geom.Point(width, height),
+      new Phaser.Geom.Point(0, height),
+    ], true);
+    landscape.lineStyle(2, colors.brassMuted, 0.72);
+    landscape.lineBetween(width / 2 - 260, height / 2 - 154, width / 2 - 50, height / 2 - 154);
+    landscape.lineBetween(width / 2 + 50, height / 2 - 154, width / 2 + 260, height / 2 - 154);
+    landscape.fillStyle(colors.cinnabar, 1);
+    landscape.fillRect(width / 2 - 15, height / 2 - 169, 30, 30);
 
-      // 闪烁动画
-      this.tweens.add({
-        targets: star,
-        alpha: 0.2,
-        duration: Phaser.Math.Between(500, 1500),
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 1000)
-      });
-    }
-
-    // 胜利标题
-    const victoryText = this.add.text(width / 2, height / 2 - 100, '胜利！', {
-      fontSize: '64px',
-      fill: '#00ff00',
-      fontFamily: 'Courier New',
+    const victoryText = this.add.text(width / 2, height / 2 - 250, '问道功成', {
+      fontSize: '72px',
+      fill: text.paper,
+      fontFamily: font.display,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // 标题动画
     this.tweens.add({
       targets: victoryText,
-      scaleX: 1.15,
-      scaleY: 1.15,
-      duration: 1200,
+      alpha: 0.76,
+      duration: 1800,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // 副标题
-    this.add.text(width / 2, height / 2 - 30, '你成功找到了神器并逃出了迷宫！', {
-      fontSize: '18px',
-      fill: '#ffffff',
-      fontFamily: 'Courier New'
+    this.add.text(width / 2, height / 2 - 104, '你取得镇界灵宝，平定了云荒异变', {
+      fontSize: '20px',
+      fill: text.jadeBright,
+      fontFamily: font.body
     }).setOrigin(0.5);
 
     // 分数显示
     const gameState = this.registry.get('gameState');
     const score = gameState ? gameState.score : 0;
 
-    this.add.text(width / 2, height / 2 + 20, `最终得分: ${score}`, {
-      fontSize: '24px',
-      fill: '#ffff00',
-      fontFamily: 'Courier New'
+    this.add.text(width / 2, height / 2 - 36, `历练所得  ${score}`, {
+      fontSize: '28px',
+      fill: text.brass,
+      fontFamily: font.body
     }).setOrigin(0.5);
 
-    // 统计信息
     const keysCollected = gameState ? gameState.keysCollected : 0;
-    this.add.text(width / 2, height / 2 + 60, `禁制令牌: ${keysCollected}`, {
+    this.add.text(width / 2, height / 2 + 18, `禁制令牌  ${keysCollected}`, {
       fontSize: '16px',
-      fill: '#ff69b4',
-      fontFamily: 'Courier New'
+      fill: text.muted,
+      fontFamily: font.body
     }).setOrigin(0.5);
 
-    // 重新开始提示
-    const restartText = this.add.text(width / 2, height / 2 + 120, '点击屏幕重返云荒', {
+    const actionBg = this.add.rectangle(width / 2, height / 2 + 116, 240, 48, colors.panelRaised)
+      .setStrokeStyle(1, colors.jade);
+    const restartText = this.add.text(width / 2, height / 2 + 116, '重返山门', {
       fontSize: '18px',
-      fill: '#aaaaaa',
-      fontFamily: 'Courier New'
+      fill: text.jadeBright,
+      fontFamily: font.body
     }).setOrigin(0.5);
 
-    // 闪烁动画
     this.tweens.add({
-      targets: restartText,
-      alpha: 0.3,
-      duration: 1000,
+      targets: [actionBg, restartText],
+      alpha: 0.64,
+      duration: 1200,
       yoyo: true,
       repeat: -1
     });
@@ -111,11 +115,10 @@ export class VictoryScene extends Phaser.Scene {
     this.input.on('pointerdown', goToMenu);
     this.input.keyboard.on('keydown-R', goToMenu);
 
-    // 底部提示
-    this.add.text(width / 2, height - 40, '感谢游玩！按 R 键重新开始', {
+    this.add.text(width / 2, height - 52, '云荒留痕，道途未止', {
       fontSize: '14px',
-      fill: '#666666',
-      fontFamily: 'Courier New'
+      fill: text.muted,
+      fontFamily: font.body
     }).setOrigin(0.5);
   }
 }

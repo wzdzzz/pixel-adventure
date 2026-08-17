@@ -4,6 +4,7 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import audioEngine from '../systems/AudioEngine.js';
 import MusicEngine from '../systems/MusicEngine.js';
 import { RESOURCE_LABELS, STAT_LABELS, THEME_CONFIG } from '../config/themeConfig.js';
+import { UI_THEME } from '../config/uiTheme.js';
 
 /**
  * 主菜单场景 — 标题画面 + 角色选择
@@ -21,24 +22,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.w = this.cameras.main.width;
     this.h = this.cameras.main.height;
 
-    // Starfield background
-    this.add.rectangle(this.w / 2, this.h / 2, this.w, this.h, 0x0e0e1a);
-    this.stars = [];
-    for (let i = 0; i < 60; i++) {
-      const s = this.add.circle(
-        Phaser.Math.Between(0, this.w),
-        Phaser.Math.Between(0, this.h),
-        Phaser.Math.Between(1, 2),
-        0xffffff, Phaser.Math.FloatBetween(0.15, 0.6)
-      );
-      this.tweens.add({
-        targets: s, alpha: 0.1,
-        duration: Phaser.Math.Between(600, 2000),
-        yoyo: true, repeat: -1,
-        delay: Phaser.Math.Between(0, 1000)
-      });
-      this.stars.push(s);
-    }
+    this.buildInkLandscape();
 
     // Containers for two phases
     this.menuContainer = this.add.container(0, 0);
@@ -55,6 +39,59 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  buildInkLandscape() {
+    const { colors } = UI_THEME;
+    this.add.rectangle(this.w / 2, this.h / 2, this.w, this.h, colors.ink);
+
+    const landscape = this.add.graphics();
+    landscape.fillStyle(colors.backdrop, 1);
+    landscape.fillPoints([
+      new Phaser.Geom.Point(0, this.h * 0.68),
+      new Phaser.Geom.Point(this.w * 0.12, this.h * 0.49),
+      new Phaser.Geom.Point(this.w * 0.24, this.h * 0.65),
+      new Phaser.Geom.Point(this.w * 0.4, this.h * 0.38),
+      new Phaser.Geom.Point(this.w * 0.56, this.h * 0.67),
+      new Phaser.Geom.Point(this.w * 0.72, this.h * 0.46),
+      new Phaser.Geom.Point(this.w * 0.84, this.h * 0.63),
+      new Phaser.Geom.Point(this.w, this.h * 0.43),
+      new Phaser.Geom.Point(this.w, this.h),
+      new Phaser.Geom.Point(0, this.h),
+    ], true);
+
+    landscape.fillStyle(colors.panel, 0.92);
+    landscape.fillPoints([
+      new Phaser.Geom.Point(0, this.h * 0.79),
+      new Phaser.Geom.Point(this.w * 0.17, this.h * 0.63),
+      new Phaser.Geom.Point(this.w * 0.31, this.h * 0.75),
+      new Phaser.Geom.Point(this.w * 0.47, this.h * 0.58),
+      new Phaser.Geom.Point(this.w * 0.66, this.h * 0.78),
+      new Phaser.Geom.Point(this.w * 0.82, this.h * 0.62),
+      new Phaser.Geom.Point(this.w, this.h * 0.73),
+      new Phaser.Geom.Point(this.w, this.h),
+      new Phaser.Geom.Point(0, this.h),
+    ], true);
+
+    landscape.lineStyle(2, colors.borderMuted, 0.55);
+    const cloudBands = [0.24, 0.31, 0.71];
+    for (const [index, ratio] of cloudBands.entries()) {
+      const y = this.h * ratio;
+      const startX = index % 2 === 0 ? this.w * 0.06 : this.w * 0.57;
+      landscape.beginPath();
+      landscape.moveTo(startX, y);
+      landscape.lineTo(startX + this.w * 0.1, y);
+      landscape.lineTo(startX + this.w * 0.125, y - 14);
+      landscape.lineTo(startX + this.w * 0.16, y - 14);
+      landscape.lineTo(startX + this.w * 0.18, y);
+      landscape.lineTo(startX + this.w * 0.29, y);
+      landscape.strokePath();
+    }
+
+    landscape.lineStyle(1, colors.brassMuted, 0.55);
+    landscape.strokeRect(28, 28, this.w - 56, this.h - 56);
+    landscape.lineBetween(64, 52, 210, 52);
+    landscape.lineBetween(this.w - 210, 52, this.w - 64, 52);
+  }
+
   // ═══════════════════════════════════════════
   //  Phase 1: Main Menu
   // ═══════════════════════════════════════════
@@ -62,68 +99,66 @@ export class MainMenuScene extends Phaser.Scene {
   buildMenuPhase() {
     const cx = this.w / 2;
     const cy = this.h / 2;
+    const { colors, text, font } = UI_THEME;
 
-    // Title
-    const title = this.add.text(cx, cy - 140, THEME_CONFIG.title, {
-      fontSize: '48px', fill: '#00ff88',
-      fontFamily: 'Courier New', fontStyle: 'bold'
+    const title = this.add.text(cx, cy - 255, THEME_CONFIG.title, {
+      fontSize: '76px', fill: text.paper,
+      fontFamily: font.display, fontStyle: 'bold'
     }).setOrigin(0.5);
     this.menuContainer.add(title);
 
-    this.tweens.add({
-      targets: title,
-      y: title.y - 6, duration: 1500,
-      yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-    });
+    const titleRule = this.add.graphics();
+    titleRule.lineStyle(2, colors.brass, 0.85);
+    titleRule.lineBetween(cx - 210, cy - 200, cx - 42, cy - 200);
+    titleRule.lineBetween(cx + 42, cy - 200, cx + 210, cy - 200);
+    titleRule.fillStyle(colors.cinnabar, 1);
+    titleRule.fillRect(cx - 13, cy - 213, 26, 26);
+    this.menuContainer.add(titleRule);
 
-    // Subtitle
-    const sub = this.add.text(cx, cy - 90, THEME_CONFIG.subtitle, {
-      fontSize: '16px', fill: '#556677', fontFamily: 'Courier New'
+    const sub = this.add.text(cx, cy - 160, THEME_CONFIG.subtitle, {
+      fontSize: '20px', fill: text.brass, fontFamily: font.body
     }).setOrigin(0.5);
     this.menuContainer.add(sub);
 
-    // --- Buttons ---
-    let btnY = cy - 20;
-    const btnGap = 52;
+    let btnY = cy - 60;
+    const btnGap = 68;
 
     // 加载存档（始终显示，进入 SaveSelectScene）
-    this.addMenuButton(cx, btnY, '加载存档', '#44ff88', () => this.openSaveSelect());
+    this.addMenuButton(cx, btnY, '续接道途', text.jadeBright, () => this.openSaveSelect());
     btnY += btnGap;
 
     // New Game
-    this.addMenuButton(cx, btnY, '新建游戏', '#66aaff', () => this.showSelectPhase());
+    this.addMenuButton(cx, btnY, '初入云荒', text.brass, () => this.showSelectPhase());
     btnY += btnGap;
 
     // Exit
-    this.addMenuButton(cx, btnY, '退出游戏', '#aa6666', () => this.exitGame());
+    this.addMenuButton(cx, btnY, '暂别山门', text.cinnabarBright, () => this.exitGame());
 
-    // Version / footer
-    const footer = this.add.text(cx, this.h - 20, 'v2.1  |  WASD移动  鼠标攻击  1-4技能', {
-      fontSize: '13px', fill: '#333344', fontFamily: 'Courier New'
+    const footer = this.add.text(cx, this.h - 48, '云荒纪 · v2.1', {
+      fontSize: '14px', fill: text.muted, fontFamily: font.body
     }).setOrigin(0.5);
     this.menuContainer.add(footer);
   }
 
   addMenuButton(x, y, label, color, callback) {
-    const w = 220;
-    const h = 38;
+    const { colors, font } = UI_THEME;
+    const w = 300;
+    const h = 50;
 
-    const bg = this.add.rectangle(x, y, w, h, 0x1a1a2e, 0.9)
+    const bg = this.add.rectangle(x, y, w, h, colors.panel, 0.96)
       .setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(color).color)
       .setInteractive({ useHandCursor: true });
 
     const txt = this.add.text(x, y, label, {
-      fontSize: '16px', fill: color, fontFamily: 'Courier New'
+      fontSize: '18px', fill: color, fontFamily: font.body
     }).setOrigin(0.5);
 
     bg.on('pointerover', () => {
-      bg.setFillStyle(0x2a2a3e, 1);
-      txt.setScale(1.05);
+      bg.setFillStyle(colors.panelHover, 1);
       audioEngine.playSfx('ui_hover');
     });
     bg.on('pointerout', () => {
-      bg.setFillStyle(0x1a1a2e, 0.9);
-      txt.setScale(1);
+      bg.setFillStyle(colors.panel, 0.96);
     });
     bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); callback(); });
 
@@ -152,7 +187,7 @@ export class MainMenuScene extends Phaser.Scene {
     // If window.close didn't work (most browsers block it)
     // Show a message
     const msg = this.add.text(this.w / 2, this.h - 50, '请直接关闭浏览器标签页', {
-      fontSize: '14px', fill: '#ffaa44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5);
     this.menuContainer.add(msg);
     this.tweens.add({ targets: msg, alpha: 0, delay: 2000, duration: 500 });
@@ -164,13 +199,18 @@ export class MainMenuScene extends Phaser.Scene {
 
   buildSelectPhase() {
     const cx = this.w / 2;
+    const { colors, text, font } = UI_THEME;
 
-    // Title
-    const title = this.add.text(cx, 30, '选择修行路数', {
-      fontSize: '24px', fill: '#ffffff',
-      fontFamily: 'Courier New', fontStyle: 'bold'
+    const title = this.add.text(cx, 92, '择一道而行', {
+      fontSize: '38px', fill: text.paper,
+      fontFamily: font.display, fontStyle: 'bold'
     }).setOrigin(0.5);
     this.selectContainer.add(title);
+
+    const subtitle = this.add.text(cx, 138, '体魄 · 飞剑 · 五行', {
+      fontSize: '16px', fill: text.brass, fontFamily: font.body
+    }).setOrigin(0.5);
+    this.selectContainer.add(subtitle);
 
     // Class cards
     this.selectedClass = 'warrior';
@@ -178,12 +218,12 @@ export class MainMenuScene extends Phaser.Scene {
     this.classCards = {};
 
     const classes = Object.values(CLASS_CONFIG);
-    const cardW = 200;
-    const cardH = 260;
-    const gap = 20;
+    const cardW = 280;
+    const cardH = 390;
+    const gap = 32;
     const totalW = classes.length * cardW + (classes.length - 1) * gap;
     const startX = cx - totalW / 2 + cardW / 2;
-    const cardY = 190;
+    const cardY = 450;
 
     classes.forEach((cls, i) => {
       const x = startX + i * (cardW + gap);
@@ -191,21 +231,21 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // Gender selection
-    const genderY = cardY + cardH / 2 + 40;
-    const genderLabel = this.add.text(cx - 80, genderY, '性别:', {
-      fontSize: '16px', fill: '#aaaaaa', fontFamily: 'Courier New'
+    const genderY = cardY + cardH / 2 + 60;
+    const genderLabel = this.add.text(cx - 116, genderY, '道身', {
+      fontSize: '16px', fill: text.muted, fontFamily: font.body
     }).setOrigin(0, 0.5);
     this.selectContainer.add(genderLabel);
 
     this.genderBtns = {};
     const genderNames = { male: '男', female: '女' };
     GENDER_OPTIONS.forEach((g, i) => {
-      const gx = cx + i * 70;
-      const bg = this.add.rectangle(gx, genderY, 54, 28, 0x1a1a2e)
-        .setStrokeStyle(1, 0x555566)
+      const gx = cx + i * 82;
+      const bg = this.add.rectangle(gx, genderY, 64, 34, colors.panel)
+        .setStrokeStyle(1, colors.border)
         .setInteractive({ useHandCursor: true });
       const txt = this.add.text(gx, genderY, genderNames[g], {
-        fontSize: '15px', fill: '#aaaaaa', fontFamily: 'Courier New'
+        fontSize: '15px', fill: text.muted, fontFamily: font.body
       }).setOrigin(0.5);
 
       bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); this.selectGender(g); });
@@ -214,25 +254,25 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     // Confirm button
-    const confirmY = genderY + 50;
-    const confirmBg = this.add.rectangle(cx, confirmY, 180, 40, 0x1a2e1a)
-      .setStrokeStyle(2, 0x44ff66)
+    const confirmY = genderY + 70;
+    const confirmBg = this.add.rectangle(cx, confirmY, 220, 48, colors.panel)
+      .setStrokeStyle(2, colors.jade)
       .setInteractive({ useHandCursor: true });
     const confirmTxt = this.add.text(cx, confirmY, '踏入云荒', {
-      fontSize: '18px', fill: '#44ff66', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '18px', fill: text.jadeBright, fontFamily: font.body, fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    confirmBg.on('pointerover', () => { confirmBg.setFillStyle(0x2a3e2a); audioEngine.playSfx('ui_hover'); });
-    confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x1a2e1a));
+    confirmBg.on('pointerover', () => { confirmBg.setFillStyle(colors.panelHover); audioEngine.playSfx('ui_hover'); });
+    confirmBg.on('pointerout', () => confirmBg.setFillStyle(colors.panel));
     confirmBg.on('pointerdown', () => { audioEngine.playSfx('quest_accept'); this.confirmSelection(); });
     this.selectContainer.add([confirmBg, confirmTxt]);
 
     // Back button
-    const backBg = this.add.rectangle(70, 30, 80, 28, 0x1a1a2e)
-      .setStrokeStyle(1, 0x666666)
+    const backBg = this.add.rectangle(104, 82, 116, 36, colors.panel)
+      .setStrokeStyle(1, colors.borderMuted)
       .setInteractive({ useHandCursor: true });
-    const backTxt = this.add.text(70, 30, '← 返回', {
-      fontSize: '14px', fill: '#888888', fontFamily: 'Courier New'
+    const backTxt = this.add.text(104, 82, '← 返回', {
+      fontSize: '14px', fill: text.muted, fontFamily: font.body
     }).setOrigin(0.5);
     backBg.on('pointerdown', () => { audioEngine.playSfx('ui_close'); this.showMenuPhase(); });
     this.selectContainer.add([backBg, backTxt]);
@@ -243,30 +283,34 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   buildClassCard(x, y, cls, w, h) {
-    // Card BG
-    const bg = this.add.rectangle(x, y, w, h, 0x14141e, 0.95)
-      .setStrokeStyle(1, 0x3a3a5a)
+    const { colors, text, font } = UI_THEME;
+    const bg = this.add.rectangle(x, y, w, h, colors.panel, 0.97)
+      .setStrokeStyle(1, colors.borderMuted)
       .setInteractive({ useHandCursor: true });
 
-    // Resource color
-    const resourceColors = { rage: '#ff4444', stamina: '#ddcc00', mana: '#4488ff' };
+    const resourceColors = {
+      rage: text.cinnabarBright,
+      stamina: text.brass,
+      mana: text.jadeBright,
+    };
 
     // Class name
-    const nameText = this.add.text(x, y - h / 2 + 24, cls.name, {
-      fontSize: '20px', fill: '#ffffff',
-      fontFamily: 'Courier New', fontStyle: 'bold'
+    const nameText = this.add.text(x, y - h / 2 + 34, cls.name, {
+      fontSize: '24px', fill: text.paper,
+      fontFamily: font.display, fontStyle: 'bold'
     }).setOrigin(0.5);
 
     // Resource tag
-    const resText = this.add.text(x, y - h / 2 + 48, RESOURCE_LABELS[cls.resource], {
+    const resText = this.add.text(x, y - h / 2 + 70, RESOURCE_LABELS[cls.resource], {
       fontSize: '14px', fill: resourceColors[cls.resource],
-      fontFamily: 'Courier New'
+      fontFamily: font.body
     }).setOrigin(0.5);
 
     // Description
-    const descText = this.add.text(x, y - h / 2 + 74, cls.description, {
-      fontSize: '13px', fill: '#888899', fontFamily: 'Courier New',
-      wordWrap: { width: w - 24, useAdvancedWrap: true }, align: 'center'
+    const descText = this.add.text(x, y - h / 2 + 104, cls.description, {
+      fontSize: '14px', fill: text.muted, fontFamily: font.body,
+      wordWrap: { width: w - 36, useAdvancedWrap: true }, align: 'center',
+      lineSpacing: 5
     }).setOrigin(0.5, 0);
 
     // Base stats
@@ -274,22 +318,22 @@ export class MainMenuScene extends Phaser.Scene {
     let statY = y + 20;
     const statTexts = [];
     for (const [key, val] of Object.entries(stats)) {
-      const barW = val * 8;
-      const barColor = val >= 10 ? 0x44ff66 : val >= 7 ? 0xaacc44 : 0x666688;
+      const barW = val * 10;
+      const barColor = val >= 10 ? colors.jade : val >= 7 ? colors.brass : colors.border;
 
-      const label = this.add.text(x - w / 2 + 14, statY, STAT_LABELS[key], {
-        fontSize: '12px', fill: '#777788', fontFamily: 'Courier New'
+      const label = this.add.text(x - w / 2 + 26, statY, STAT_LABELS[key], {
+        fontSize: '13px', fill: text.muted, fontFamily: font.body
       }).setOrigin(0, 0.5);
 
-      const bar = this.add.rectangle(x - w / 2 + 52, statY, barW, 6, barColor)
+      const bar = this.add.rectangle(x - w / 2 + 76, statY, barW, 7, barColor)
         .setOrigin(0, 0.5);
 
-      const valText = this.add.text(x - w / 2 + 56 + barW, statY, `${val}`, {
-        fontSize: '11px', fill: '#999999', fontFamily: 'Courier New'
+      const valText = this.add.text(x - w / 2 + 82 + barW, statY, `${val}`, {
+        fontSize: '12px', fill: text.paper, fontFamily: font.mono
       }).setOrigin(0, 0.5);
 
       statTexts.push(label, bar, valText);
-      statY += 16;
+      statY += 25;
     }
 
     const allElements = [bg, nameText, resText, descText, ...statTexts];
@@ -305,11 +349,11 @@ export class MainMenuScene extends Phaser.Scene {
     // Update highlights
     for (const [id, card] of Object.entries(this.classCards)) {
       if (id === classId) {
-        card.bg.setStrokeStyle(2, 0x44ff66);
-        card.bg.setFillStyle(0x1a2a1e, 0.95);
+        card.bg.setStrokeStyle(2, UI_THEME.colors.jade);
+        card.bg.setFillStyle(UI_THEME.colors.panelRaised, 0.98);
       } else {
-        card.bg.setStrokeStyle(1, 0x3a3a5a);
-        card.bg.setFillStyle(0x14141e, 0.95);
+        card.bg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
+        card.bg.setFillStyle(UI_THEME.colors.panel, 0.97);
       }
     }
   }
@@ -318,13 +362,13 @@ export class MainMenuScene extends Phaser.Scene {
     this.selectedGender = gender;
     for (const [g, btn] of Object.entries(this.genderBtns)) {
       if (g === gender) {
-        btn.bg.setStrokeStyle(2, 0x44ff66);
-        btn.bg.setFillStyle(0x1a2e1a);
-        btn.txt.setColor('#44ff66');
+        btn.bg.setStrokeStyle(2, UI_THEME.colors.jade);
+        btn.bg.setFillStyle(UI_THEME.colors.panelRaised);
+        btn.txt.setColor(UI_THEME.text.jadeBright);
       } else {
-        btn.bg.setStrokeStyle(1, 0x555566);
-        btn.bg.setFillStyle(0x1a1a2e);
-        btn.txt.setColor('#aaaaaa');
+        btn.bg.setStrokeStyle(1, UI_THEME.colors.border);
+        btn.bg.setFillStyle(UI_THEME.colors.panel);
+        btn.txt.setColor(UI_THEME.text.muted);
       }
     }
   }

@@ -4,6 +4,7 @@ import { GEMS } from '../../data/gems.js';
 import { SETS, countSetPieces } from '../../data/sets.js';
 import itemData from '../../data/items.json';
 import { EQUIPMENT_SLOT_LABELS, RARITY_LABELS, STAT_LABELS, THEME_CONFIG, WEAPON_TYPE_LABELS } from '../../config/themeConfig.js';
+import { RARITY_THEME, UI_THEME } from '../../config/uiTheme.js';
 
 const RARITY_LABEL = RARITY_LABELS;
 
@@ -51,7 +52,7 @@ function formatEquipTooltip(item, equippedSetCount) {
       const def = AFFIXES[a.id];
       if (!def) continue;
       if (def.stat === '_trigger' && def.trigger) {
-        lines.push(`  ✨ ${def.name}: ${(def.trigger.chance*100).toFixed(0)}% 触发`);
+        lines.push(`  ${def.name}: ${(def.trigger.chance*100).toFixed(0)}% 触发`);
       } else {
         const v = def.isFlat ? a.value.toFixed(1) : `${(a.value * 100).toFixed(1)}%`;
         lines.push(`  T${def.tier} ${def.name}: ${v}`);
@@ -92,7 +93,7 @@ function formatEquipTooltip(item, equippedSetCount) {
   }
   // 保底进度
   if (item.reforgePity && item.reforgePity > 0) {
-    lines.push(`♻ 洗练保底: ${item.reforgePity}/5`);
+    lines.push(`洗练保底: ${item.reforgePity}/5`);
   }
   if (item.description) lines.push(`\n${item.description}`);
   return lines.join('\n');
@@ -192,8 +193,8 @@ export const InventoryPanel = {
     // Content background
     const contentBg = this.add.rectangle(
       this.panelX, contentTop + contentH / 2,
-      contentW, contentH, 0x12121e, 0.8
-    ).setStrokeStyle(1, 0x3a3a5a);
+      contentW, contentH, UI_THEME.colors.backdrop, 0.88
+    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(contentBg);
 
     // --- Filter bar ---
@@ -209,19 +210,19 @@ export const InventoryPanel = {
     this.invFilterButtons = [];
 
     const filterLabel = this.add.text(this.panelLeft + 20, filterY, '过滤:', {
-      fontSize: '14px', fill: '#888899', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(filterLabel);
 
     filterTypes.forEach((ft, i) => {
       const btn = this.add.text(this.panelLeft + 65 + i * 55, filterY, `[${ft.label}]`, {
-        fontSize: '14px', fill: ft.key === 'all' ? '#ffffff' : '#777788', fontFamily: 'Courier New'
+        fontSize: '14px', fill: ft.key === 'all' ? UI_THEME.text.jadeBright : UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       }).setInteractive({ useHandCursor: true });
 
       btn.on('pointerdown', () => {
         this.invActiveFilter = ft.key;
         this.invFilterButtons.forEach((b, j) => {
-          b.setColor(filterTypes[j].key === ft.key ? '#ffffff' : '#777788');
+          b.setColor(filterTypes[j].key === ft.key ? UI_THEME.text.jadeBright : UI_THEME.text.disabled);
         });
         this.refreshInventoryTab();
       });
@@ -233,7 +234,7 @@ export const InventoryPanel = {
     // --- Sort buttons + Gold display ---
     const sortY = contentTop + 38;
     const sortLabel = this.add.text(this.panelLeft + 20, sortY, '排序:', {
-      fontSize: '14px', fill: '#888899', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(sortLabel);
 
@@ -244,7 +245,7 @@ export const InventoryPanel = {
     ];
     sortTypes.forEach((st, i) => {
       const btn = this.add.text(this.panelLeft + 65 + i * 65, sortY, `[${st.label}]`, {
-        fontSize: '14px', fill: '#777788', fontFamily: 'Courier New'
+        fontSize: '14px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       }).setInteractive({ useHandCursor: true });
 
       btn.on('pointerdown', () => {
@@ -254,47 +255,47 @@ export const InventoryPanel = {
           this.refreshInventoryTab();
         }
       });
-      btn.on('pointerover', () => btn.setColor('#aaaacc'));
-      btn.on('pointerout', () => btn.setColor('#777788'));
+      btn.on('pointerover', () => btn.setColor(UI_THEME.text.jadeBright));
+      btn.on('pointerout', () => btn.setColor(UI_THEME.text.disabled));
       container.add(btn);
     });
 
     // Gold display
     this.invGoldText = this.add.text(this.panelLeft + contentW - 10, sortY, `${THEME_CONFIG.currency}: 0`, {
-      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setOrigin(1, 0);
     container.add(this.invGoldText);
 
     // 批量拆解按钮（位于金币左侧）
-    const bulkBtn = this.add.text(this.panelLeft + contentW - 90, filterY, '[🪓 批量拆解]', {
-      fontSize: '14px', fill: '#66ccff', fontFamily: 'Courier New',
-      backgroundColor: '#1a2a3a', padding: { x: 6, y: 3 }
+    const bulkBtn = this.add.text(this.panelLeft + contentW - 90, filterY, '[批量拆解]', {
+      fontSize: '14px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body,
+      backgroundColor: '#192b24', padding: { x: 6, y: 3 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     bulkBtn.on('pointerdown', () => {
       this.openBulkDecomposeModal?.();
     });
-    bulkBtn.on('pointerover', () => bulkBtn.setColor('#aaddff'));
-    bulkBtn.on('pointerout', () => bulkBtn.setColor('#66ccff'));
+    bulkBtn.on('pointerover', () => bulkBtn.setColor(UI_THEME.text.paper));
+    bulkBtn.on('pointerout', () => bulkBtn.setColor(UI_THEME.text.cinnabarBright));
     container.add(bulkBtn);
 
     // 制作按钮（bulkBtn 左侧，因 bulkBtn 是右锚定，需向左偏移）
-    const craftBtn = this.add.text(bulkBtn.x - bulkBtn.width - 10, filterY, '[🛠 制作]', {
-      fontSize: '14px', fill: '#88ddaa', fontFamily: 'Courier New',
-      backgroundColor: '#1a3a2a', padding: { x: 6, y: 3 }
+    const craftBtn = this.add.text(bulkBtn.x - bulkBtn.width - 10, filterY, '[炼制]', {
+      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body,
+      backgroundColor: '#192b24', padding: { x: 6, y: 3 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     craftBtn.on('pointerdown', () => this.openCraftModal?.());
-    craftBtn.on('pointerover', () => craftBtn.setColor('#bbeecc'));
-    craftBtn.on('pointerout', () => craftBtn.setColor('#88ddaa'));
+    craftBtn.on('pointerover', () => craftBtn.setColor(UI_THEME.text.jadeBright));
+    craftBtn.on('pointerout', () => craftBtn.setColor(UI_THEME.text.jade));
     container.add(craftBtn);
 
     // 合成按钮（craftBtn 左侧）
-    const fuseBtn = this.add.text(craftBtn.x - craftBtn.width - 10, filterY, '[💎 合成]', {
-      fontSize: '14px', fill: '#ffdd66', fontFamily: 'Courier New',
-      backgroundColor: '#3a2a1a', padding: { x: 6, y: 3 }
+    const fuseBtn = this.add.text(craftBtn.x - craftBtn.width - 10, filterY, '[合成]', {
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body,
+      backgroundColor: '#192b24', padding: { x: 6, y: 3 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     fuseBtn.on('pointerdown', () => this.openGemFusionModal?.());
-    fuseBtn.on('pointerover', () => fuseBtn.setColor('#ffeeaa'));
-    fuseBtn.on('pointerout', () => fuseBtn.setColor('#ffdd66'));
+    fuseBtn.on('pointerover', () => fuseBtn.setColor(UI_THEME.text.paper));
+    fuseBtn.on('pointerout', () => fuseBtn.setColor(UI_THEME.text.brass));
     container.add(fuseBtn);
 
     // --- 11x9 Grid (99 slots) ---
@@ -306,15 +307,7 @@ export const InventoryPanel = {
     const gridStartX = this.panelX - gridW / 2;
     const gridStartY = contentTop + 65;
 
-    const RARITY_COLORS = {
-      common:    { bg: 0x3a3a3a, border: 0x666666 },
-      uncommon:  { bg: 0x1a3a1a, border: 0x44bb44 },
-      rare:      { bg: 0x1a1a3a, border: 0x4488ff },
-      epic:      { bg: 0x2a1a3a, border: 0xbb44ff },
-      legendary: { bg: 0x3a2a1a, border: 0xffaa00 },
-      mythic:    { bg: 0x3a1a1a, border: 0xff4444 }
-    };
-    this.RARITY_COLORS = RARITY_COLORS;
+    this.RARITY_COLORS = RARITY_THEME;
 
     this.invSlots = [];
     for (let row = 0; row < rows; row++) {
@@ -323,23 +316,23 @@ export const InventoryPanel = {
         const y = gridStartY + row * (cellSize + gap) + cellSize / 2;
         const slotIndex = row * cols + col;
 
-        const cell = this.add.rectangle(x, y, cellSize, cellSize, 0x3a3a3a, 0.8)
-          .setStrokeStyle(1, 0x666666)
+        const cell = this.add.rectangle(x, y, cellSize, cellSize, RARITY_THEME.common.bg, 0.8)
+          .setStrokeStyle(1, RARITY_THEME.common.border)
           .setInteractive({ useHandCursor: true });
 
         // Item icon placeholder (text-based since we use generated textures)
         const icon = this.add.text(x, y - 4, '', {
-          fontSize: '18px', fill: '#ffffff', fontFamily: 'Courier New'
+          fontSize: '18px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
         }).setOrigin(0.5).setVisible(false);
 
         // Quantity badge
         const countText = this.add.text(x + cellSize / 2 - 4, y + cellSize / 2 - 4, '', {
-          fontSize: '14px', fill: '#ffffff', fontFamily: 'Courier New',
+          fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.mono,
           backgroundColor: '#00000088', padding: { x: 2, y: 0 }
         }).setOrigin(1, 1).setVisible(false);
 
         cell.on('pointerover', () => {
-          cell.setStrokeStyle(2, 0xffffff);
+          cell.setStrokeStyle(2, UI_THEME.colors.jadeBright);
           this.showItemTooltip(slotIndex, x, y);
         });
         cell.on('pointerout', () => {
@@ -363,55 +356,55 @@ export const InventoryPanel = {
     const detailY = gridStartY + rows * (cellSize + gap) + 10;
     const detailH = contentTop + contentH - detailY - 10;
 
-    const detailBg = this.add.rectangle(this.panelX, detailY + detailH / 2, contentW - 20, detailH, 0x1e1e2e, 0.9)
-      .setStrokeStyle(1, 0x3a3a5a);
+    const detailBg = this.add.rectangle(this.panelX, detailY + detailH / 2, contentW - 20, detailH, UI_THEME.colors.panelRaised, 0.9)
+      .setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(detailBg);
 
     this.invDetailName = this.add.text(this.panelLeft + 30, detailY + 8, '', {
-      fontSize: '16px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '16px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(this.invDetailName);
 
     this.invDetailRarity = this.add.text(this.panelLeft + 30, detailY + 28, '', {
-      fontSize: '13px', fill: '#888888', fontFamily: 'Courier New'
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(this.invDetailRarity);
 
     this.invDetailDesc = this.add.text(this.panelLeft + 30, detailY + 44, '', {
-      fontSize: '13px', fill: '#aaaaaa', fontFamily: 'Courier New',
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body,
       wordWrap: { width: (contentW - 120) / 2 - 20 }, lineSpacing: 1
     });
     container.add(this.invDetailDesc);
 
     // 对比栏（右半边：显示当前装备信息 + 属性差异）
     this.invCompareText = this.add.text(this.panelX + 10, detailY + 8, '', {
-      fontSize: '13px', fill: '#88bbff', fontFamily: 'Courier New',
+      fontSize: '13px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body,
       lineSpacing: 1, wordWrap: { width: (contentW - 120) / 2 - 20 }
     }).setVisible(false);
     container.add(this.invCompareText);
 
     // Action buttons
     this.invUseBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 12, '[使用]', {
-      fontSize: '14px', fill: '#44cc44', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invUseBtn.on('pointerdown', () => this.useSelectedItem());
     container.add(this.invUseBtn);
 
     this.invDropBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 34, '[丢弃]', {
-      fontSize: '14px', fill: '#cc4444', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.cinnabar, fontFamily: UI_THEME.font.body
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invDropBtn.on('pointerdown', () => this.dropSelectedItem());
     container.add(this.invDropBtn);
 
     this.invEquipBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 56, '[装备]', {
-      fontSize: '14px', fill: '#44ff44', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invEquipBtn.on('pointerdown', () => this.equipSelectedItem());
     container.add(this.invEquipBtn);
 
     // 强化按钮（仅装备显示）
-    this.invEnhanceBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 78, '[🔨 强化]', {
-      fontSize: '14px', fill: '#ffdd66', fontFamily: 'Courier New'
+    this.invEnhanceBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 78, '[强化]', {
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invEnhanceBtn.on('pointerdown', () => {
       if (this.invSelectedSlot < 0) return;
@@ -421,8 +414,8 @@ export const InventoryPanel = {
     container.add(this.invEnhanceBtn);
 
     // 分解按钮（仅装备显示）
-    this.invDecomposeBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 100, '[🪓 分解]', {
-      fontSize: '14px', fill: '#ff8866', fontFamily: 'Courier New'
+    this.invDecomposeBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 100, '[分解]', {
+      fontSize: '14px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invDecomposeBtn.on('pointerdown', () => {
       if (this.invSelectedSlot < 0) return;
@@ -432,8 +425,8 @@ export const InventoryPanel = {
     container.add(this.invDecomposeBtn);
 
     // 镶嵌按钮（仅有孔位装备显示）
-    this.invSocketBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 122, '[💎 镶嵌]', {
-      fontSize: '14px', fill: '#aa88ff', fontFamily: 'Courier New'
+    this.invSocketBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 122, '[镶嵌]', {
+      fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body
     }).setInteractive({ useHandCursor: true }).setVisible(false);
     this.invSocketBtn.on('pointerdown', () => {
       if (this.invSelectedSlot < 0) return;
@@ -476,7 +469,7 @@ export const InventoryPanel = {
 
     // Item name abbreviations for icon display
     const ITEM_ICONS = {
-      potion: '药', mana_potion: '蓝', heart: '♥', key: '🔑', artifact: '✦',
+      potion: '药', mana_potion: '灵', heart: '丹', key: '钥', artifact: '符',
       coin: '●'
     };
 
@@ -499,8 +492,8 @@ export const InventoryPanel = {
           countText.setVisible(false);
         }
       } else {
-        cell.setFillStyle(0x3a3a3a, 0.8);
-        cell.setStrokeStyle(1, 0x666666);
+        cell.setFillStyle(RARITY_THEME.common.bg, 0.8);
+        cell.setStrokeStyle(1, RARITY_THEME.common.border);
         icon.setVisible(false);
         countText.setVisible(false);
       }
@@ -578,7 +571,7 @@ export const InventoryPanel = {
     // Highlight selected slot
     this.invSlots.forEach(({ cell }, i) => {
       if (i === slotIndex) {
-        cell.setStrokeStyle(2, 0xffffff);
+        cell.setStrokeStyle(2, UI_THEME.colors.jadeBright);
       } else {
         this.restoreSlotBorder(i);
       }
@@ -594,7 +587,7 @@ export const InventoryPanel = {
     const cell = this.invSlots[gridIndex].cell;
 
     if (gridIndex === this.invSelectedSlot) {
-      cell.setStrokeStyle(2, 0xffffff);
+      cell.setStrokeStyle(2, UI_THEME.colors.jadeBright);
       return;
     }
 
@@ -602,7 +595,7 @@ export const InventoryPanel = {
       const rarity = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
       cell.setStrokeStyle(1, rarity.border);
     } else {
-      cell.setStrokeStyle(1, 0x666666);
+      cell.setStrokeStyle(1, RARITY_THEME.common.border);
     }
   },
 
@@ -673,7 +666,7 @@ export const InventoryPanel = {
       if (equipped && this.tooltipContainer2) {
         // ——— 右面板：当前装备 + 属性差异 ———
         const esc = getSetCount(equipSys, equipped);
-        let rightText = '📌 当前装备\n' + formatEquipTooltip(equipped, esc);
+        let rightText = '当前装备\n' + formatEquipTooltip(equipped, esc);
 
         // 属性差异
         const ns = calcEquipStats(item);
@@ -733,7 +726,7 @@ export const InventoryPanel = {
 
     // ——— 非装备：单窗口 ———
     if (this.tooltipContainer2) this.tooltipContainer2.setVisible(false);
-    this.tooltipBg.setStrokeStyle(1, 0x6666aa);
+    this.tooltipBg.setStrokeStyle(1, UI_THEME.colors.brassMuted);
     this.tooltipText.setText(
       `${item.name}\n[${RARITY_LABEL[item.rarity] || RARITY_LABEL.common}] Lv.${item.level || 1}\n${item.description || ''}\n数量: ${item.quantity}${item.sellPrice > 0 ? `\n售价: ${item.sellPrice} ${THEME_CONFIG.currency}` : ''}`
     );
@@ -759,31 +752,31 @@ export const InventoryPanel = {
     const menuX = pointer.x;
     const menuY = pointer.y;
 
-    const bg = this.add.rectangle(0, 0, 120, 0, 0x2a2a3e, 0.95)
-      .setStrokeStyle(1, 0x5a5a7a).setOrigin(0, 0);
+    const bg = this.add.rectangle(0, 0, 120, 0, UI_THEME.colors.panelRaised, 0.97)
+      .setStrokeStyle(1, UI_THEME.colors.border).setOrigin(0, 0);
     this.contextMenu.add(bg);
 
     let optionY = 4;
     const addOption = (label, color, callback) => {
       const opt = this.add.text(8, optionY, label, {
-        fontSize: '14px', fill: color, fontFamily: 'Courier New'
+        fontSize: '14px', fill: color, fontFamily: UI_THEME.font.body
       }).setInteractive({ useHandCursor: true });
       opt.on('pointerdown', () => {
         callback();
         this.contextMenu.setVisible(false);
       });
-      opt.on('pointerover', () => opt.setColor('#ffffff'));
+      opt.on('pointerover', () => opt.setColor(UI_THEME.text.paper));
       opt.on('pointerout', () => opt.setColor(color));
       this.contextMenu.add(opt);
       optionY += 20;
     };
 
     if (item.type === 'consumable') {
-      addOption('使用', '#44cc44', () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
+      addOption('使用', UI_THEME.text.jade, () => { inv.useItem(actualSlot); this.refreshInventoryTab(); });
       // 设置到快捷栏 F1-F4
       for (let si = 0; si < 4; si++) {
         const slotIdx = si;
-        addOption(`设为快捷栏 F${si + 1}`, '#88aa88', () => {
+        addOption(`设为快捷栏 F${si + 1}`, UI_THEME.text.muted, () => {
           const player = this.gameScene?.player;
           if (!player) return;
           player.itemSlots[slotIdx] = item.id;
@@ -793,7 +786,7 @@ export const InventoryPanel = {
     }
     // 装备：加装备/强化/洗练/镶嵌/分解
     if (item.type === 'equipment') {
-      addOption('⚔ 装备', '#88ccff', () => {
+      addOption('装备', UI_THEME.text.jadeBright, () => {
         const equip = this.gameScene?.equipmentSystem;
         if (!equip) return;
         const success = equip.equipFromInventory(actualSlot);
@@ -802,18 +795,18 @@ export const InventoryPanel = {
           this.events.emit('panel:refresh', 'character');
         }
       });
-      addOption('🔨 强化', '#ffdd66', () => this.openEnhanceModal?.(actualSlot));
-      addOption('♻ 洗练', '#66ccff', () => this.openReforgeModal?.(item));
+      addOption('强化', UI_THEME.text.brass, () => this.openEnhanceModal?.(actualSlot));
+      addOption('洗练', UI_THEME.text.jadeBright, () => this.openReforgeModal?.(item));
       if (item.sockets && item.sockets.length > 0) {
-        addOption('💎 镶嵌', '#aa88ff', () => this.openSocketModal?.(item));
+        addOption('镶嵌', UI_THEME.text.jade, () => this.openSocketModal?.(item));
       }
-      addOption('🪓 分解', '#ff8866', () => this.openDecomposeModal?.(actualSlot));
+      addOption('分解', UI_THEME.text.cinnabarBright, () => this.openDecomposeModal?.(actualSlot));
     }
     // 宝石：合成入口
     if (item.type === 'gem') {
-      addOption('✨ 合成', '#ffdd66', () => this.openGemFusionModal?.());
+      addOption('合成', UI_THEME.text.brass, () => this.openGemFusionModal?.());
     }
-    if (item.type !== 'quest') addOption('丢弃', '#cc4444', () => { inv.removeItem(actualSlot, 1); this.refreshInventoryTab(); });
+    if (item.type !== 'quest') addOption('丢弃', UI_THEME.text.cinnabar, () => { inv.removeItem(actualSlot, 1); this.refreshInventoryTab(); });
 
     bg.setSize(120, optionY + 4);
 

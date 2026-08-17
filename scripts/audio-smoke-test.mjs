@@ -68,23 +68,23 @@ console.log('  载入后（解锁前）:', await snap());
 
 // 1) 首次手势：点击菜单中心，解锁 AudioContext + 触发按钮 hover/click 音
 console.log('→ 点击解锁音频 + 主菜单...');
-await page.mouse.move(960, 540);
+await page.mouse.move(24, 24);
 await page.waitForTimeout(200);
-await page.mouse.click(960, 540);
+await page.mouse.click(24, 24);
 await page.waitForTimeout(1800); // 等菜单音乐调度
 const afterMenu = await snap();
 console.log('  解锁 + 菜单音乐后:', afterMenu);
 
 // 2) 新建游戏 → 选职业页
 console.log('→ 新建游戏...');
-await page.mouse.click(960, 572);
+await page.mouse.click(960, 548);
 await page.waitForTimeout(600);
 // hover 确认按钮触发音效
-await page.mouse.move(960, 410);
+await page.mouse.move(960, 775);
 await page.waitForTimeout(200);
 // 3) 开始冒险（确认）
 console.log('→ 开始冒险（进入游戏）...');
-await page.mouse.click(960, 410);
+await page.mouse.click(960, 775);
 await page.waitForTimeout(2500); // 等场景加载 + 城镇音乐
 
 // 4) 触发游戏内音效：攻击（左键）+ 移动 + 开面板

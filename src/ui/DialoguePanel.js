@@ -10,6 +10,7 @@
  * 复用 UIManager 的样式（黑底绿边 + 打字机效果）。
  */
 import Phaser from 'phaser';
+import { UI_THEME } from '../config/uiTheme.js';
 
 export class DialoguePanel {
   constructor(scene, dialogueEngine, displayScene = null) {
@@ -31,22 +32,22 @@ export class DialoguePanel {
     this.container = this.displayScene.add.container(cx, cy)
       .setDepth(9990).setScrollFactor(0).setVisible(false);
 
-    this.bg = this.displayScene.add.rectangle(0, 0, W, H, 0x000000, 0.92)
-      .setStrokeStyle(2, 0x00ff88);
+    this.bg = this.displayScene.add.rectangle(0, 0, W, H, UI_THEME.colors.ink, 0.95)
+      .setStrokeStyle(2, UI_THEME.colors.jade);
     this.border = this.displayScene.add.rectangle(0, 0, W + 4, H + 4, 0, 0)
-      .setStrokeStyle(1, 0x00ff88, 0.3);
+      .setStrokeStyle(1, UI_THEME.colors.jadeBright, 0.3);
 
     this.nameText = this.displayScene.add.text(-W / 2 + 24, -H / 2 + 14, '', {
       fontSize: '18px',
-      fill: '#00bfff',
-      fontFamily: 'Courier New',
+      fill: UI_THEME.text.brass,
+      fontFamily: UI_THEME.font.body,
       fontStyle: 'bold'
     });
 
     this.bodyText = this.displayScene.add.text(-W / 2 + 24, -H / 2 + 50, '', {
       fontSize: '17px',
-      fill: '#ffffff',
-      fontFamily: 'Courier New',
+      fill: UI_THEME.text.paper,
+      fontFamily: UI_THEME.font.body,
       wordWrap: { width: W - 48 }
     });
 
@@ -58,22 +59,22 @@ export class DialoguePanel {
     for (let i = 0; i < 9; i++) {
       const t = this.displayScene.add.text(-W / 2 + 32, 0, '', {
         fontSize: '16px',
-        fill: '#cccccc',
-        fontFamily: 'Courier New'
+        fill: UI_THEME.text.paper,
+        fontFamily: UI_THEME.font.body
       }).setInteractive(
         new Phaser.Geom.Rectangle(0, 0, OPT_W, OPT_H),
         Phaser.Geom.Rectangle.Contains
       );
-      t.on('pointerover', () => t.setFill('#ffff66'));
-      t.on('pointerout',  () => t.setFill('#cccccc'));
+      t.on('pointerover', () => t.setFill(UI_THEME.text.jadeBright));
+      t.on('pointerout',  () => t.setFill(UI_THEME.text.paper));
       t.on('pointerdown', () => this._choose(i));
       this.optionTexts.push(t);
     }
 
     this.hintText = this.displayScene.add.text(W / 2 - 24, H / 2 - 18, '', {
       fontSize: '13px',
-      fill: '#888888',
-      fontFamily: 'Courier New'
+      fill: UI_THEME.text.muted,
+      fontFamily: UI_THEME.font.mono
     }).setOrigin(1, 1);
 
     this.container.add([this.border, this.bg, this.nameText, this.bodyText, ...this.optionTexts, this.hintText]);
@@ -170,7 +171,7 @@ export class DialoguePanel {
         t.setText(`${i + 1}. ${opt.text}`);
         t.setPosition(-900 / 2 + 32, baseY + i * 22);
         t.setVisible(true);
-        t.setFill('#cccccc');
+        t.setFill(UI_THEME.text.paper);
       } else {
         t.setText('').setVisible(false);
       }

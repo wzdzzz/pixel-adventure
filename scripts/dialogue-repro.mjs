@@ -1,5 +1,6 @@
 // 对话框 drawImage 崩溃 — 复现：场景重启导致事件监听器泄漏
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 const URL = 'http://localhost:3000';
 const pageErrors = [];
 const browser = await chromium.launch({
@@ -11,10 +12,7 @@ const page = await ctx.newPage();
 page.on('pageerror', (e) => pageErrors.push(e.message));
 
 const enterGame = async () => {
-  await page.mouse.click(960, 572); // 新建游戏
-  await page.waitForTimeout(500);
-  await page.mouse.click(960, 410); // 开始冒险
-  await page.waitForTimeout(2500);
+  await enterFreshGame(page, { afterStartMs: 2500 });
 };
 
 const probe = async (label) => {
@@ -34,7 +32,7 @@ console.log('→ 加载 + 解锁...');
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(1000);
-await page.mouse.click(960, 540); // 解锁
+await page.mouse.click(24, 24); // 解锁
 await page.waitForTimeout(400);
 
 console.log('→ 第 1 次进入游戏...');

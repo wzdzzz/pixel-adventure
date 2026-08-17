@@ -19,6 +19,7 @@ import {
   THEME_CONFIG,
   WEAPON_TYPE_LABELS,
 } from '../src/config/themeConfig.js';
+import { RARITY_THEME, UI_THEME } from '../src/config/uiTheme.js';
 
 assert.equal(THEME_CONFIG.title, '云荒问道');
 assert.deepEqual(CLASS_LABELS, { warrior: '体修', archer: '剑修', mage: '术修' });
@@ -26,6 +27,10 @@ assert.deepEqual(RESOURCE_LABELS, { rage: '罡气', stamina: '剑意', mana: '�
 assert.equal(STAT_LABELS.int, '悟性');
 assert.equal(RARITY_LABELS.mythic, '仙品');
 assert.deepEqual(WEAPON_TYPE_LABELS, { heavy: '重兵', light: '飞剑', magic: '法器' });
+assert.equal(UI_THEME.colors.jade, 0x62bc91);
+assert.equal(UI_THEME.colors.cinnabar, 0xb94f43);
+assert.equal(UI_THEME.colors.brass, 0xc6a45f);
+assert.equal(RARITY_THEME.legendary.border, UI_THEME.colors.brass);
 assert.deepEqual(
   Object.fromEntries(Object.entries(CLASS_CONFIG).map(([id, config]) => [id, config.name])),
   CLASS_LABELS

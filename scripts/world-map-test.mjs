@@ -6,6 +6,7 @@
 // - overlay pause reasons cannot resume each other
 // - scene restart disposes the previous world graph
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 
 const URL = process.env.GAME_URL || 'http://localhost:3000';
 const pageErrors = [];
@@ -24,12 +25,7 @@ await page.waitForSelector('canvas');
 await page.evaluate(() => localStorage.clear());
 await page.waitForTimeout(1000);
 
-await page.mouse.click(960, 540);
-await page.waitForTimeout(400);
-await page.mouse.click(960, 572);
-await page.waitForTimeout(500);
-await page.mouse.click(960, 410);
-await page.waitForTimeout(3000);
+await enterFreshGame(page, { afterStartMs: 3000 });
 
 const result = await page.evaluate(async () => {
   const game = window.__game;

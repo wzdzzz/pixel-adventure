@@ -1,6 +1,7 @@
 import { formatEquipTooltip, getSetCount } from './InventoryPanel.js';
 import SystemRegistry from '../../core/SystemRegistry.js';
 import { EQUIPMENT_SLOT_LABELS, STAT_LABELS } from '../../config/themeConfig.js';
+import { UI_THEME } from '../../config/uiTheme.js';
 
 export const CharacterPanel = {
   createCharacterTab() {
@@ -19,13 +20,13 @@ export const CharacterPanel = {
     // Content background
     const contentBg = this.add.rectangle(
       this.panelX, contentTop + (this.panelH - 60) / 2,
-      this.panelW - 20, this.panelH - 60, 0x12121e, 0.8
-    ).setStrokeStyle(1, 0x3a3a5a);
+      this.panelW - 20, this.panelH - 60, UI_THEME.colors.backdrop, 0.88
+    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(contentBg);
 
     // --- LEFT: Paper Doll (加大区域) ---
     const leftTitle = this.add.text(leftX, topY, '-- 角色装备 --', {
-      fontSize: '15px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '15px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5);
     container.add(leftTitle);
 
@@ -51,21 +52,21 @@ export const CharacterPanel = {
 
     this.equipSlotUI = {};
     const SLOT_ICONS = {
-      weapon: '⚔', offhand: '🛡', helmet: '⛑', armor: '🛡',
-      boots: '👢', necklace: '📿', ring1: '💍', ring2: '💍'
+      weapon: '器', offhand: '符', helmet: '冠', armor: '袍',
+      boots: '履', necklace: '佩', ring1: '戒', ring2: '戒'
     };
 
     slotMapping.forEach(def => {
       const sx = leftX + def.x;
       const sy = previewY + def.y;
 
-      const cell = this.add.rectangle(sx, sy, 42, 42, 0x2a2a3a, 0.7)
-        .setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
+      const cell = this.add.rectangle(sx, sy, 42, 42, UI_THEME.colors.panelRaised, 0.85)
+        .setStrokeStyle(1, UI_THEME.colors.borderMuted).setInteractive({ useHandCursor: true });
       const icon = this.add.text(sx, sy, '', {
-        fontSize: '18px', fontFamily: 'Courier New'
+        fontSize: '18px', fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setVisible(false);
       const label = this.add.text(sx, sy + 24, EQUIPMENT_SLOT_LABELS[def.slot], {
-        fontSize: '12px', fill: '#555566', fontFamily: 'Courier New'
+        fontSize: '12px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       }).setOrigin(0.5);
 
       cell.on('pointerdown', (pointer) => {
@@ -115,26 +116,26 @@ export const CharacterPanel = {
 
     const xpBarY = previewY + 180;
     this.charLevelText = this.add.text(leftX - 80, xpBarY, 'LV.1', {
-      fontSize: '16px', fill: '#ffd700', fontFamily: 'Courier New', fontStyle: 'bold'
+      fontSize: '16px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(this.charLevelText);
 
-    const xpBarBg = this.add.rectangle(leftX - 10, xpBarY + 7, 140, 10, 0x222233)
-      .setStrokeStyle(1, 0x444466).setOrigin(0, 0.5);
+    const xpBarBg = this.add.rectangle(leftX - 10, xpBarY + 7, 140, 10, UI_THEME.colors.ink)
+      .setStrokeStyle(1, UI_THEME.colors.borderMuted).setOrigin(0, 0.5);
     container.add(xpBarBg);
 
-    this.charXpBar = this.add.rectangle(leftX - 9, xpBarY + 7, 0, 8, 0x9966ff)
+    this.charXpBar = this.add.rectangle(leftX - 9, xpBarY + 7, 0, 8, UI_THEME.colors.jade)
       .setOrigin(0, 0.5);
     container.add(this.charXpBar);
 
     this.charXpText = this.add.text(leftX - 10 + 70, xpBarY + 7, '0/40', {
-      fontSize: '12px', fill: '#aaaacc', fontFamily: 'Courier New'
+      fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
     }).setOrigin(0.5);
     container.add(this.charXpText);
 
     // --- RIGHT: Base Stats ---
     const statsTitle = this.add.text(rightX, topY, '-- 基础属性 --', {
-      fontSize: '14px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(statsTitle);
 
@@ -147,23 +148,23 @@ export const CharacterPanel = {
       const y = topY + 30 + i * 32;
 
       const nameText = this.add.text(rightX, y, statNames[i], {
-        fontSize: '15px', fill: '#ccccdd', fontFamily: 'Courier New'
+        fontSize: '15px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body
       });
 
       const valueText = this.add.text(rightX + 140, y, '0', {
-        fontSize: '15px', fill: '#ffffff', fontFamily: 'Courier New'
+        fontSize: '15px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.mono
       }).setOrigin(0.5, 0);
       this.charStatValues[stat] = valueText;
 
       const plusBtn = this.add.text(rightX + 175, y, '[+]', {
-        fontSize: '15px', fill: '#444444', fontFamily: 'Courier New'
+        fontSize: '15px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       }).setInteractive({ useHandCursor: true });
       this.charStatPlusButtons[stat] = plusBtn;
 
       plusBtn.on('pointerdown', () => this.handleStatAllocation(stat));
       plusBtn.on('pointerover', () => {
         const ls = this.registry.get('levelSystem');
-        if (ls && ls.statPoints > 0) plusBtn.setColor('#00ff00');
+        if (ls && ls.statPoints > 0) plusBtn.setColor(UI_THEME.text.jadeBright);
       });
       plusBtn.on('pointerout', () => this.updatePlusButtonColors());
 
@@ -175,7 +176,7 @@ export const CharacterPanel = {
     });
 
     this.charStatPointsText = this.add.text(rightX, topY + 30 + 6 * 32 + 10, '可用属性点: 0', {
-      fontSize: '14px', fill: '#ffd700', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     });
     container.add(this.charStatPointsText);
 
@@ -184,7 +185,7 @@ export const CharacterPanel = {
     this.derivedExpanded = true;
 
     const derivedToggle = this.add.text(rightX, derivedY, '▼ 衍生属性', {
-      fontSize: '14px', fill: '#8888aa', fontFamily: 'Courier New'
+      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     }).setInteractive({ useHandCursor: true });
     container.add(derivedToggle);
 
@@ -207,10 +208,10 @@ export const CharacterPanel = {
     derivedStats.forEach((ds, i) => {
       const y = derivedY + 22 + i * 20;
       const label = this.add.text(rightX + 10, y, `${ds.label}:`, {
-        fontSize: '14px', fill: '#999999', fontFamily: 'Courier New'
+        fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
       });
       const value = this.add.text(rightX + 120, y, '-', {
-        fontSize: '14px', fill: '#cccccc', fontFamily: 'Courier New'
+        fontSize: '14px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.mono
       });
       this.charDerivedTexts[ds.key] = value;
       this.derivedContainer.add([label, value]);
@@ -224,8 +225,8 @@ export const CharacterPanel = {
 
     // --- 已激活套装区 ---
     const setsY = derivedY + 22 + derivedStats.length * 20 + 14;
-    this.charSetsTitle = this.add.text(rightX, setsY, '🛡 已激活套装', {
-      fontSize: '14px', fill: '#ffaa44', fontFamily: 'Courier New'
+    this.charSetsTitle = this.add.text(rightX, setsY, '已激活套装', {
+      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
     });
     container.add(this.charSetsTitle);
     this.charSetsContainer = this.add.container(0, 0);
@@ -246,7 +247,7 @@ export const CharacterPanel = {
 
     if (!activeSets.length) {
       const t = this.add.text(rightX + 10, baseY, '（未装备任何套装）', {
-        fontSize: '13px', fill: '#666677', fontFamily: 'Courier New'
+        fontSize: '13px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       });
       this.charSetsContainer.add(t);
       return;
@@ -255,15 +256,15 @@ export const CharacterPanel = {
     let y = baseY;
     for (const setInfo of activeSets) {
       const head = this.add.text(rightX + 10, y, `${setInfo.name}  ${setInfo.count}/${setInfo.total}`, {
-        fontSize: '14px', fill: '#ffd566', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
       });
       this.charSetsContainer.add(head);
       y += 16;
       for (const tier of setInfo.allTiers) {
         const mark = tier.active ? '✓' : '✗';
-        const color = tier.active ? '#88ff88' : '#666677';
+        const color = tier.active ? UI_THEME.text.jadeBright : UI_THEME.text.disabled;
         const t = this.add.text(rightX + 18, y, `${mark} ${tier.tier}件: ${tier.label}`, {
-          fontSize: '13px', fill: color, fontFamily: 'Courier New'
+          fontSize: '13px', fill: color, fontFamily: UI_THEME.font.body
         });
         this.charSetsContainer.add(t);
         y += 14;
@@ -312,8 +313,8 @@ export const CharacterPanel = {
     const equip = SystemRegistry.get('equipmentSystem');
     if (equip && this.equipSlotUI) {
       const SLOT_ICONS = {
-        weapon: '⚔', offhand: '🛡', helmet: '⛑', armor: '🛡',
-        boots: '👢', necklace: '📿', ring1: '💍', ring2: '💍'
+        weapon: '器', offhand: '符', helmet: '冠', armor: '袍',
+        boots: '履', necklace: '佩', ring1: '戒', ring2: '戒'
       };
 
       for (const [slotName, ui] of Object.entries(this.equipSlotUI)) {
@@ -325,8 +326,8 @@ export const CharacterPanel = {
           ui.icon.setText(SLOT_ICONS[slotName] || '?');
           ui.icon.setVisible(true);
         } else {
-          ui.cell.setFillStyle(0x2a2a3a, 0.7);
-          ui.cell.setStrokeStyle(1, 0x555555);
+          ui.cell.setFillStyle(UI_THEME.colors.panelRaised, 0.85);
+          ui.cell.setStrokeStyle(1, UI_THEME.colors.borderMuted);
           ui.icon.setVisible(false);
         }
       }
@@ -353,7 +354,7 @@ export const CharacterPanel = {
       // Show "+1" floating effect
       const valueText = this.charStatValues[statName];
       const floatText = this.add.text(valueText.x, valueText.y, '+1', {
-        fontSize: '14px', fill: '#00ff00', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
       }).setOrigin(0.5, 1).setDepth(25);
 
       this.tweens.add({
@@ -365,9 +366,9 @@ export const CharacterPanel = {
       });
 
       // Flash the value green briefly
-      this.charStatValues[statName].setColor('#00ff00');
+      this.charStatValues[statName].setColor(UI_THEME.text.jadeBright);
       this.time.delayedCall(300, () => {
-        if (this.charStatValues[statName]) this.charStatValues[statName].setColor('#ffffff');
+        if (this.charStatValues[statName]) this.charStatValues[statName].setColor(UI_THEME.text.paper);
       });
 
       this.refreshCharacterTab();
@@ -380,7 +381,7 @@ export const CharacterPanel = {
     const stats = ['con', 'str', 'int', 'agi', 'per', 'lck'];
     stats.forEach(stat => {
       if (this.charStatPlusButtons[stat]) {
-        this.charStatPlusButtons[stat].setColor(hasPoints ? '#00cc00' : '#444444');
+        this.charStatPlusButtons[stat].setColor(hasPoints ? UI_THEME.text.jade : UI_THEME.text.disabled);
       }
     });
   },
@@ -392,7 +393,7 @@ export const CharacterPanel = {
     const player = this.gameScene?.player;
     if (!player) return;
 
-    this.tooltipBg.setStrokeStyle(1, 0x6666aa);
+    this.tooltipBg.setStrokeStyle(1, UI_THEME.colors.brassMuted);
     const derived = player.stats.getDerived();
     const val = player.stats.getEffective(stat);
 
@@ -425,35 +426,35 @@ export const CharacterPanel = {
     this.charContextMenu.removeAll(true);
     this.charContextMenu.setVisible(true);
 
-    const bg = this.add.rectangle(0, 0, 120, 0, 0x2a2a3e, 0.95)
-      .setStrokeStyle(1, 0x5a5a7a).setOrigin(0, 0);
+    const bg = this.add.rectangle(0, 0, 120, 0, UI_THEME.colors.panelRaised, 0.97)
+      .setStrokeStyle(1, UI_THEME.colors.border).setOrigin(0, 0);
     this.charContextMenu.add(bg);
 
     let optY = 4;
     const addOpt = (label, color, cb) => {
       const t = this.add.text(8, optY, label, {
-        fontSize:'14px', fill:color, fontFamily:'Courier New'
+        fontSize:'14px', fill:color, fontFamily:UI_THEME.font.body
       }).setInteractive({ useHandCursor: true });
       t.on('pointerdown', () => { cb(); this.charContextMenu.setVisible(false); });
-      t.on('pointerover', () => t.setColor('#ffffff'));
+      t.on('pointerover', () => t.setColor(UI_THEME.text.paper));
       t.on('pointerout', () => t.setColor(color));
       this.charContextMenu.add(t);
       optY += 20;
     };
 
     // 强化（直接传 instance）
-    addOpt('🔨 强化', '#ffdd66', () => this.openEnhanceModal?.(equipped));
+    addOpt('强化', UI_THEME.text.brass, () => this.openEnhanceModal?.(equipped));
 
     // 洗练
-    addOpt('♻ 洗练', '#66ccff', () => this.openReforgeModal?.(equipped));
+    addOpt('洗练', UI_THEME.text.jadeBright, () => this.openReforgeModal?.(equipped));
 
     // 镶嵌（仅当装备有插槽时）
     if (equipped.sockets && equipped.sockets.length > 0) {
-      addOpt('💎 镶嵌', '#aa88ff', () => this.openSocketModal?.(equipped));
+      addOpt('镶嵌', UI_THEME.text.jade, () => this.openSocketModal?.(equipped));
     }
 
     // 卸下
-    addOpt('📥 卸下', '#aaccff', () => {
+    addOpt('卸下', UI_THEME.text.paper, () => {
       const equip = SystemRegistry.get('equipmentSystem');
       equip.unequipToInventory(slotName);
       this.refreshCharacterTab();

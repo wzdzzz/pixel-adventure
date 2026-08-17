@@ -1,5 +1,6 @@
 // 开放世界任务&赏金 验证：可接取/接受/击杀进度/自动发奖/赏金生成/刷新/UI/存档
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 const pageErrors = [];
 const browser = await chromium.launch({
   headless: true,
@@ -16,12 +17,7 @@ console.log('URL =', URL);
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(1000);
-await page.mouse.click(960, 540);
-await page.waitForTimeout(400);
-await page.mouse.click(960, 572);
-await page.waitForTimeout(500);
-await page.mouse.click(960, 410);
-await page.waitForTimeout(2800);
+await enterFreshGame(page);
 
 // 1) 初始可接取（autoAvailable + 3 赏金）+ 接受 + 击杀进度 + 自动发奖
 const flow = await page.evaluate(() => {

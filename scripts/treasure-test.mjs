@@ -1,5 +1,6 @@
 // 世界宝箱战利品验证：普通/稀有宝箱掉落真实战利品（金币+装备+材料）
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 const pageErrors = [];
 const browser = await chromium.launch({
   headless: true,
@@ -15,9 +16,7 @@ console.log('URL =', URL);
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForSelector('canvas');
 await page.waitForTimeout(1000);
-await page.mouse.click(960, 540); await page.waitForTimeout(400);
-await page.mouse.click(960, 572); await page.waitForTimeout(500);
-await page.mouse.click(960, 410); await page.waitForTimeout(2800);
+await enterFreshGame(page);
 
 const r = await page.evaluate(() => {
   const scene = window.__game.scene.getScene('MainGameScene');

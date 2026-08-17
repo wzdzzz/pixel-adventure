@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { enterFreshGame } from './helpers/game-navigation.mjs';
 
 const URL = process.env.GAME_URL || 'http://localhost:3000';
 const browser = await chromium.launch({
@@ -16,12 +17,7 @@ await page.waitForSelector('canvas');
 await page.evaluate(() => localStorage.clear());
 await page.waitForTimeout(750);
 
-await page.mouse.click(960, 540);
-await page.waitForTimeout(400);
-await page.mouse.click(960, 572);
-await page.waitForTimeout(500);
-await page.mouse.click(960, 410);
-await page.waitForTimeout(3000);
+await enterFreshGame(page, { afterStartMs: 3000 });
 
 async function sample(label, durationMs, key = null, stallMs = 0) {
   if (key) await page.keyboard.down(key);

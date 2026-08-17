@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { RESOURCE_LABELS, THEME_CONFIG } from '../../config/themeConfig.js';
+import { UI_THEME } from '../../config/uiTheme.js';
 
 export const SkillTreePanel = {
   createSkillTreeTab() {
@@ -13,13 +14,13 @@ export const SkillTreePanel = {
     // Content background
     const contentBg = this.add.rectangle(
       this.panelX, contentTop + contentH / 2,
-      contentW, contentH, 0x12121e, 0.8
-    ).setStrokeStyle(1, 0x3a3a5a);
+      contentW, contentH, UI_THEME.colors.backdrop, 0.88
+    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
     container.add(contentBg);
 
     // Skill points display
     this.skillPointsText = this.add.text(this.panelLeft + 20, contentTop + 10, `${THEME_CONFIG.skillPoint}: 0`, {
-      fontSize: '15px', fill: '#00ccff', fontFamily: 'Courier New'
+      fontSize: '15px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body
     });
     container.add(this.skillPointsText);
 
@@ -64,13 +65,13 @@ export const SkillTreePanel = {
       const cy = cardStartY + row * (cardH + cardGap) + cardH / 2;
 
       // Card background
-      const cardBg = this.add.rectangle(cardX, cy, cardW, cardH, 0x1e1e30, 0.9)
-        .setStrokeStyle(1, 0x4a4a6a);
+      const cardBg = this.add.rectangle(cardX, cy, cardW, cardH, UI_THEME.colors.panelRaised, 0.92)
+        .setStrokeStyle(1, UI_THEME.colors.borderMuted);
       cardsContainer.add(cardBg);
 
       // Skill icon (large) — interactive 用于 tooltip
       const iconText = this.add.text(cardX - cardW / 2 + 26, cy, base.icon || '?', {
-        fontSize: '24px', fontFamily: 'Courier New'
+        fontSize: '24px', fontFamily: UI_THEME.font.body
       }).setOrigin(0.5);
       iconText.setInteractive({ useHandCursor: false });
       cardsContainer.add(iconText);
@@ -109,11 +110,11 @@ export const SkillTreePanel = {
       const sbLeftEdge = cardRight - 6 - sbTotalW;
       for (let s = 0; s < 4; s++) {
         const sx = sbLeftEdge + s * (sbW + sbGap) + sbW / 2;
-        const sbg = this.add.rectangle(sx, sbY, sbW, sbH, 0x2a2a3a)
-          .setStrokeStyle(1, 0x4a4a6a)
+        const sbg = this.add.rectangle(sx, sbY, sbW, sbH, UI_THEME.colors.ink)
+          .setStrokeStyle(1, UI_THEME.colors.borderMuted)
           .setInteractive({ useHandCursor: true });
         const stx = this.add.text(sx, sbY, `${s + 1}`, {
-          fontSize: '13px', fill: '#aaaacc', fontFamily: 'Courier New'
+          fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
         }).setOrigin(0.5);
         cardsContainer.add(sbg);
         cardsContainer.add(stx);
@@ -135,26 +136,26 @@ export const SkillTreePanel = {
 
       // Skill name
       const nameText = this.add.text(textLeft, cy - 28, base.name, {
-        fontSize: '15px', fill: '#ffffff', fontFamily: 'Courier New', fontStyle: 'bold'
+        fontSize: '15px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
       });
       cardsContainer.add(nameText);
 
       // Level text — 紧跟名字
       const lvText = this.add.text(textLeft, cy - 12, 'Lv.1/5', {
-        fontSize: '13px', fill: '#aaccff', fontFamily: 'Courier New'
+        fontSize: '13px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.mono
       });
       cardsContainer.add(lvText);
 
       // Description（限制宽度避免覆盖按钮）
       const descText = this.add.text(textLeft, cy + 2, '', {
-        fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Courier New',
+        fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body,
         wordWrap: { width: textW }
       });
       cardsContainer.add(descText);
 
       // Stats line
       const statsText = this.add.text(textLeft, cy + cardH / 2 - 14, '', {
-        fontSize: '12px', fill: '#888899', fontFamily: 'Courier New'
+        fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
       });
       cardsContainer.add(statsText);
 
@@ -163,18 +164,18 @@ export const SkillTreePanel = {
       const btnH = 22;
       const btnX = cardRight - btnW / 2 - 6;
       const btnY = cy + cardH / 2 - btnH / 2 - 4;
-      const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x2a3a2a)
-        .setStrokeStyle(1, 0x44bb44).setInteractive({ useHandCursor: true });
+      const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, UI_THEME.colors.panelRaised)
+        .setStrokeStyle(1, UI_THEME.colors.jade).setInteractive({ useHandCursor: true });
       cardsContainer.add(btnBg);
 
       const btnText = this.add.text(btnX, btnY, '升级', {
-        fontSize: '13px', fill: '#44bb44', fontFamily: 'Courier New'
+        fontSize: '13px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body
       }).setOrigin(0.5);
       cardsContainer.add(btnText);
 
       // Next level preview — 升级按钮左侧小提示
       const nextLvText = this.add.text(btnX - btnW / 2 - 4, btnY, '', {
-        fontSize: '11px', fill: '#666688', fontFamily: 'Courier New'
+        fontSize: '11px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
       }).setOrigin(1, 0.5);
       cardsContainer.add(nextLvText);
 
@@ -182,10 +183,10 @@ export const SkillTreePanel = {
         this.handleSkillUpgrade(skillId);
       });
       btnBg.on('pointerover', () => {
-        btnBg.setFillStyle(0x3a4a3a);
+        btnBg.setFillStyle(UI_THEME.colors.panelHover);
       });
       btnBg.on('pointerout', () => {
-        btnBg.setFillStyle(0x2a3a2a);
+        btnBg.setFillStyle(UI_THEME.colors.panelRaised);
       });
 
       this.skillCards[skillId] = { cardBg, iconText, nameText, lvText, descText, statsText, btnBg, btnText, nextLvText, slotBtns };
@@ -193,7 +194,7 @@ export const SkillTreePanel = {
 
     // Bottom hint（固定，不随滚动）
     this.skillHintText = this.add.text(this.panelX, viewBottom + 4, `每3级获得1个${THEME_CONFIG.skillPoint} · 滚轮可滚动`, {
-      fontSize: '13px', fill: '#555566', fontFamily: 'Courier New'
+      fontSize: '13px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
     }).setOrigin(0.5, 0);
     container.add(this.skillHintText);
 
@@ -209,8 +210,8 @@ export const SkillTreePanel = {
       const sbX = this.panelLeft + this.panelW - 8;
       const sbTrackH = viewH;
       const sbThumbH = Math.max(20, (viewH / totalCardsH) * sbTrackH);
-      this._skillScrollTrack = this.add.rectangle(sbX, viewTop, 4, sbTrackH, 0x222233, 0.6).setOrigin(0, 0);
-      this._skillScrollThumb = this.add.rectangle(sbX, viewTop, 4, sbThumbH, 0x6666aa, 0.9).setOrigin(0, 0);
+      this._skillScrollTrack = this.add.rectangle(sbX, viewTop, 4, sbTrackH, UI_THEME.colors.ink, 0.7).setOrigin(0, 0);
+      this._skillScrollThumb = this.add.rectangle(sbX, viewTop, 4, sbThumbH, UI_THEME.colors.jade, 0.9).setOrigin(0, 0);
       container.add(this._skillScrollTrack);
       container.add(this._skillScrollThumb);
     }
@@ -266,7 +267,7 @@ export const SkillTreePanel = {
 
       // Update level
       card.lvText.setText(`Lv.${level}/${base.maxLevel}`);
-      card.lvText.setColor(isMaxed ? '#ffd700' : '#aaccff');
+      card.lvText.setColor(isMaxed ? UI_THEME.text.brass : UI_THEME.text.jadeBright);
 
       // Update description
       if (skillModule?.getSkillDescription) {
@@ -279,7 +280,7 @@ export const SkillTreePanel = {
       card.statsText.setText(`${resourceName}: ${scaled.cost} | 冷却: ${(scaled.cooldown / 1000).toFixed(1)}s${dmgText}`);
 
       // Update card border
-      card.cardBg.setStrokeStyle(1, isMaxed ? 0xffd700 : 0x4a4a6a);
+      card.cardBg.setStrokeStyle(1, isMaxed ? UI_THEME.colors.brass : UI_THEME.colors.borderMuted);
 
       // Update slot buttons (highlight equipped slot)
       const playerSlotsCur = player.skillSlots || [];
@@ -287,13 +288,13 @@ export const SkillTreePanel = {
         card.slotBtns.forEach((sb, idx) => {
           const equipped = playerSlotsCur[idx] === skillId;
           if (equipped) {
-            sb.bg.setFillStyle(0x2a4a2a);
-            sb.bg.setStrokeStyle(1, 0x66ff88);
-            sb.text.setColor('#ccffcc');
+            sb.bg.setFillStyle(UI_THEME.colors.panelHover);
+            sb.bg.setStrokeStyle(1, UI_THEME.colors.jadeBright);
+            sb.text.setColor(UI_THEME.text.jadeBright);
           } else {
-            sb.bg.setFillStyle(0x2a2a3a);
-            sb.bg.setStrokeStyle(1, 0x4a4a6a);
-            sb.text.setColor('#aaaacc');
+            sb.bg.setFillStyle(UI_THEME.colors.ink);
+            sb.bg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
+            sb.text.setColor(UI_THEME.text.muted);
           }
         });
       }
@@ -301,31 +302,31 @@ export const SkillTreePanel = {
       // Update upgrade button
       if (isMaxed) {
         card.btnText.setText('已满级');
-        card.btnText.setColor('#ffd700');
-        card.btnBg.setStrokeStyle(1, 0x665500);
-        card.btnBg.setFillStyle(0x2a2a1a);
+        card.btnText.setColor(UI_THEME.text.brass);
+        card.btnBg.setStrokeStyle(1, UI_THEME.colors.brassMuted);
+        card.btnBg.setFillStyle(UI_THEME.colors.ink);
         card.btnBg.disableInteractive();
         card.nextLvText.setText('');
       } else if (skillPoints >= base.upgradeCost) {
         card.btnText.setText(`升级 (${base.upgradeCost}点)`);
-        card.btnText.setColor('#44bb44');
-        card.btnBg.setStrokeStyle(1, 0x44bb44);
-        card.btnBg.setFillStyle(0x2a3a2a);
+        card.btnText.setColor(UI_THEME.text.jade);
+        card.btnBg.setStrokeStyle(1, UI_THEME.colors.jade);
+        card.btnBg.setFillStyle(UI_THEME.colors.panelRaised);
         card.btnBg.setInteractive({ useHandCursor: true });
         // Next level preview — 使用 getAtLevel 获取下一级数值
         const nextLevel = (engine.skillLevels[skillId] || 1) + 1;
         const nextScaled = engine.getAtLevel(skillId, nextLevel);
         const nextDmg = nextScaled?.effect?.damageMultiplier ? Math.round(nextScaled.effect.damageMultiplier * 100) : 0;
         card.nextLvText.setText(nextDmg ? `下级: ${nextDmg}%伤害` : '');
-        card.nextLvText.setColor('#558855');
+        card.nextLvText.setColor(UI_THEME.text.jade);
       } else {
         card.btnText.setText(`升级 (${base.upgradeCost}点)`);
-        card.btnText.setColor('#666666');
-        card.btnBg.setStrokeStyle(1, 0x444444);
-        card.btnBg.setFillStyle(0x2a2a2a);
+        card.btnText.setColor(UI_THEME.text.disabled);
+        card.btnBg.setStrokeStyle(1, UI_THEME.colors.disabled);
+        card.btnBg.setFillStyle(UI_THEME.colors.ink);
         card.btnBg.disableInteractive();
         card.nextLvText.setText(`${THEME_CONFIG.skillPoint}不足`);
-        card.nextLvText.setColor('#664444');
+        card.nextLvText.setColor(UI_THEME.text.cinnabar);
       }
     });
   },
@@ -344,9 +345,9 @@ export const SkillTreePanel = {
           duration: 100, yoyo: true, ease: 'Back.easeOut'
         });
         // Flash the card border gold briefly
-        card.cardBg.setStrokeStyle(2, 0xffdd44);
+        card.cardBg.setStrokeStyle(2, UI_THEME.colors.brass);
         this.time.delayedCall(300, () => {
-          if (card.cardBg) card.cardBg.setStrokeStyle(1, 0x4a4a6a);
+          if (card.cardBg) card.cardBg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
         });
       }
       this.refreshSkillTreeTab();

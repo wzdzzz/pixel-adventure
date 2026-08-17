@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { THEME_CONFIG } from '../config/themeConfig.js';
+import { UI_THEME } from '../config/uiTheme.js';
 import { AssetManager, TEXTURES, CHARACTERS } from '../assets/AssetManager.js';
 
 export class BootScene extends Phaser.Scene {
@@ -43,20 +44,39 @@ export class BootScene extends Phaser.Scene {
   create() {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+    const { colors, text, font } = UI_THEME;
 
-    this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e);
+    this.add.rectangle(width / 2, height / 2, width, height, colors.ink);
 
-    const titleText = this.add.text(width / 2, height / 2 - 60, THEME_CONFIG.title, {
-      fontSize: '36px',
-      fill: '#00ff00',
-      fontFamily: 'Courier New',
+    const landscape = this.add.graphics();
+    landscape.fillStyle(colors.backdrop, 1);
+    landscape.fillPoints([
+      new Phaser.Geom.Point(0, height * 0.74),
+      new Phaser.Geom.Point(width * 0.2, height * 0.5),
+      new Phaser.Geom.Point(width * 0.36, height * 0.72),
+      new Phaser.Geom.Point(width * 0.55, height * 0.42),
+      new Phaser.Geom.Point(width * 0.73, height * 0.69),
+      new Phaser.Geom.Point(width, height * 0.52),
+      new Phaser.Geom.Point(width, height),
+      new Phaser.Geom.Point(0, height),
+    ], true);
+    landscape.lineStyle(1, colors.brassMuted, 0.7);
+    landscape.lineBetween(width / 2 - 180, height / 2 + 12, width / 2 - 32, height / 2 + 12);
+    landscape.lineBetween(width / 2 + 32, height / 2 + 12, width / 2 + 180, height / 2 + 12);
+    landscape.fillStyle(colors.cinnabar, 1);
+    landscape.fillRect(width / 2 - 9, height / 2 + 3, 18, 18);
+
+    this.add.text(width / 2, height / 2 - 90, THEME_CONFIG.title, {
+      fontSize: '64px',
+      fill: text.paper,
+      fontFamily: font.display,
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    const loadText = this.add.text(width / 2, height / 2 + 10, '正在加载...', {
+    const loadText = this.add.text(width / 2, height / 2 + 62, '引灵入境', {
       fontSize: '16px',
-      fill: '#888888',
-      fontFamily: 'Courier New'
+      fill: text.jadeBright,
+      fontFamily: font.body
     }).setOrigin(0.5);
 
     this.tweens.add({
