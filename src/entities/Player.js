@@ -27,6 +27,12 @@ const SKILL_MODULES = {
   mage: MageModule
 };
 
+const TECHNIQUE_COLORS = {
+  warrior: { primary: 0xc65343, secondary: 0xc9a35f, pale: 0xf0dfbd },
+  archer: { primary: 0x58b89a, secondary: 0xe7e1d2, pale: 0x9cd8c0 },
+  mage: { primary: 0xb84b3e, secondary: 0x70c7c7, pale: 0xd0aa62 }
+};
+
 export class Player extends Actor {
   constructor(scene, x, y, classType = 'warrior', gender = 'male') {
     const classConfig = getClassConfig(classType);
@@ -241,8 +247,8 @@ export class Player extends Actor {
 
     if (this.isRangedClass()) {
       this.playAnim('idle');
-      // Brief "charge" tint for ranged classes
-      const tint = this.classType === 'archer' ? 0xccffcc : 0xccccff;
+      // 御剑与施术前摇使用职业技法色短暂提亮
+      const tint = TECHNIQUE_COLORS[this.classType]?.secondary || 0xe7e1d2;
       this.sprite.setTint(tint);
       this.scene.time.delayedCall(120, () => { if (this.sprite) this.sprite.clearTint(); });
     } else {
@@ -264,9 +270,11 @@ export class Player extends Actor {
           this.facing = dir.x >= 0 ? 1 : -1;
           this.sprite.setFlipX(this.facing < 0);
         }
-        // 弹道 visual 沿瞄准方向飞 220px
+        // 飞剑或符箓沿瞄准方向飞行 220px
         const range = 220;
-        const color = this.classType === 'archer' ? 0xccff44 : 0x88aaff;
+        const color = this.classType === 'archer'
+          ? TECHNIQUE_COLORS.archer.primary
+          : TECHNIQUE_COLORS.mage.pale;
         this.spawnProjectile(dir.x * range, dir.y * range, color, 4, 2);
         // hitbox：小方框 24×24，由 handleAttackActive 沿 dir 扫掠
         this.attackHitbox.setSize(24, 24);
@@ -797,7 +805,7 @@ export class Player extends Actor {
     this.sprite.setAngle(0);
   }
 
-  // ─── Dash (Charge, Leap Strike) ───
+  // ─── 身法与突进（铁山靠、流云步、缩地符） ───
 
   startChargeDash(skill) {
     const effect = skill.effect;
@@ -821,6 +829,7 @@ export class Player extends Actor {
     }
 
     this._chargeDashDir = { x: dirX, y: dirY };
+    this._spawnMovementTechniqueVisual(skill, this.sprite.x, this.sprite.y, dirX, dirY);
 
     // 闪现：瞬移到终点（不走 velocity）
     if (effect.blink) {
@@ -847,6 +856,7 @@ export class Player extends Actor {
       // 瞬移到合法终点
       this.sprite.setPosition(dest.x, dest.y);
       this.sprite.setVelocity(0, 0);
+      this._spawnTechniqueSeal(skill, dest.x, dest.y, 24);
       this._chargeDashVelocity = null;
       this._chargeHitRegistered = false;
       return;
@@ -866,7 +876,7 @@ export class Player extends Actor {
     };
     this._chargeHitRegistered = false;
 
-    // Archer 翻滚：半透明
+    // 剑修身法：短暂虚化，位移残光由绘制层负责
     if (this.classType === 'archer') {
       this.sprite.setAlpha(0.5);
       this.scene.time.delayedCall(skill.phases.active, () => {
@@ -877,7 +887,7 @@ export class Player extends Actor {
     this.sprite.setVelocity(this._chargeDashVelocity.vx, this._chargeDashVelocity.vy);
   }
 
-  // ─── Leap Slam (跳斩) ───
+  // ─── 天坠式落地技 ───
 
   startLeapSlam(skill) {
     const effect = skill.effect;
@@ -994,16 +1004,8 @@ export class Player extends Actor {
       this.addRage(10 + hitCount * 5);
     }
 
-    // 落地视觉特效：冲击波
-    const ring = this.scene.add.circle(x, y, 10, 0xff6600, 0.6).setDepth(1);
-    this.scene.tweens.add({
-      targets: ring,
-      radius: hw / 2 + 20,
-      alpha: 0,
-      duration: 300,
-      onUpdate: () => { ring.setRadius(ring.radius); },
-      onComplete: () => ring.destroy()
-    });
+    // 落地视觉：山纹与罡气冲击环
+    this._spawnImpactArray(skill, x, y, hw / 2 + 20);
 
     // 地面持续伤害区域
     if (effect.groundDot) {
@@ -1023,9 +1025,21 @@ export class Player extends Actor {
     const tickInterval = dot.tickInterval || 500;
     const dmgMult = dot.damageMultiplier || 0.3;
 
-    // 视觉：地面灼烧圈
-    const zone = this.scene.add.circle(x, y, radius, 0xff4400, 0.25)
-      .setDepth(0).setStrokeStyle(2, 0xff6600, 0.5);
+    // 视觉：持续的朱砂山阵，不遮挡地表细节
+    const colors = TECHNIQUE_COLORS.warrior;
+    const zone = this.scene.add.graphics().setPosition(x, y).setDepth(0);
+    zone.fillStyle(colors.primary, 0.08);
+    zone.fillCircle(0, 0, radius);
+    zone.lineStyle(2, colors.secondary, 0.65);
+    zone.strokeCircle(0, 0, radius);
+    zone.lineStyle(1, colors.primary, 0.55);
+    zone.beginPath();
+    zone.moveTo(-radius * 0.7, radius * 0.22);
+    zone.lineTo(-radius * 0.28, -radius * 0.32);
+    zone.lineTo(0, radius * 0.08);
+    zone.lineTo(radius * 0.28, -radius * 0.42);
+    zone.lineTo(radius * 0.72, radius * 0.22);
+    zone.strokePath();
 
     let elapsed = 0;
     const tickTimer = this.scene.time.addEvent({
@@ -1059,7 +1073,7 @@ export class Player extends Actor {
     });
   }
 
-  // ─── Spin (Whirlwind) ───
+  // ─── 持续阵技（罡风、剑阵、术阵） ───
 
   startWhirlwind(skill) {
     const effect = skill.effect;
@@ -1104,42 +1118,42 @@ export class Player extends Actor {
 
     const spinDuration = skill.phases.active;
 
-    if (this.isRangedClass()) {
-      // 远程 AOE 视觉：外圈描边脉冲 + 内圈实心反向脉冲
-      const color = this.getSkillProjectileColor(skill);
+    const colors = this._getTechniquePalette(skill);
+    this._auraRing = this._createTechniqueArrayGraphics(
+      skill, anchorX, anchorY, effect.radius
+    ).setDepth(this.sprite.depth - 1);
+    this._auraInner = this.scene.add.graphics()
+      .setPosition(anchorX, anchorY)
+      .setDepth(this.sprite.depth - 1);
+    this._auraInner.lineStyle(1, colors.pale, 0.62);
+    this._auraInner.strokeCircle(0, 0, effect.radius * 0.45);
+    this._auraInner.lineStyle(2, colors.primary, 0.48);
+    this._auraInner.beginPath();
+    this._auraInner.moveTo(-effect.radius * 0.3, 0);
+    this._auraInner.lineTo(0, -effect.radius * 0.3);
+    this._auraInner.lineTo(effect.radius * 0.3, 0);
+    this._auraInner.lineTo(0, effect.radius * 0.3);
+    this._auraInner.closePath();
+    this._auraInner.strokePath();
 
-      // 外圈
-      this._auraRing = this.scene.add.circle(
-        anchorX, anchorY, effect.radius, color, 0.18
-      ).setStrokeStyle(2, color, 0.75).setDepth(this.sprite.depth - 1);
-
-      // 内圈（更小更亮）
-      this._auraInner = this.scene.add.circle(
-        anchorX, anchorY, effect.radius * 0.55, color, 0.32
-      ).setDepth(this.sprite.depth - 1);
-
-      // 外圈：膨胀+渐淡
-      this._whirlwindTween = this.scene.tweens.add({
-        targets: this._auraRing,
-        scaleX: 1.12, scaleY: 1.12, alpha: 0.06,
-        duration: 320, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-      });
-      // 内圈：反向收缩+变亮
-      this._auraInnerTween = this.scene.tweens.add({
-        targets: this._auraInner,
-        scaleX: 0.75, scaleY: 0.75, alpha: 0.5,
-        duration: 220, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-      });
-    } else {
-      // 战士：玩家身上旋转
-      this._whirlwindTween = this.scene.tweens.add({
-        targets: this.sprite,
-        angle: 360 * 4,
-        duration: spinDuration,
-        ease: 'Linear',
-        onComplete: () => { this.sprite.setAngle(0); }
-      });
-    }
+    this._whirlwindTween = this.scene.tweens.add({
+      targets: this._auraRing,
+      rotation: this.classType === 'warrior' ? Math.PI * 2 : -Math.PI * 2,
+      scaleX: 1.08,
+      scaleY: 1.08,
+      alpha: 0.42,
+      duration: Math.max(360, spinDuration),
+      ease: 'Linear'
+    });
+    this._auraInnerTween = this.scene.tweens.add({
+      targets: this._auraInner,
+      rotation: this.classType === 'mage' ? Math.PI * 2 : -Math.PI * 2,
+      alpha: 0.82,
+      duration: Math.max(300, spinDuration * 0.75),
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
   }
 
   whirlwindTick(skill) {
@@ -1152,10 +1166,11 @@ export class Player extends Actor {
       // 战士：跟随玩家
       this.skillHitbox.setPosition(this.sprite.x, this.sprite.y);
       if (this._auraRing) this._auraRing.setPosition(this.sprite.x, this.sprite.y);
+      if (this._auraInner) this._auraInner.setPosition(this.sprite.x, this.sprite.y);
     }
   }
 
-  // ─── Melee (Heavy Strike, Execute, Ground Splitter, Armor Break) ───
+  // ─── Directed techniques: body strikes, flying swords and talismans ───
 
   startMeleeSkill(skill) {
     const effect = skill.effect;
@@ -1176,7 +1191,7 @@ export class Player extends Actor {
         this.sprite.setFlipX(this.facing < 0);
       }
 
-      // 扇形多弹道（multiShot 等：effect.arrows > 1）
+      // 分光剑等扇形多弹道（effect.arrows > 1）
       if (effect.arrows && effect.arrows > 1) {
         this.startConeSkill(skill, dir, range);
         return;
@@ -1223,11 +1238,12 @@ export class Player extends Actor {
         this.sprite.y
       );
       this.skillHitbox.body.enable = true;
+      this._spawnBodyTechniqueVisual(skill);
     }
   }
 
   /**
-   * 扇形多弹道技能（如多重射击）。
+   * 扇形多飞剑技能（如分光剑）。
    * - arrows: 弹道数量
    * - spreadAngle: 总扩散角度（度）
    * hitbox: 用扇形 4 角点的 AABB 覆盖整个扇形区域，active 期间静止（不扫掠）
@@ -1286,7 +1302,10 @@ export class Player extends Actor {
       targets: fanGfx,
       alpha: 0,
       duration: 350,
-      onComplete: () => fanGfx.destroy()
+      onComplete: () => {
+        if (this._fanIndicator === fanGfx) this._fanIndicator = null;
+        fanGfx.destroy();
+      }
     });
 
     // 多发弹道按角度散开
@@ -1300,7 +1319,7 @@ export class Player extends Actor {
     }
   }
 
-  // ─── Buff (War Cry, Blood Rage, Defensive Stance, Berserker Rage) ───
+  // ─── 护体与增益法印 ───
 
   startBuffSkill(skill) {
     const effect = skill.effect;
@@ -1318,44 +1337,279 @@ export class Player extends Actor {
         description: desc
       });
     }
-    // Class-colored visual feedback
-    const buffColors = { warrior: 0xffdd44, archer: 0x66ff88, mage: 0x88bbff };
-    const tint = buffColors[this.classType] || 0xffdd44;
+    // 职业色只短暂提亮角色，主要辨识来自脚下法纹
+    const colors = this._getTechniquePalette(skill);
+    const tint = colors.secondary;
     this.sprite.setTint(tint);
     this.scene.time.delayedCall(300, () => {
       if (this.sprite) this.sprite.clearTint();
     });
 
-    // Mage: extra sparkle ring on shield-type buffs
-    if (this.classType === 'mage' && effect.modifiers?.damageReduction) {
-      const ring = this.scene.add.circle(this.sprite.x, this.sprite.y, 24, 0x6688ff, 0.2)
-        .setStrokeStyle(2, 0x88bbff, 0.7).setDepth(this.sprite.depth + 1);
-      this.scene.tweens.add({
-        targets: ring, scaleX: 2, scaleY: 2, alpha: 0,
-        duration: 400, onComplete: () => ring.destroy()
-      });
-    }
+    const sealRadius = effect.modifiers?.damageReduction ? 32 : 24;
+    this._spawnTechniqueSeal(skill, this.sprite.x, this.sprite.y, sealRadius);
   }
 
-  // ─── Taunt ───
+  // ─── 镇魂喝 ───
 
   startTauntSkill(skill) {
     const effect = skill.effect;
     // Force nearby enemies to target player
     this.scene.events.emit('playerTaunt', this, effect.radius, effect.duration);
-    // Visual: red pulse
-    this.sprite.setTint(0xff4444);
+    // 镇魂喝：朱砂山印向外震开
+    this.sprite.setTint(TECHNIQUE_COLORS.warrior.primary);
     this.scene.time.delayedCall(300, () => {
       if (this.sprite) this.sprite.clearTint();
     });
+    this._spawnImpactArray(skill, this.sprite.x, this.sprite.y, effect.radius);
   }
 
   // ═══════════════════════════════════════════════
-  // Projectile & Visual Effects (code-generated)
+  // Cultivation technique visuals (code-generated, gameplay-independent)
   // ═══════════════════════════════════════════════
 
+  _getTechniquePalette(skill = null) {
+    const id = skill?.id || '';
+    if (this.classType === 'mage' &&
+        (id.includes('ice') || id.includes('frost') || id === 'freeze' || id === 'blizzard')) {
+      return { primary: 0x6fc7c7, secondary: 0xe4eee8, pale: 0xa7d9d1 };
+    }
+    return TECHNIQUE_COLORS[this.classType] || TECHNIQUE_COLORS.warrior;
+  }
+
+  _drawFlyingSword(graphics, x, y, angle, length, colors, alpha = 1) {
+    const ux = Math.cos(angle);
+    const uy = Math.sin(angle);
+    const px = -uy;
+    const py = ux;
+    const tipX = x + ux * length * 0.58;
+    const tipY = y + uy * length * 0.58;
+    const heelX = x - ux * length * 0.35;
+    const heelY = y - uy * length * 0.35;
+    const halfW = Math.max(1.4, length * 0.085);
+
+    graphics.fillStyle(colors.secondary, alpha * 0.92);
+    graphics.fillTriangle(
+      heelX + px * halfW, heelY + py * halfW,
+      heelX - px * halfW, heelY - py * halfW,
+      tipX, tipY
+    );
+    graphics.lineStyle(1, colors.primary, alpha);
+    graphics.beginPath();
+    graphics.moveTo(heelX + px * halfW, heelY + py * halfW);
+    graphics.lineTo(tipX, tipY);
+    graphics.lineTo(heelX - px * halfW, heelY - py * halfW);
+    graphics.strokePath();
+    graphics.lineStyle(2, colors.pale, alpha * 0.9);
+    graphics.lineBetween(
+      heelX + px * halfW * 1.7, heelY + py * halfW * 1.7,
+      heelX - px * halfW * 1.7, heelY - py * halfW * 1.7
+    );
+    graphics.lineStyle(2, colors.primary, alpha * 0.75);
+    graphics.lineBetween(
+      heelX - ux * length * 0.18, heelY - uy * length * 0.18,
+      heelX, heelY
+    );
+  }
+
+  _drawTalisman(graphics, skill, length, height, colors) {
+    const id = skill?.id || '';
+    if (id.includes('ice') || id.includes('frost') || id === 'freeze') {
+      graphics.fillStyle(colors.secondary, 0.9);
+      graphics.fillTriangle(-length * 0.45, -height * 0.45, -length * 0.45, height * 0.45, length * 0.55, 0);
+      graphics.lineStyle(1, colors.primary, 1);
+      graphics.lineBetween(-length * 0.45, -height * 0.45, length * 0.55, 0);
+      graphics.lineBetween(-length * 0.45, height * 0.45, length * 0.55, 0);
+      graphics.lineBetween(-length * 0.18, 0, length * 0.28, 0);
+      return;
+    }
+
+    graphics.fillStyle(0xe7d7aa, 0.95);
+    graphics.fillRect(-length / 2, -height / 2, length, height);
+    graphics.lineStyle(1, colors.primary, 0.95);
+    graphics.strokeRect(-length / 2, -height / 2, length, height);
+    graphics.beginPath();
+    graphics.moveTo(-length * 0.3, 0);
+    graphics.lineTo(-length * 0.08, -height * 0.28);
+    graphics.lineTo(length * 0.05, height * 0.26);
+    graphics.lineTo(length * 0.28, -height * 0.2);
+    graphics.strokePath();
+  }
+
+  _createTechniqueArrayGraphics(skill, x, y, radius) {
+    const graphics = this.scene.add.graphics().setPosition(x, y);
+    const colors = this._getTechniquePalette(skill);
+    graphics.lineStyle(2, colors.primary, 0.72);
+    graphics.strokeCircle(0, 0, radius);
+    graphics.lineStyle(1, colors.secondary, 0.58);
+    graphics.strokeCircle(0, 0, radius * 0.72);
+
+    if (this.classType === 'archer') {
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 * i) / 6;
+        this._drawFlyingSword(
+          graphics,
+          Math.cos(angle) * radius * 0.72,
+          Math.sin(angle) * radius * 0.72,
+          angle + Math.PI / 2,
+          Math.max(12, radius * 0.34),
+          colors,
+          0.9
+        );
+      }
+    } else if (this.classType === 'mage') {
+      graphics.lineStyle(1, colors.pale, 0.7);
+      graphics.beginPath();
+      for (let i = 0; i <= 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8 - Math.PI / 8;
+        const px = Math.cos(angle) * radius * 0.72;
+        const py = Math.sin(angle) * radius * 0.72;
+        if (i === 0) graphics.moveTo(px, py);
+        else graphics.lineTo(px, py);
+      }
+      graphics.strokePath();
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        graphics.fillStyle(i % 2 ? colors.primary : colors.secondary, 0.8);
+        graphics.fillCircle(Math.cos(angle) * radius, Math.sin(angle) * radius, 2);
+      }
+      if (skill?.id === 'elementalBurst') {
+        const elementColors = [0x58b89a, 0xc65343, 0xc9a35f, 0x70c7c7, 0xe4eee8];
+        for (let i = 0; i < elementColors.length; i++) {
+          const angle = (Math.PI * 2 * i) / elementColors.length - Math.PI / 2;
+          graphics.fillStyle(elementColors[i], 0.92);
+          graphics.fillCircle(
+            Math.cos(angle) * radius * 0.48,
+            Math.sin(angle) * radius * 0.48,
+            Math.max(2, radius * 0.07)
+          );
+        }
+      }
+    } else {
+      graphics.lineStyle(2, colors.secondary, 0.72);
+      for (let i = 0; i < 4; i++) {
+        const angle = (Math.PI * i) / 2;
+        const ux = Math.cos(angle);
+        const uy = Math.sin(angle);
+        const px = -uy;
+        const py = ux;
+        const ox = ux * radius * 0.68;
+        const oy = uy * radius * 0.68;
+        graphics.beginPath();
+        graphics.moveTo(ox - px * 9, oy + py * 9);
+        graphics.lineTo(ox - ux * radius * 0.2, oy - uy * radius * 0.2);
+        graphics.lineTo(ox + px * 9, oy + py * 9);
+        graphics.strokePath();
+      }
+    }
+    return graphics;
+  }
+
+  _spawnTechniqueSeal(skill, x, y, radius = 24) {
+    const seal = this._createTechniqueArrayGraphics(skill, x, y, radius)
+      .setDepth(this.sprite.depth - 1)
+      .setScale(0.58)
+      .setAlpha(0.9);
+    this.scene.tweens.add({
+      targets: seal,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      alpha: 0,
+      rotation: this.classType === 'mage' ? Math.PI / 3 : -Math.PI / 5,
+      duration: 420,
+      ease: 'Quad.easeOut',
+      onComplete: () => seal.destroy()
+    });
+  }
+
+  _spawnImpactArray(skill, x, y, radius) {
+    const impact = this._createTechniqueArrayGraphics(skill, x, y, radius)
+      .setDepth(this.sprite.depth - 1)
+      .setScale(0.18)
+      .setAlpha(0.88);
+    this.scene.tweens.add({
+      targets: impact,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 0,
+      duration: 360,
+      ease: 'Cubic.easeOut',
+      onComplete: () => impact.destroy()
+    });
+  }
+
+  _spawnMovementTechniqueVisual(skill, x, y, dirX, dirY) {
+    const colors = this._getTechniquePalette(skill);
+    const angle = Math.atan2(dirY, dirX);
+    this._spawnTechniqueSeal(skill, x, y, 18);
+
+    const streaks = this.scene.add.graphics()
+      .setPosition(x, y)
+      .setRotation(angle)
+      .setDepth(this.sprite.depth);
+    streaks.lineStyle(2, colors.primary, 0.78);
+    streaks.lineBetween(-22, -7, 12, -7);
+    streaks.lineBetween(-28, 0, 16, 0);
+    streaks.lineStyle(1, colors.secondary, 0.75);
+    streaks.lineBetween(-18, 7, 10, 7);
+    this.scene.tweens.add({
+      targets: streaks,
+      x: x + dirX * 34,
+      y: y + dirY * 34,
+      alpha: 0,
+      scaleX: 1.45,
+      duration: 260,
+      ease: 'Quad.easeOut',
+      onComplete: () => streaks.destroy()
+    });
+  }
+
+  _spawnBodyTechniqueVisual(skill) {
+    const colors = this._getTechniquePalette(skill);
+    const dir = this.facing || 1;
+    const graphics = this.scene.add.graphics()
+      .setPosition(this.sprite.x + dir * 18, this.sprite.y)
+      .setScale(dir, 1)
+      .setDepth(this.sprite.depth + 1);
+    const id = skill?.id || '';
+
+    graphics.lineStyle(3, colors.primary, 0.86);
+    if (id === 'groundSplitter') {
+      graphics.beginPath();
+      graphics.moveTo(0, 12);
+      graphics.lineTo(12, -4);
+      graphics.lineTo(22, 9);
+      graphics.lineTo(34, -10);
+      graphics.lineTo(52, 12);
+      graphics.strokePath();
+    } else {
+      graphics.beginPath();
+      graphics.moveTo(-4, -14);
+      graphics.lineTo(20, -8);
+      graphics.lineTo(34, 0);
+      graphics.lineTo(20, 8);
+      graphics.lineTo(-4, 14);
+      graphics.strokePath();
+      graphics.fillStyle(colors.secondary, 0.72);
+      graphics.fillCircle(9, 0, id === 'execute' ? 7 : 5);
+    }
+    graphics.lineStyle(1, colors.secondary, 0.7);
+    graphics.lineBetween(-8, -9, 24, -3);
+    graphics.lineBetween(-8, 9, 24, 3);
+
+    this.scene.tweens.add({
+      targets: graphics,
+      x: graphics.x + dir * 26,
+      scaleX: dir * 1.18,
+      scaleY: 1.18,
+      alpha: 0,
+      duration: 260,
+      ease: 'Quad.easeOut',
+      onComplete: () => graphics.destroy()
+    });
+  }
+
   /**
-   * Spawn a simple projectile visual (no physics — hitbox handles damage)
+   * 绘制飞剑、符箓或拳风弹道。仅负责表现，伤害仍由复用 hitbox 处理。
    * @param {number} dx - relative X offset to travel
    * @param {number} dy - relative Y offset to travel
    * @param {number} color - tint color
@@ -1369,16 +1623,31 @@ export class Player extends Actor {
     const tx = sx + dx;
     const ty = sy + dy;
 
-    // Main projectile body
-    const proj = this.scene.add.rectangle(sx, sy, w, h, color)
+    const angle = Math.atan2(dy, dx);
+    const colors = this._getTechniquePalette(skill);
+    const proj = this.scene.add.graphics()
+      .setPosition(sx, sy)
+      .setRotation(angle)
       .setDepth(this.sprite.depth + 1);
 
-    // Rotate to face travel direction
-    const angle = Math.atan2(dy, dx);
-    proj.setRotation(angle);
+    if (this.classType === 'archer') {
+      this._drawFlyingSword(proj, 0, 0, 0, Math.max(16, w * 2.8), colors);
+    } else if (this.classType === 'mage') {
+      this._drawTalisman(proj, skill, Math.max(14, w * 2.3), Math.max(7, h * 2.8), colors);
+    } else {
+      proj.lineStyle(3, colors.primary, 0.9);
+      proj.beginPath();
+      proj.moveTo(-w * 1.5, -h);
+      proj.lineTo(w * 1.4, 0);
+      proj.lineTo(-w * 1.5, h);
+      proj.strokePath();
+      proj.lineStyle(1, colors.secondary, 0.75);
+      proj.lineBetween(-w * 2, 0, w, 0);
+    }
 
-    // Trail particles
-    const trailColor = Phaser.Display.Color.IntegerToColor(color).brighten(30).color;
+    const trailColor = Phaser.Display.Color.IntegerToColor(colors.pale).color;
+    const totalDistance = Math.max(1, Math.hypot(dx, dy));
+    let trailCount = 0;
 
     this.scene.tweens.add({
       targets: proj,
@@ -1386,21 +1655,37 @@ export class Player extends Actor {
       duration: 120,
       ease: 'Quad.easeOut',
       onUpdate: () => {
-        // Spawn trail particle
-        const t = this.scene.add.circle(proj.x, proj.y, w * 0.4, trailColor, 0.5)
+        const travelled = Math.hypot(proj.x - sx, proj.y - sy);
+        if (trailCount >= 3 || travelled < totalDistance * ((trailCount + 1) / 4)) return;
+        trailCount++;
+        const trail = this.scene.add.graphics()
+          .setPosition(proj.x, proj.y)
+          .setRotation(angle)
           .setDepth(proj.depth - 1);
+        trail.lineStyle(Math.max(1, h * 0.55), trailColor, 0.45);
+        trail.lineBetween(-Math.max(8, w * 1.8), 0, 0, 0);
         this.scene.tweens.add({
-          targets: t, alpha: 0, scaleX: 0.2, scaleY: 0.2,
-          duration: 150, onComplete: () => t.destroy()
+          targets: trail,
+          alpha: 0,
+          scaleX: 0.25,
+          duration: 150,
+          onComplete: () => trail.destroy()
         });
       },
       onComplete: () => {
-        // Impact flash
-        const flash = this.scene.add.circle(tx, ty, w * 1.5, color, 0.6)
-          .setDepth(proj.depth);
+        const flash = this.scene.add.graphics().setPosition(tx, ty).setDepth(proj.depth);
+        flash.lineStyle(2, colors.primary, 0.8);
+        flash.strokeCircle(0, 0, Math.max(5, w * 1.2));
+        flash.lineStyle(1, colors.secondary, 0.75);
+        flash.lineBetween(-w, 0, w, 0);
+        flash.lineBetween(0, -w, 0, w);
         this.scene.tweens.add({
-          targets: flash, scaleX: 2.5, scaleY: 2.5, alpha: 0,
-          duration: 150, onComplete: () => flash.destroy()
+          targets: flash,
+          scaleX: 2.1,
+          scaleY: 2.1,
+          alpha: 0,
+          duration: 160,
+          onComplete: () => flash.destroy()
         });
         proj.destroy();
       }
@@ -1507,14 +1792,14 @@ export class Player extends Actor {
     return { x: startX, y: startY };
   }
 
-  /** Ghost afterimage for mage blink */
+  /** 缩地符残影：纸白轮廓配朱砂符光，避免旧奥术紫色。 */
   spawnGhostAfterimage() {
-    // Create a tinted copy at current position
+    const colors = TECHNIQUE_COLORS.mage;
     const ghost = this.scene.add.image(this.sprite.x, this.sprite.y, this.sprite.texture.key)
       .setFlipX(this.sprite.flipX)
       .setDisplaySize(this.sprite.displayWidth, this.sprite.displayHeight)
       .setOrigin(0.5, 0.5)
-      .setTint(0x6688ff)
+      .setTint(colors.secondary)
       .setAlpha(0.6)
       .setDepth(this.sprite.depth - 1);
     this.scene.tweens.add({
@@ -1523,21 +1808,17 @@ export class Player extends Actor {
     });
   }
 
-  /** Get projectile color based on skill type */
+  /** 为阵纹与指示层提供克制的中式技法色。 */
   getSkillProjectileColor(skill) {
-    if (!skill) return 0xffffff;
+    if (!skill) return 0xe7e1d2;
     const id = skill.id || '';
-    // Archer colors
-    if (id.includes('poison') || id === 'poisonArrow') return 0x66ff44;
-    if (id.includes('hunter') || id === 'huntersMark') return 0xff8844;
-    if (this.classType === 'archer') return 0xccff44;
-    // Mage colors
-    if (id.includes('fire') || id === 'fireball' || id === 'meteor') return 0xff6633;
-    if (id.includes('ice') || id.includes('frost') || id === 'freeze' || id === 'blizzard') return 0x44ccff;
-    if (id.includes('arcane') || id === 'arcaneMissile') return 0xbb66ff;
-    if (this.classType === 'mage') return 0x88aaff;
-    // Warrior fallback
-    return 0xffffff;
+    if (id.includes('poison') || id === 'poisonArrow') return 0x4f9b72;
+    if (id.includes('hunter') || id === 'huntersMark') return 0xc9a35f;
+    if (this.classType === 'archer') return TECHNIQUE_COLORS.archer.primary;
+    if (id.includes('fire') || id === 'fireball' || id === 'meteor') return TECHNIQUE_COLORS.mage.primary;
+    if (id.includes('ice') || id.includes('frost') || id === 'freeze' || id === 'blizzard') return TECHNIQUE_COLORS.mage.secondary;
+    if (this.classType === 'mage') return TECHNIQUE_COLORS.mage.pale;
+    return TECHNIQUE_COLORS.warrior.primary;
   }
 
   // ═══════════════════════════════════════════════

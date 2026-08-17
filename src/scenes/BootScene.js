@@ -11,6 +11,7 @@ export class BootScene extends Phaser.Scene {
   preload() {
     // Load real sprite images — these override generated textures
     const sprites = {
+      [TEXTURES.MENU_BACKGROUND]: 'sprites/theme/cloud_wastes_menu.webp',
       [TEXTURES.CHEST_CLOSED]: 'sprites/chest_closed.png',
       [TEXTURES.CHEST_OPEN]: 'sprites/chest_open.png',
       [TEXTURES.CHEST_LOCKED]: 'sprites/chest_locked.png',
@@ -46,7 +47,9 @@ export class BootScene extends Phaser.Scene {
     const height = this.cameras.main.height;
     const { colors, text, font } = UI_THEME;
 
-    this.add.rectangle(width / 2, height / 2, width, height, colors.ink);
+    this.add.image(width / 2, height / 2, TEXTURES.MENU_BACKGROUND)
+      .setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height / 2, width, height, colors.ink, 0.56);
 
     const landscape = this.add.graphics();
     landscape.fillStyle(colors.backdrop, 1);

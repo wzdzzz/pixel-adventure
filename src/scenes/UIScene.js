@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { RESOURCE_LABELS, THEME_CONFIG } from '../config/themeConfig.js';
 import { UI_THEME } from '../config/uiTheme.js';
 import { TEXTURES } from '../assets/AssetManager.js';
+import { getSkillIconTexture } from '../assets/XianxiaSkillIcons.js';
 import { Tooltip } from '../ui/Tooltip.js';
 import itemData from '../data/items.json';
 import { BIOMES, getDifficultyAtChunk } from '../world/biomes/biomeConfig.js';
@@ -236,9 +237,8 @@ export class UIScene extends Phaser.Scene {
       const bg = this.add.rectangle(x, slotY, slotSize, slotSize, UI_THEME.colors.panel, 0.9)
         .setStrokeStyle(1, base ? UI_THEME.colors.jade : UI_THEME.colors.borderMuted).setDepth(4);
 
-      const icon = this.add.text(x, slotY - 2, base ? base.icon : '', {
-        fontSize: '18px', fontFamily: UI_THEME.font.body
-      }).setOrigin(0.5).setDepth(5);
+      const icon = this.add.image(x, slotY - 2, getSkillIconTexture(player?.classType, skillId))
+        .setDisplaySize(28, 28).setDepth(5).setVisible(Boolean(base));
 
       const keyLabel = this.add.text(x - slotSize / 2 + 3, slotY - slotSize / 2 + 1, `${i + 1}`, {
         fontSize: '12px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
@@ -318,7 +318,7 @@ export class UIScene extends Phaser.Scene {
           ? `冷却: ${cdSec}s`
           : `冷却: ${cdSec}s   ${r}: ${skill.cost}`;
         return {
-          title: `${skill.icon || ''} ${skill.name}  Lv.${level}/${skill.maxLevel}`,
+          title: `${skill.name}  Lv.${level}/${skill.maxLevel}`,
           body: `${desc}\n${costLine}`
         };
       });
@@ -384,7 +384,8 @@ export class UIScene extends Phaser.Scene {
       const id = playerSlots[i] || null;
       const base = id ? skillDefs[id] : null;
       slot.skillId = id;
-      slot.icon.setText(base ? base.icon : '');
+      slot.icon.setVisible(Boolean(base));
+      if (base) slot.icon.setTexture(getSkillIconTexture(player?.classType, id));
       slot.bg.setStrokeStyle(1, base ? UI_THEME.colors.jade : UI_THEME.colors.borderMuted);
       slot.cdOverlay.setSize(slot.size - 2, 0);
       slot.cdText.setVisible(false);

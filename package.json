@@ -20,7 +20,8 @@
     "test:smoke:world": "node scripts/shrine-test.mjs && node scripts/treasure-test.mjs && node scripts/world-map-test.mjs",
     "test:perf:movement": "node scripts/movement-performance-test.mjs",
     "test:theme": "node scripts/xianxia-theme-test.mjs",
-    "test:smoke": "pnpm test:theme && pnpm test:smoke:audio && pnpm test:smoke:boss && pnpm test:smoke:companion && pnpm test:smoke:dialogue && pnpm test:smoke:quest && pnpm test:smoke:world"
+    "test:theme:visual": "node scripts/xianxia-visual-test.mjs",
+    "test:smoke": "pnpm test:theme && pnpm test:theme:visual && pnpm test:smoke:audio && pnpm test:smoke:boss && pnpm test:smoke:companion && pnpm test:smoke:dialogue && pnpm test:smoke:quest && pnpm test:smoke:world"
   },
   "dependencies": {
     "phaser": "^3.80.1",

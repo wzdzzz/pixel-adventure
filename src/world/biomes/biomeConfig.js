@@ -6,7 +6,7 @@ import { WORLD_CONFIG } from '../worldConfig.js';
 
 // ─── 6 种 biome 基础配置 ─────────────────────────────────
 export const BIOMES = {
-  forest:  { id: 'forest',  name: '青岚竹海', color: 0x228b22, groundTile: 0,  wallTile: 1,  treeDensity: 0.15, enemyDensity: 'medium' },
+  forest:  { id: 'forest',  name: '青岚竹海', color: 0x315846, groundTile: 0,  wallTile: 1,  treeDensity: 0.15, enemyDensity: 'medium' },
   ruins:   { id: 'ruins',   name: '太虚宗遗址', color: 0x696969, groundTile: 2,  wallTile: 3,  treeDensity: 0.03, enemyDensity: 'high' },
   snow:    { id: 'snow',    name: '寒渊雪岭', color: 0xb0c4de, groundTile: 4,  wallTile: 5,  treeDensity: 0.08, enemyDensity: 'medium' },
   desert:  { id: 'desert',  name: '赤金沙海', color: 0xdaa520, groundTile: 6,  wallTile: 7,  treeDensity: 0.01, enemyDensity: 'low' },

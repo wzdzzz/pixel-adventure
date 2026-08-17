@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { RESOURCE_LABELS, THEME_CONFIG } from '../../config/themeConfig.js';
 import { UI_THEME } from '../../config/uiTheme.js';
+import { getSkillIconTexture } from '../../assets/XianxiaSkillIcons.js';
 
 export const SkillTreePanel = {
   createSkillTreeTab() {
@@ -70,9 +71,11 @@ export const SkillTreePanel = {
       cardsContainer.add(cardBg);
 
       // Skill icon (large) — interactive 用于 tooltip
-      const iconText = this.add.text(cardX - cardW / 2 + 26, cy, base.icon || '?', {
-        fontSize: '24px', fontFamily: UI_THEME.font.body
-      }).setOrigin(0.5);
+      const iconText = this.add.image(
+        cardX - cardW / 2 + 26,
+        cy,
+        getSkillIconTexture(player?.classType, skillId)
+      ).setDisplaySize(34, 34);
       iconText.setInteractive({ useHandCursor: false });
       cardsContainer.add(iconText);
 
@@ -91,7 +94,7 @@ export const SkillTreePanel = {
             ? `冷却: ${cdSec}s`
             : `冷却: ${cdSec}s   ${r}: ${skill.cost}`;
           return {
-            title: `${skill.icon || ''} ${skill.name}  Lv.${lv}/${skill.maxLevel}`,
+            title: `${skill.name}  Lv.${lv}/${skill.maxLevel}`,
             body: `${desc}\n${costLine}`
           };
         });

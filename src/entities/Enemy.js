@@ -64,12 +64,6 @@ export class Enemy extends Actor {
     // 派生属性缩放（等级成长 + Tier 倍率）
     this._applyLevelScaling(finalLevel, tier);
 
-    // Random slime color variant
-    if (characterType === 'slime') {
-      const slimeColors = [0x88ff88, 0x8888ff, 0xff8888];
-      this.sprite.setTint(slimeColors[Math.floor(Math.random() * 3)]);
-    }
-
     // Bounce — added after super(), body is already set up by Actor
     this.sprite.setBounce(0.1);
 

@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { installXianxiaCharacterTextures } from './XianxiaCharacterTextures.js';
+import { installXianxiaSkillIcons } from './XianxiaSkillIcons.js';
+import { drawXianxiaWorldTile } from './XianxiaWorldTiles.js';
 
 // Character animation config — maps character type to frames and animations
 export const CHARACTERS = {
@@ -117,6 +120,7 @@ export const CHARACTERS = {
 };
 
 export const TEXTURES = {
+  MENU_BACKGROUND: 'theme_menu_cloud_wastes',
   PLAYER: 'player',
   ENEMY: 'enemy',
   COIN: 'coin',
@@ -204,6 +208,10 @@ export class AssetManager {
 
     // 世界流式加载 tileset
     AssetManager.generateWorldTileset(scene);
+
+    // P2 visual sample keeps all animation keys while replacing western silhouettes.
+    installXianxiaCharacterTextures(scene, CHARACTERS);
+    installXianxiaSkillIcons(scene);
   }
 
   static createPixelCharacter(scene, key, color, width, height) {
@@ -685,6 +693,8 @@ export class AssetManager {
    * @param {number} size   - 单格像素尺寸 (32)
    */
   static _drawTileToCanvas(ctx, tileId, cols, size) {
+    if (drawXianxiaWorldTile(ctx, tileId, cols, size)) return;
+
     const col = tileId % cols;
     const row = Math.floor(tileId / cols);
     const x = col * size;

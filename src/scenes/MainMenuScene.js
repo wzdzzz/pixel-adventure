@@ -5,6 +5,7 @@ import audioEngine from '../systems/AudioEngine.js';
 import MusicEngine from '../systems/MusicEngine.js';
 import { RESOURCE_LABELS, STAT_LABELS, THEME_CONFIG } from '../config/themeConfig.js';
 import { UI_THEME } from '../config/uiTheme.js';
+import { TEXTURES } from '../assets/AssetManager.js';
 
 /**
  * 主菜单场景 — 标题画面 + 角色选择
@@ -41,51 +42,11 @@ export class MainMenuScene extends Phaser.Scene {
 
   buildInkLandscape() {
     const { colors } = UI_THEME;
-    this.add.rectangle(this.w / 2, this.h / 2, this.w, this.h, colors.ink);
+    this.add.image(this.w / 2, this.h / 2, TEXTURES.MENU_BACKGROUND)
+      .setDisplaySize(this.w, this.h);
+    this.add.rectangle(this.w / 2, this.h / 2, this.w, this.h, colors.ink, 0.34);
 
     const landscape = this.add.graphics();
-    landscape.fillStyle(colors.backdrop, 1);
-    landscape.fillPoints([
-      new Phaser.Geom.Point(0, this.h * 0.68),
-      new Phaser.Geom.Point(this.w * 0.12, this.h * 0.49),
-      new Phaser.Geom.Point(this.w * 0.24, this.h * 0.65),
-      new Phaser.Geom.Point(this.w * 0.4, this.h * 0.38),
-      new Phaser.Geom.Point(this.w * 0.56, this.h * 0.67),
-      new Phaser.Geom.Point(this.w * 0.72, this.h * 0.46),
-      new Phaser.Geom.Point(this.w * 0.84, this.h * 0.63),
-      new Phaser.Geom.Point(this.w, this.h * 0.43),
-      new Phaser.Geom.Point(this.w, this.h),
-      new Phaser.Geom.Point(0, this.h),
-    ], true);
-
-    landscape.fillStyle(colors.panel, 0.92);
-    landscape.fillPoints([
-      new Phaser.Geom.Point(0, this.h * 0.79),
-      new Phaser.Geom.Point(this.w * 0.17, this.h * 0.63),
-      new Phaser.Geom.Point(this.w * 0.31, this.h * 0.75),
-      new Phaser.Geom.Point(this.w * 0.47, this.h * 0.58),
-      new Phaser.Geom.Point(this.w * 0.66, this.h * 0.78),
-      new Phaser.Geom.Point(this.w * 0.82, this.h * 0.62),
-      new Phaser.Geom.Point(this.w, this.h * 0.73),
-      new Phaser.Geom.Point(this.w, this.h),
-      new Phaser.Geom.Point(0, this.h),
-    ], true);
-
-    landscape.lineStyle(2, colors.borderMuted, 0.55);
-    const cloudBands = [0.24, 0.31, 0.71];
-    for (const [index, ratio] of cloudBands.entries()) {
-      const y = this.h * ratio;
-      const startX = index % 2 === 0 ? this.w * 0.06 : this.w * 0.57;
-      landscape.beginPath();
-      landscape.moveTo(startX, y);
-      landscape.lineTo(startX + this.w * 0.1, y);
-      landscape.lineTo(startX + this.w * 0.125, y - 14);
-      landscape.lineTo(startX + this.w * 0.16, y - 14);
-      landscape.lineTo(startX + this.w * 0.18, y);
-      landscape.lineTo(startX + this.w * 0.29, y);
-      landscape.strokePath();
-    }
-
     landscape.lineStyle(1, colors.brassMuted, 0.55);
     landscape.strokeRect(28, 28, this.w - 56, this.h - 56);
     landscape.lineBetween(64, 52, 210, 52);
