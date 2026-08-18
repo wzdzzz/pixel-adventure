@@ -393,12 +393,439 @@ function drawMountainDemon(ctx, frame, _pose, width, height) {
   rect(ctx, bodyX + 2, groundY - 40, 3, 4, '#8f8170');
 }
 
+function drawShadeSoldier(ctx, frame, _pose, width, height) {
+  const centerX = Math.round(width / 2);
+  const groundY = height - 5;
+  const hurt = frame === 1;
+  const walkStep = frame === 3 ? 1 : frame === 4 ? 2 : frame === 5 ? 3 : 0;
+  const thrust = frame === 5;
+  const lean = hurt ? -2 : thrust ? 2 : 0;
+  const bodyX = centerX + lean;
+  const bone = '#c9c3ae';
+  const armor = '#4c5a50';
+  const armorLight = '#66776a';
+  const armorDark = '#323d36';
+
+  pixelShadow(ctx, centerX, groundY + 1, 26);
+
+  const leftLift = walkStep === 1 ? 2 : 0;
+  const rightLift = walkStep === 3 ? 2 : 0;
+  rect(ctx, bodyX - 8, groundY - 9 - leftLift, 6, 9, COLORS.outline);
+  rect(ctx, bodyX + 2, groundY - 9 - rightLift, 6, 9, COLORS.outline);
+  rect(ctx, bodyX - 7, groundY - 8 - leftLift, 4, 6, armorDark);
+  rect(ctx, bodyX + 3, groundY - 8 - rightLift, 4, 6, armorDark);
+
+  // 兵俑甲身：横向札甲条
+  rect(ctx, bodyX - 10, groundY - 27, 20, 19, COLORS.outline);
+  rect(ctx, bodyX - 8, groundY - 25, 16, 16, armor);
+  rect(ctx, bodyX - 8, groundY - 22, 16, 2, armorDark);
+  rect(ctx, bodyX - 8, groundY - 17, 16, 2, armorDark);
+  rect(ctx, bodyX - 8, groundY - 12, 16, 2, armorDark);
+  rect(ctx, bodyX - 7, groundY - 25, 5, 2, armorLight);
+  rect(ctx, bodyX - 2, groundY - 20, 4, 5, COLORS.brass);
+  if (hurt) {
+    rect(ctx, bodyX - 5, groundY - 21, 3, 8, COLORS.cinnabar);
+    rect(ctx, bodyX - 3, groundY - 18, 2, 3, '#e17a61');
+  }
+
+  // 持戈臂（右）与护臂（左）
+  const armY = groundY - 24 + (walkStep === 2 ? 1 : 0);
+  rect(ctx, bodyX - 14, armY, 5, 13, COLORS.outline);
+  rect(ctx, bodyX - 13, armY + 1, 3, 10, armorDark);
+  if (thrust) {
+    rect(ctx, bodyX + 8, groundY - 24, 10, 5, COLORS.outline);
+    rect(ctx, bodyX + 9, groundY - 23, 8, 3, armor);
+  } else {
+    rect(ctx, bodyX + 9, armY, 5, 13, COLORS.outline);
+    rect(ctx, bodyX + 10, armY + 1, 3, 10, armor);
+  }
+
+  // 长戈：竖杆 + 横刃
+  if (thrust) {
+    stairLine(ctx, [[bodyX + 14, groundY - 22], [bodyX + 20, groundY - 22]], 3, COLORS.outline);
+    stairLine(ctx, [[bodyX + 14, groundY - 22], [bodyX + 19, groundY - 22]], 1, '#6b4a35');
+    rect(ctx, bodyX + 17, groundY - 27, 3, 10, COLORS.outline);
+    rect(ctx, bodyX + 18, groundY - 26, 1, 8, COLORS.steel);
+    stairLine(ctx, [[bodyX + 20, groundY - 24], [bodyX + 26, groundY - 23]], 2, 'rgba(131, 210, 162, 0.7)');
+  } else {
+    const poleX = bodyX + (frame === 4 ? 13 : 11);
+    rect(ctx, poleX, groundY - 38, 3, 34, COLORS.outline);
+    rect(ctx, poleX + 1, groundY - 37, 1, 31, '#6b4a35');
+    rect(ctx, poleX - 5, groundY - 37, 9, 3, COLORS.outline);
+    rect(ctx, poleX - 4, groundY - 36, 6, 1, COLORS.steel);
+  }
+
+  // 头：兵俑盔 + 骨面 + 阴火目
+  const headY = groundY - 40 + (hurt ? 2 : 0);
+  rect(ctx, bodyX - 7, headY, 14, 14, COLORS.outline);
+  rect(ctx, bodyX - 5, headY + 3, 10, 9, bone);
+  rect(ctx, bodyX - 6, headY + 1, 12, 4, armorDark);
+  rect(ctx, bodyX - 8, headY + 3, 3, 6, armorDark);
+  rect(ctx, bodyX + 5, headY + 3, 3, 6, armorDark);
+  rect(ctx, bodyX - 1, headY - 3, 2, 4, COLORS.outline);
+  rect(ctx, bodyX - 1, headY - 2, 2, 2, COLORS.cinnabar);
+  const eyeColor = hurt ? COLORS.cinnabar : COLORS.jadeLight;
+  rect(ctx, bodyX - 4, headY + 6, 3, 3, COLORS.outline);
+  rect(ctx, bodyX + 1, headY + 6, 3, 3, COLORS.outline);
+  rect(ctx, bodyX - 3, headY + 6, 2, 2, eyeColor);
+  rect(ctx, bodyX + 2, headY + 6, 2, 2, eyeColor);
+  rect(ctx, bodyX - 2, headY + 10, 4, 1, '#8f8a77');
+}
+
+function drawDemonBrute(ctx, frame, _pose, width, height) {
+  const centerX = Math.round(width / 2);
+  const groundY = height - 5;
+  const crouch = frame === 1;
+  const walkStep = frame === 2 ? 1 : frame === 3 ? 2 : frame === 4 ? 3 : 0;
+  const windup = frame === 3;
+  const smash = frame === 4;
+  const bodyX = centerX + (smash ? 2 : 0);
+  const bodyLift = crouch ? 2 : 0;
+  const hide = '#7c4636';
+  const hideLight = '#96604a';
+  const furDark = '#3c342c';
+  const fur = '#57493c';
+
+  pixelShadow(ctx, centerX, groundY + 1, 34);
+
+  const leftLift = walkStep === 1 ? 2 : 0;
+  const rightLift = walkStep === 3 ? 2 : 0;
+  rect(ctx, bodyX - 11, groundY - 10 - leftLift, 8, 10, COLORS.outline);
+  rect(ctx, bodyX + 3, groundY - 10 - rightLift, 8, 10, COLORS.outline);
+  rect(ctx, bodyX - 10, groundY - 9 - leftLift, 6, 7, hide);
+  rect(ctx, bodyX + 4, groundY - 9 - rightLift, 6, 7, hide);
+
+  // 兽皮围裙 + 宽厚躯干
+  rect(ctx, bodyX - 13, groundY - 32 + bodyLift, 26, 24, COLORS.outline);
+  rect(ctx, bodyX - 11, groundY - 30 + bodyLift, 22, 20, hide);
+  rect(ctx, bodyX - 11, groundY - 24 + bodyLift, 22, 3, hideLight);
+  rect(ctx, bodyX - 11, groundY - 15 + bodyLift, 22, 6, fur);
+  rect(ctx, bodyX - 9, groundY - 13 + bodyLift, 4, 4, furDark);
+  rect(ctx, bodyX + 2, groundY - 14 + bodyLift, 5, 5, furDark);
+  rect(ctx, bodyX - 3, groundY - 22 + bodyLift, 6, 6, COLORS.brass);
+  rect(ctx, bodyX - 2, groundY - 21 + bodyLift, 4, 4, '#8a6a35');
+
+  // 铁肩甲
+  rect(ctx, bodyX - 17, groundY - 34 + bodyLift, 10, 9, COLORS.outline);
+  rect(ctx, bodyX - 16, groundY - 33 + bodyLift, 8, 6, COLORS.steelShade);
+  rect(ctx, bodyX + 7, groundY - 34 + bodyLift, 10, 9, COLORS.outline);
+  rect(ctx, bodyX + 8, groundY - 33 + bodyLift, 8, 6, COLORS.steelShade);
+
+  // 臂与石锤
+  if (smash) {
+    stairLine(ctx, [[bodyX + 10, groundY - 28], [bodyX + 17, groundY - 20], [bodyX + 20, groundY - 14]], 4, COLORS.outline);
+    stairLine(ctx, [[bodyX + 10, groundY - 28], [bodyX + 17, groundY - 20], [bodyX + 19, groundY - 15]], 2, hideLight);
+    rect(ctx, bodyX + 16, groundY - 14, 12, 10, COLORS.outline);
+    rect(ctx, bodyX + 18, groundY - 12, 8, 6, '#6d7a72');
+    rect(ctx, bodyX + 18, groundY - 12, 8, 2, '#8c958a');
+    stairLine(ctx, [[bodyX + 12, groundY - 6], [bodyX + 20, groundY - 3], [bodyX + 28, groundY - 5]], 1, 'rgba(198, 154, 85, 0.75)');
+  } else if (windup) {
+    stairLine(ctx, [[bodyX + 10, groundY - 30], [bodyX + 15, groundY - 38], [bodyX + 17, groundY - 43]], 4, COLORS.outline);
+    stairLine(ctx, [[bodyX + 10, groundY - 30], [bodyX + 15, groundY - 38], [bodyX + 16, groundY - 42]], 2, hideLight);
+    rect(ctx, bodyX + 13, groundY - 51, 12, 10, COLORS.outline);
+    rect(ctx, bodyX + 15, groundY - 49, 8, 6, '#6d7a72');
+  } else {
+    stairLine(ctx, [[bodyX + 10, groundY - 29 + bodyLift], [bodyX + 14, groundY - 20], [bodyX + 14, groundY - 13]], 4, COLORS.outline);
+    stairLine(ctx, [[bodyX + 10, groundY - 29 + bodyLift], [bodyX + 14, groundY - 21], [bodyX + 14, groundY - 14]], 2, hideLight);
+    rect(ctx, bodyX + 11, groundY - 40, 3, 28, COLORS.outline);
+    rect(ctx, bodyX + 12, groundY - 39, 1, 26, '#6b4a35');
+    rect(ctx, bodyX + 8, groundY - 48, 12, 10, COLORS.outline);
+    rect(ctx, bodyX + 10, groundY - 46, 8, 6, '#6d7a72');
+    rect(ctx, bodyX + 10, groundY - 46, 8, 2, '#8c958a');
+  }
+  stairLine(ctx, [[bodyX - 10, groundY - 29 + bodyLift], [bodyX - 15, groundY - 21], [bodyX - 14, groundY - 13]], 4, COLORS.outline);
+  stairLine(ctx, [[bodyX - 10, groundY - 29 + bodyLift], [bodyX - 15, groundY - 22], [bodyX - 14, groundY - 14]], 2, hide);
+
+  // 牛角兽面
+  const headY = groundY - 46 + bodyLift + (crouch ? 2 : 0);
+  rect(ctx, bodyX - 9, headY, 18, 14, COLORS.outline);
+  rect(ctx, bodyX - 7, headY + 2, 14, 11, hide);
+  rect(ctx, bodyX - 6, headY + 5, 12, 7, '#8d4c3f');
+  stairLine(ctx, [[bodyX - 10, headY + 3], [bodyX - 14, headY - 2], [bodyX - 15, headY - 6]], 3, COLORS.outline);
+  stairLine(ctx, [[bodyX - 10, headY + 3], [bodyX - 14, headY - 2], [bodyX - 15, headY - 5]], 1, '#d8c7a2');
+  stairLine(ctx, [[bodyX + 9, headY + 3], [bodyX + 13, headY - 2], [bodyX + 14, headY - 6]], 3, COLORS.outline);
+  stairLine(ctx, [[bodyX + 9, headY + 3], [bodyX + 13, headY - 2], [bodyX + 14, headY - 5]], 1, '#d8c7a2');
+  const eyeColor = crouch ? COLORS.cinnabar : '#f0b35e';
+  rect(ctx, bodyX - 5, headY + 6, 3, 2, eyeColor);
+  rect(ctx, bodyX + 2, headY + 6, 3, 2, eyeColor);
+  rect(ctx, bodyX - 3, headY + 10, 6, 2, '#d8c7a2');
+  rect(ctx, bodyX - 4, headY + 9, 2, 3, '#e8e0cb');
+  rect(ctx, bodyX + 2, headY + 9, 2, 3, '#e8e0cb');
+}
+
+function drawKarmicFlameCultist(ctx, frame, _pose, width, height) {
+  const centerX = Math.round(width / 2);
+  const groundY = height - 5;
+  const raise = frame === 3;
+  const release = frame === 5;
+  const walkStep = frame === 1 ? 1 : frame === 2 ? 2 : release ? 3 : 0;
+  const lean = release ? 3 : 0;
+  const bodyX = centerX + lean;
+  const robe = '#2c2320';
+  const robeLight = '#463732';
+  const robeTrim = '#8a3a30';
+  const flame = '#e6842f';
+  const flameCore = '#f4c05e';
+
+  pixelShadow(ctx, centerX, groundY + 1, 26);
+
+  // 破损道袍下摆：锯齿边
+  rect(ctx, bodyX - 11, groundY - 26, 22, 22, COLORS.outline);
+  rect(ctx, bodyX - 9, groundY - 24, 18, 19, robe);
+  rect(ctx, bodyX - 9, groundY - 24, 5, 16, robeLight);
+  for (let i = 0; i < 5; i += 1) {
+    const fx = bodyX - 9 + i * 4;
+    const drop = (i + walkStep) % 2 === 0 ? 0 : 3;
+    rect(ctx, fx, groundY - 6 + drop, 3, 3, robe);
+    rect(ctx, fx, groundY - 3 + drop, 3, 2, COLORS.outline);
+  }
+  rect(ctx, bodyX - 9, groundY - 16, 18, 2, robeTrim);
+  rect(ctx, bodyX - 2, groundY - 22, 4, 8, robeTrim);
+  rect(ctx, bodyX - 1, groundY - 20, 2, 4, COLORS.brass);
+
+  // 符箓腰牌
+  rect(ctx, bodyX + 4, groundY - 15, 5, 9, '#c9bfa4');
+  rect(ctx, bodyX + 5, groundY - 13, 3, 2, COLORS.cinnabar);
+  rect(ctx, bodyX + 6, groundY - 10, 1, 3, COLORS.cinnabar);
+
+  // 施法臂
+  if (raise) {
+    stairLine(ctx, [[bodyX + 8, groundY - 22], [bodyX + 12, groundY - 30], [bodyX + 13, groundY - 35]], 3, COLORS.outline);
+    stairLine(ctx, [[bodyX + 8, groundY - 22], [bodyX + 12, groundY - 30], [bodyX + 13, groundY - 34]], 1, robeLight);
+    rect(ctx, bodyX + 10, groundY - 44, 7, 9, COLORS.outline);
+    rect(ctx, bodyX + 11, groundY - 43, 5, 7, flame);
+    rect(ctx, bodyX + 12, groundY - 41, 3, 4, flameCore);
+    rect(ctx, bodyX + 13, groundY - 47, 2, 3, flame);
+  } else if (release) {
+    rect(ctx, bodyX + 7, groundY - 24, 11, 5, COLORS.outline);
+    rect(ctx, bodyX + 8, groundY - 23, 9, 3, robeLight);
+    rect(ctx, bodyX + 17, groundY - 27, 9, 10, COLORS.outline);
+    rect(ctx, bodyX + 18, groundY - 26, 7, 8, flame);
+    rect(ctx, bodyX + 20, groundY - 24, 4, 4, flameCore);
+    stairLine(ctx, [[bodyX + 25, groundY - 29], [bodyX + 30, groundY - 31]], 2, flame);
+    stairLine(ctx, [[bodyX + 25, groundY - 16], [bodyX + 30, groundY - 14]], 2, flame);
+  } else {
+    rect(ctx, bodyX + 7, groundY - 23, 5, 12, COLORS.outline);
+    rect(ctx, bodyX + 8, groundY - 22, 3, 9, robeLight);
+    rect(ctx, bodyX + 7, groundY - 12, 5, 4, flame);
+    rect(ctx, bodyX + 8, groundY - 11, 3, 2, flameCore);
+  }
+  rect(ctx, bodyX - 12, groundY - 23 + (walkStep === 2 ? 2 : 0), 5, 12, COLORS.outline);
+  rect(ctx, bodyX - 11, groundY - 22 + (walkStep === 2 ? 2 : 0), 3, 9, robe);
+
+  // 兜帽头：阴影中一双业火眼
+  const headY = groundY - 38;
+  rect(ctx, bodyX - 8, headY, 16, 14, COLORS.outline);
+  rect(ctx, bodyX - 6, headY + 2, 12, 11, robe);
+  rect(ctx, bodyX - 5, headY + 3, 10, 3, robeLight);
+  rect(ctx, bodyX - 4, headY + 6, 8, 6, '#100c0a');
+  const eyeColor = release || raise ? flameCore : flame;
+  rect(ctx, bodyX - 3, headY + 8, 2, 2, eyeColor);
+  rect(ctx, bodyX + 1, headY + 8, 2, 2, eyeColor);
+  rect(ctx, bodyX - 1, headY - 3, 2, 3, robeTrim);
+
+  // 飘散余烬
+  const emberShift = (frame * 3) % 5;
+  rect(ctx, bodyX - 14, groundY - 30 - emberShift, 2, 2, flame);
+  rect(ctx, bodyX + 13, groundY - 34 + emberShift, 2, 2, 'rgba(244, 192, 94, 0.8)');
+}
+
+function drawCorpsePuppetGeneral(ctx, frame, _pose, width, height) {
+  const centerX = Math.round(width / 2);
+  const groundY = height - 5;
+  const hurt = frame === 5;
+  const windup = frame === 2;
+  const slam = frame === 3;
+  const sway = frame === 1 ? 1 : 0;
+  const bodyX = centerX + (slam ? 3 : hurt ? -2 : 0);
+  const armor = '#4a4f42';
+  const armorLight = '#666c58';
+  const armorDark = '#2f342b';
+  const corpse = '#77896f';
+
+  pixelShadow(ctx, centerX, groundY + 1, 44);
+
+  rect(ctx, bodyX - 13, groundY - 13 - sway, 9, 13, COLORS.outline);
+  rect(ctx, bodyX + 4, groundY - 13 + sway, 9, 13, COLORS.outline);
+  rect(ctx, bodyX - 11, groundY - 11 - sway, 5, 9, armorDark);
+  rect(ctx, bodyX + 6, groundY - 11 + sway, 5, 9, armorDark);
+
+  // 甲裙垂片
+  rect(ctx, bodyX - 15, groundY - 24, 30, 12, COLORS.outline);
+  rect(ctx, bodyX - 13, groundY - 22, 26, 9, armor);
+  rect(ctx, bodyX - 8, groundY - 22, 2, 9, armorDark);
+  rect(ctx, bodyX - 1, groundY - 22, 2, 9, armorDark);
+  rect(ctx, bodyX + 6, groundY - 22, 2, 9, armorDark);
+
+  // 胸甲：古将军扎甲 + 裂痕
+  rect(ctx, bodyX - 14, groundY - 44, 28, 22, COLORS.outline);
+  rect(ctx, bodyX - 12, groundY - 42, 24, 19, armor);
+  rect(ctx, bodyX - 12, groundY - 37, 24, 2, armorDark);
+  rect(ctx, bodyX - 12, groundY - 31, 24, 2, armorDark);
+  rect(ctx, bodyX - 11, groundY - 42, 6, 3, armorLight);
+  rect(ctx, bodyX - 3, groundY - 36, 6, 7, COLORS.brass);
+  rect(ctx, bodyX - 2, groundY - 35, 4, 5, '#8a6a35');
+  stairLine(ctx, [[bodyX + 4, groundY - 42], [bodyX + 8, groundY - 36], [bodyX + 6, groundY - 30]], 1, hurt ? COLORS.cinnabar : armorDark);
+  if (hurt) {
+    rect(ctx, bodyX - 8, groundY - 39, 4, 9, COLORS.cinnabar);
+    rect(ctx, bodyX - 6, groundY - 36, 2, 4, '#e17a61');
+  }
+
+  // 肩吞与红缨绦带
+  rect(ctx, bodyX - 20, groundY - 46, 11, 11, COLORS.outline);
+  rect(ctx, bodyX - 19, groundY - 45, 9, 8, armorLight);
+  rect(ctx, bodyX + 9, groundY - 46, 11, 11, COLORS.outline);
+  rect(ctx, bodyX + 10, groundY - 45, 9, 8, armorLight);
+  stairLine(ctx, [[bodyX - 18, groundY - 36], [bodyX - 21, groundY - 28], [bodyX - 19, groundY - 21]], 2, COLORS.cinnabar);
+
+  // 巨型残刀
+  if (windup) {
+    stairLine(ctx, [[bodyX + 13, groundY - 40], [bodyX + 19, groundY - 48], [bodyX + 21, groundY - 54]], 5, COLORS.outline);
+    stairLine(ctx, [[bodyX + 13, groundY - 40], [bodyX + 19, groundY - 48], [bodyX + 20, groundY - 53]], 2, corpse);
+    rect(ctx, bodyX + 17, groundY - 66, 5, 14, COLORS.outline);
+    rect(ctx, bodyX + 18, groundY - 64, 2, 11, COLORS.steel);
+    rect(ctx, bodyX + 21, groundY - 62, 3, 7, COLORS.steelShade);
+  } else if (slam) {
+    stairLine(ctx, [[bodyX + 13, groundY - 38], [bodyX + 21, groundY - 28], [bodyX + 25, groundY - 18]], 5, COLORS.outline);
+    stairLine(ctx, [[bodyX + 13, groundY - 38], [bodyX + 21, groundY - 28], [bodyX + 24, groundY - 19]], 2, corpse);
+    rect(ctx, bodyX + 22, groundY - 18, 14, 5, COLORS.outline);
+    rect(ctx, bodyX + 23, groundY - 17, 12, 3, COLORS.steel);
+    rect(ctx, bodyX + 30, groundY - 19, 5, 2, COLORS.steelShade);
+    stairLine(ctx, [[bodyX + 16, groundY - 8], [bodyX + 26, groundY - 4], [bodyX + 36, groundY - 7]], 1, 'rgba(131, 210, 162, 0.7)');
+  } else {
+    stairLine(ctx, [[bodyX + 13, groundY - 40 + sway], [bodyX + 17, groundY - 30], [bodyX + 17, groundY - 20]], 5, COLORS.outline);
+    stairLine(ctx, [[bodyX + 13, groundY - 40 + sway], [bodyX + 17, groundY - 30], [bodyX + 17, groundY - 21]], 2, corpse);
+    rect(ctx, bodyX + 15, groundY - 24, 4, 20, COLORS.outline);
+    rect(ctx, bodyX + 16, groundY - 22, 2, 17, COLORS.steel);
+  }
+  stairLine(ctx, [[bodyX - 13, groundY - 40 - sway], [bodyX - 18, groundY - 31], [bodyX - 17, groundY - 22]], 5, COLORS.outline);
+  stairLine(ctx, [[bodyX - 13, groundY - 40 - sway], [bodyX - 18, groundY - 31], [bodyX - 17, groundY - 23]], 2, corpse);
+
+  // 将盔：高冠 + 红缨 + 尸面
+  const headY = groundY - 60 + (hurt ? 3 : 0);
+  rect(ctx, bodyX - 9, headY, 18, 17, COLORS.outline);
+  rect(ctx, bodyX - 7, headY + 4, 14, 12, corpse);
+  rect(ctx, bodyX - 8, headY + 1, 16, 5, armorDark);
+  rect(ctx, bodyX - 10, headY + 4, 3, 8, armorDark);
+  rect(ctx, bodyX + 7, headY + 4, 3, 8, armorDark);
+  rect(ctx, bodyX - 3, headY - 6, 6, 7, COLORS.outline);
+  rect(ctx, bodyX - 2, headY - 5, 4, 5, armorDark);
+  rect(ctx, bodyX - 1, headY - 9, 2, 4, COLORS.cinnabar);
+  const eyeColor = hurt ? COLORS.cinnabar : COLORS.jadeLight;
+  rect(ctx, bodyX - 5, headY + 8, 3, 3, COLORS.outline);
+  rect(ctx, bodyX + 2, headY + 8, 3, 3, COLORS.outline);
+  rect(ctx, bodyX - 4, headY + 8, 2, 2, eyeColor);
+  rect(ctx, bodyX + 3, headY + 8, 2, 2, eyeColor);
+  rect(ctx, bodyX - 2, headY + 13, 4, 1, '#55654e');
+}
+
+function drawBoneGhostKing(ctx, frame, _pose, width, height) {
+  const centerX = Math.round(width / 2);
+  const groundY = height - 4;
+  const bob = frame === 1 || frame === 3 ? 2 : 0;
+  const raise = frame === 2;
+  const strike = frame === 3;
+  const bodyX = centerX + (strike ? 3 : 0);
+  const baseY = groundY - bob;
+  const bone = '#e2ddce';
+  const boneShade = '#b3ac97';
+  const robe = '#1d1a22';
+  const robeLight = '#332d3c';
+  const ghost = 'rgba(131, 210, 162, 0.75)';
+
+  pixelShadow(ctx, centerX, groundY + 1, 40);
+
+  // 袍底鬼火：漂浮无足
+  rect(ctx, bodyX - 14, baseY - 8, 5, 5, ghost);
+  rect(ctx, bodyX + 10, baseY - 7, 4, 4, ghost);
+  rect(ctx, bodyX - 2, baseY - 5, 4, 4, 'rgba(131, 210, 162, 0.5)');
+
+  // 残破王袍：锯齿下摆
+  rect(ctx, bodyX - 16, baseY - 40, 32, 30, COLORS.outline);
+  rect(ctx, bodyX - 14, baseY - 38, 28, 28, robe);
+  rect(ctx, bodyX - 14, baseY - 38, 8, 24, robeLight);
+  for (let i = 0; i < 7; i += 1) {
+    const fx = bodyX - 14 + i * 4;
+    const drop = i % 2 === 0 ? 0 : 4;
+    rect(ctx, fx, baseY - 12 + drop, 3, 4, robe);
+    rect(ctx, fx, baseY - 8 + drop, 3, 2, COLORS.outline);
+  }
+  rect(ctx, bodyX - 10, baseY - 34, 3, 16, COLORS.cinnabar);
+  rect(ctx, bodyX + 7, baseY - 33, 3, 14, COLORS.cinnabar);
+
+  // 白骨胸廓压在袍上
+  rect(ctx, bodyX - 9, baseY - 38, 18, 14, COLORS.outline);
+  rect(ctx, bodyX - 7, baseY - 36, 14, 11, bone);
+  rect(ctx, bodyX - 7, baseY - 33, 14, 2, boneShade);
+  rect(ctx, bodyX - 7, baseY - 29, 14, 2, boneShade);
+  rect(ctx, bodyX - 1, baseY - 36, 2, 11, boneShade);
+
+  // 骨爪臂
+  if (raise) {
+    stairLine(ctx, [[bodyX + 8, baseY - 36], [bodyX + 15, baseY - 46], [bodyX + 17, baseY - 54]], 4, COLORS.outline);
+    stairLine(ctx, [[bodyX + 8, baseY - 36], [bodyX + 15, baseY - 46], [bodyX + 16, baseY - 53]], 2, bone);
+    rect(ctx, bodyX + 13, baseY - 60, 3, 7, bone);
+    rect(ctx, bodyX + 17, baseY - 61, 3, 8, bone);
+    rect(ctx, bodyX + 21, baseY - 59, 3, 7, bone);
+    rect(ctx, bodyX + 14, baseY - 63, 9, 3, ghost);
+  } else if (strike) {
+    stairLine(ctx, [[bodyX + 8, baseY - 35], [bodyX + 18, baseY - 32], [bodyX + 26, baseY - 30]], 4, COLORS.outline);
+    stairLine(ctx, [[bodyX + 8, baseY - 35], [bodyX + 18, baseY - 32], [bodyX + 25, baseY - 30]], 2, bone);
+    rect(ctx, bodyX + 25, baseY - 34, 7, 3, bone);
+    rect(ctx, bodyX + 27, baseY - 30, 6, 3, bone);
+    rect(ctx, bodyX + 25, baseY - 26, 6, 3, bone);
+    stairLine(ctx, [[bodyX + 20, baseY - 44], [bodyX + 30, baseY - 40], [bodyX + 36, baseY - 33]], 2, ghost);
+    stairLine(ctx, [[bodyX + 22, baseY - 20], [bodyX + 31, baseY - 18]], 2, ghost);
+  } else {
+    stairLine(ctx, [[bodyX + 8, baseY - 36], [bodyX + 13, baseY - 28], [bodyX + 12, baseY - 20]], 4, COLORS.outline);
+    stairLine(ctx, [[bodyX + 8, baseY - 36], [bodyX + 13, baseY - 28], [bodyX + 12, baseY - 21]], 2, bone);
+  }
+  stairLine(ctx, [[bodyX - 8, baseY - 36], [bodyX - 14, baseY - 28], [bodyX - 13, baseY - 20]], 4, COLORS.outline);
+  stairLine(ctx, [[bodyX - 8, baseY - 36], [bodyX - 14, baseY - 28], [bodyX - 13, baseY - 21]], 2, boneShade);
+
+  // 幽火杖：左手骨杖悬浮鬼火
+  rect(ctx, bodyX - 16, baseY - 44, 3, 26, COLORS.outline);
+  rect(ctx, bodyX - 15, baseY - 43, 1, 23, bone);
+  rect(ctx, bodyX - 18, baseY - 50, 7, 7, COLORS.outline);
+  rect(ctx, bodyX - 17, baseY - 49, 5, 5, raise || strike ? COLORS.jadeLight : '#5ba185');
+
+  // 白骨法冠 + 骷髅首
+  const headY = baseY - 56 + (strike ? 1 : 0);
+  rect(ctx, bodyX - 8, headY, 16, 16, COLORS.outline);
+  rect(ctx, bodyX - 6, headY + 2, 12, 12, bone);
+  rect(ctx, bodyX - 5, headY + 11, 10, 3, boneShade);
+  rect(ctx, bodyX - 4, headY + 12, 2, 2, COLORS.outline);
+  rect(ctx, bodyX, headY + 12, 2, 2, COLORS.outline);
+  rect(ctx, bodyX + 3, headY + 12, 2, 2, COLORS.outline);
+  const eyeGlow = raise || strike ? '#b7f0d2' : COLORS.jadeLight;
+  rect(ctx, bodyX - 5, headY + 5, 4, 4, COLORS.outline);
+  rect(ctx, bodyX + 1, headY + 5, 4, 4, COLORS.outline);
+  rect(ctx, bodyX - 4, headY + 6, 2, 2, eyeGlow);
+  rect(ctx, bodyX + 2, headY + 6, 2, 2, eyeGlow);
+
+  // 法冠：中高侧低三叉 + 朱砂绦
+  rect(ctx, bodyX - 7, headY - 4, 14, 5, COLORS.outline);
+  rect(ctx, bodyX - 6, headY - 3, 12, 3, COLORS.brass);
+  rect(ctx, bodyX - 2, headY - 9, 4, 6, COLORS.outline);
+  rect(ctx, bodyX - 1, headY - 8, 2, 5, bone);
+  rect(ctx, bodyX - 7, headY - 7, 3, 4, COLORS.outline);
+  rect(ctx, bodyX + 4, headY - 7, 3, 4, COLORS.outline);
+  rect(ctx, bodyX - 6, headY - 6, 1, 3, bone);
+  rect(ctx, bodyX + 5, headY - 6, 1, 3, bone);
+  stairLine(ctx, [[bodyX + 8, headY - 2], [bodyX + 12, headY + 4], [bodyX + 11, headY + 10]], 1, COLORS.cinnabar);
+}
+
 const DRAWERS = Object.freeze({
   hero: drawHero,
   slime: drawMurkwaterSpirit,
   bat: drawSoulBat,
   spider: drawSoulSpider,
-  goblin: drawMountainDemon
+  goblin: drawMountainDemon,
+  skeleton: drawShadeSoldier,
+  orc_warrior: drawDemonBrute,
+  fire_mage: drawKarmicFlameCultist,
+  giant_skeleton: drawCorpsePuppetGeneral,
+  skeleton_king: drawBoneGhostKing
 });
 
 const POSE_PRIORITY = Object.freeze(['die', 'hurt', 'attack', 'walk_up', 'walk', 'idle']);
@@ -432,6 +859,43 @@ function makePixelCanvas(display, drawFrame) {
 function replaceCanvasTexture(scene, key, canvas) {
   if (scene.textures.exists(key)) scene.textures.remove(key);
   scene.textures.addCanvas(key, canvas);
+}
+
+/** 通用坊民贴图（28×32）：束发布衣，替换旧的纯色小人。 */
+function drawTownsfolk(ctx, width, height) {
+  const centerX = Math.round(width / 2);
+  const groundY = height - 3;
+  pixelShadow(ctx, centerX, groundY, 18);
+
+  rect(ctx, centerX - 6, groundY - 6, 5, 5, COLORS.outline);
+  rect(ctx, centerX + 1, groundY - 6, 5, 5, COLORS.outline);
+  rect(ctx, centerX - 5, groundY - 5, 3, 3, '#4b5a52');
+  rect(ctx, centerX + 2, groundY - 5, 3, 3, '#4b5a52');
+
+  rect(ctx, centerX - 8, groundY - 18, 16, 13, COLORS.outline);
+  rect(ctx, centerX - 6, groundY - 16, 12, 10, '#7d8f83');
+  rect(ctx, centerX - 6, groundY - 16, 4, 8, '#93a396');
+  rect(ctx, centerX - 6, groundY - 11, 12, 2, COLORS.brass);
+  rect(ctx, centerX - 1, groundY - 16, 2, 7, '#5c6f63');
+
+  rect(ctx, centerX - 10, groundY - 16, 3, 9, COLORS.outline);
+  rect(ctx, centerX + 7, groundY - 16, 3, 9, COLORS.outline);
+
+  rect(ctx, centerX - 6, groundY - 29, 12, 12, COLORS.outline);
+  rect(ctx, centerX - 4, groundY - 27, 8, 9, COLORS.skin);
+  rect(ctx, centerX - 4, groundY - 28, 8, 3, COLORS.deepInk);
+  rect(ctx, centerX - 3, groundY - 24, 2, 2, COLORS.outline);
+  rect(ctx, centerX + 1, groundY - 24, 2, 2, COLORS.outline);
+  rect(ctx, centerX - 2, groundY - 32, 4, 4, COLORS.deepInk);
+  rect(ctx, centerX - 1, groundY - 33, 2, 2, COLORS.brass);
+}
+
+export function installXianxiaNpcTexture(scene) {
+  if (!scene?.textures) return;
+  const canvas = makePixelCanvas({ w: 28, h: 32 }, (ctx, width, height) => {
+    drawTownsfolk(ctx, width, height);
+  });
+  replaceCanvasTexture(scene, 'npc', canvas);
 }
 
 /**

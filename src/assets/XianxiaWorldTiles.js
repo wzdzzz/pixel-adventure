@@ -18,7 +18,7 @@ const COLORS = Object.freeze({
   flame: '#e6bd67'
 });
 
-const SUPPORTED_TILE_IDS = new Set([0, 1, 4, 5, 16, 17, 18, 20, 32, 34, 36]);
+const SUPPORTED_TILE_IDS = new Set([0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 32, 33, 34, 36]);
 
 /**
  * Draws a deterministic xianxia-themed replacement for a world tileset cell.
@@ -88,6 +88,48 @@ export function drawXianxiaWorldTile(ctx, tileId, cols, size) {
       break;
     }
 
+    case 2: { // Red-gold dune sand (赤金沙海)
+      ctx.fillStyle = '#b3854c';
+      rect(0, 0, 32, 32);
+      ctx.fillStyle = '#96693c';
+      rect(0, 7, 11, 2);
+      rect(15, 8, 12, 2);
+      rect(4, 18, 14, 2);
+      rect(22, 17, 10, 2);
+      rect(0, 27, 9, 2);
+      rect(14, 28, 13, 2);
+      ctx.fillStyle = '#cda05f';
+      rect(6, 3, 5, 2);
+      rect(20, 12, 6, 2);
+      rect(10, 22, 5, 2);
+      ctx.fillStyle = COLORS.cinnabarDark;
+      rect(26, 4, 3, 2);
+      rect(2, 13, 2, 2);
+      break;
+    }
+
+    case 3: { // Cold-abyss snowfield (寒渊雪岭)
+      ctx.fillStyle = '#c3ccd1';
+      rect(0, 0, 32, 32);
+      ctx.fillStyle = '#a3b2bb';
+      rect(0, 10, 9, 2);
+      rect(14, 11, 12, 2);
+      rect(5, 24, 13, 2);
+      rect(23, 23, 9, 2);
+      ctx.fillStyle = '#8fa4ad';
+      rect(19, 4, 5, 2);
+      rect(2, 18, 4, 2);
+      ctx.fillStyle = '#e4eaeb';
+      rect(7, 5, 5, 2);
+      rect(24, 15, 5, 2);
+      rect(12, 19, 4, 2);
+      rect(3, 29, 5, 2);
+      ctx.fillStyle = 'rgba(121, 168, 137, 0.35)';
+      rect(27, 8, 3, 2);
+      rect(9, 14, 3, 2);
+      break;
+    }
+
     case 4: { // Mountain stream
       ctx.fillStyle = '#315d67';
       rect(0, 0, 32, 32);
@@ -124,6 +166,55 @@ export function drawXianxiaWorldTile(ctx, tileId, cols, size) {
       ctx.fillStyle = COLORS.jadeDark;
       rect(0, 20, 5, 1);
       rect(25, 9, 7, 1);
+      break;
+    }
+
+    case 6: { // Earthfire fissures (焚天火域地火)
+      ctx.fillStyle = '#241814';
+      rect(0, 0, 32, 32);
+      ctx.fillStyle = '#3a2119';
+      rect(2, 3, 10, 6);
+      rect(18, 5, 11, 7);
+      rect(5, 20, 12, 8);
+      rect(21, 21, 9, 7);
+      ctx.fillStyle = '#8c3524';
+      rect(0, 13, 13, 2);
+      rect(17, 14, 15, 2);
+      rect(13, 12, 2, 6);
+      rect(8, 2, 2, 8);
+      rect(24, 20, 2, 9);
+      ctx.fillStyle = '#d9663a';
+      rect(3, 13, 6, 2);
+      rect(20, 14, 7, 2);
+      rect(13, 14, 2, 3);
+      ctx.fillStyle = COLORS.flame;
+      rect(5, 13, 2, 2);
+      rect(23, 14, 2, 2);
+      break;
+    }
+
+    case 7: { // Miasma marsh mud (瘴云泽黑水泥沼)
+      ctx.fillStyle = '#2a3427';
+      rect(0, 0, 32, 32);
+      ctx.fillStyle = '#1d2620';
+      rect(3, 5, 10, 5);
+      rect(19, 8, 10, 5);
+      rect(6, 21, 12, 6);
+      rect(24, 22, 8, 5);
+      ctx.fillStyle = '#3d4c33';
+      rect(14, 3, 6, 3);
+      rect(0, 14, 7, 3);
+      rect(20, 16, 8, 2);
+      ctx.fillStyle = '#4f6242';
+      rect(15, 4, 3, 1);
+      rect(2, 15, 3, 1);
+      ctx.fillStyle = 'rgba(104, 88, 128, 0.5)';
+      rect(9, 12, 3, 2);
+      rect(25, 5, 3, 2);
+      rect(17, 26, 3, 2);
+      ctx.fillStyle = 'rgba(121, 168, 137, 0.3)';
+      rect(12, 18, 2, 2);
+      rect(28, 12, 2, 2);
       break;
     }
 
@@ -195,6 +286,29 @@ export function drawXianxiaWorldTile(ctx, tileId, cols, size) {
       break;
     }
 
+    case 19: { // Wind-eroded rock (风蚀石)
+      clear();
+      ctx.fillStyle = COLORS.ink;
+      rect(2, 6, 28, 24);
+      ctx.fillStyle = COLORS.stoneDark;
+      rect(4, 8, 24, 20);
+      rect(8, 4, 16, 6);
+      ctx.fillStyle = COLORS.stone;
+      rect(6, 10, 20, 4);
+      rect(9, 5, 12, 3);
+      rect(5, 18, 22, 3);
+      ctx.fillStyle = COLORS.stoneLight;
+      rect(10, 6, 8, 2);
+      rect(8, 11, 10, 2);
+      ctx.fillStyle = COLORS.earthDark;
+      rect(4, 15, 24, 2);
+      rect(6, 23, 20, 2);
+      ctx.fillStyle = COLORS.earthLight;
+      rect(20, 15, 6, 1);
+      rect(8, 23, 5, 1);
+      break;
+    }
+
     case 20: { // Cinnabar timber railing
       clear();
       ctx.fillStyle = COLORS.cinnabarDark;
@@ -227,6 +341,28 @@ export function drawXianxiaWorldTile(ctx, tileId, cols, size) {
       rect(18, 9, 2, 2);
       ctx.fillStyle = COLORS.brass;
       rect(22, 13, 2, 2);
+      break;
+    }
+
+    case 33: { // Lingzhi fungus (灵芝)
+      clear();
+      ctx.fillStyle = COLORS.earthDark;
+      rect(13, 17, 5, 11);
+      rect(10, 26, 12, 3);
+      ctx.fillStyle = COLORS.earthLight;
+      rect(14, 18, 2, 8);
+      ctx.fillStyle = COLORS.cinnabarDark;
+      rect(6, 10, 20, 8);
+      rect(9, 6, 14, 5);
+      ctx.fillStyle = COLORS.cinnabar;
+      rect(8, 11, 14, 4);
+      rect(11, 7, 9, 3);
+      ctx.fillStyle = '#d8935d';
+      rect(6, 16, 20, 2);
+      rect(9, 9, 4, 2);
+      ctx.fillStyle = 'rgba(121, 168, 137, 0.5)';
+      rect(23, 6, 2, 3);
+      rect(4, 12, 2, 3);
       break;
     }
 

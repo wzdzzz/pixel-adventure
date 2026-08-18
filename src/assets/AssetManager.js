@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { installXianxiaCharacterTextures } from './XianxiaCharacterTextures.js';
+import { installXianxiaCharacterTextures, installXianxiaNpcTexture } from './XianxiaCharacterTextures.js';
+import { installXianxiaPropTextures } from './XianxiaPropTextures.js';
 import { installXianxiaSkillIcons } from './XianxiaSkillIcons.js';
 import { drawXianxiaWorldTile } from './XianxiaWorldTiles.js';
 
@@ -209,8 +210,10 @@ export class AssetManager {
     // 世界流式加载 tileset
     AssetManager.generateWorldTileset(scene);
 
-    // P2 visual sample keeps all animation keys while replacing western silhouettes.
+    // P2/P3 visual pass keeps all animation keys while replacing western silhouettes.
     installXianxiaCharacterTextures(scene, CHARACTERS);
+    installXianxiaNpcTexture(scene);
+    installXianxiaPropTextures(scene);
     installXianxiaSkillIcons(scene);
   }
 

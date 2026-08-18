@@ -35,9 +35,14 @@ export const SOUNDS = {
       { kind: 'tone', type: 'triangle', freq: 520, freqEnd: 300, dur: 0.09, gain: 0.18, attack: 0.002, release: 0.06 },
     ],
   },
+  // 飞剑出鞘：破风噪声 + 金属清鸣
   player_attack_ranged: {
-    kind: 'tone', type: 'triangle', freq: 900, freqEnd: 1500, dur: 0.12, gain: 0.26,
-    attack: 0.002, release: 0.08, minInterval: 60,
+    kind: 'mix', minInterval: 60,
+    layers: [
+      { kind: 'noise', dur: 0.12, filterType: 'highpass', filterFreq: 1800, filterQ: 0.8, gain: 0.2, attack: 0.002, release: 0.09 },
+      { kind: 'tone', type: 'sine', freq: 1400, freqEnd: 2200, dur: 0.1, gain: 0.15, attack: 0.002, release: 0.07 },
+      { kind: 'tone', type: 'triangle', freq: 950, freqEnd: 1500, dur: 0.12, gain: 0.13, attack: 0.002, release: 0.08 },
+    ],
   },
 
   hit_impact: {
@@ -77,31 +82,39 @@ export const SOUNDS = {
     dur: 0.5, gain: 0.4, minInterval: 500,
   },
 
+  // 符法起手：铃音 + 低频灵力涌动 + 纸符轻响
   skill_cast: {
-    kind: 'tone', type: 'sine', freq: 440, freqEnd: 990, dur: 0.22, gain: 0.3,
-    attack: 0.005, release: 0.14, minInterval: 80,
+    kind: 'mix', minInterval: 80,
+    layers: [
+      { kind: 'tone', type: 'sine', freq: 660, freqEnd: 1320, dur: 0.18, gain: 0.2, attack: 0.004, release: 0.12 },
+      { kind: 'tone', type: 'sine', freq: 110, freqEnd: 165, dur: 0.3, gain: 0.15, attack: 0.02, release: 0.18 },
+      { kind: 'noise', dur: 0.07, filterType: 'highpass', filterFreq: 3200, gain: 0.07, attack: 0.002, release: 0.05 },
+    ],
   },
 
   // ───────── 进度 / 经济 ─────────
+  // 修为精进：宫调五声上行
   level_up: {
-    kind: 'arp', notes: [523, 659, 784, 1047, 1319], step: 0.085, type: 'square',
+    kind: 'arp', notes: [523, 587, 659, 784, 1047], step: 0.085, type: 'triangle',
     dur: 0.22, gain: 0.38, minInterval: 500,
   },
   xp_gain: {
     kind: 'tone', type: 'sine', freq: 1300, dur: 0.045, gain: 0.1,
     attack: 0.002, release: 0.04, minInterval: 80, volume: 0.8,
   },
+  // 灵石入囊：玉石轻碰
   coin: {
-    kind: 'tone', type: 'square', freq: 1320, freqEnd: 1760, dur: 0.08, gain: 0.2,
-    attack: 0.002, release: 0.06, minInterval: 50,
+    kind: 'tone', type: 'sine', freq: 1568, freqEnd: 2093, dur: 0.07, gain: 0.18,
+    attack: 0.002, release: 0.05, minInterval: 50,
   },
   loot_pickup: {
     kind: 'tone', type: 'triangle', freq: 660, freqEnd: 990, dur: 0.1, gain: 0.26,
     attack: 0.003, release: 0.08, minInterval: 50,
   },
+  // 灵宝现世：玉石清响（纯音五声）
   loot_legendary: {
-    kind: 'arp', notes: [784, 988, 1175, 1568], step: 0.07, type: 'square',
-    dur: 0.18, gain: 0.36, minInterval: 300,
+    kind: 'arp', notes: [1047, 1319, 1568, 2093], step: 0.09, type: 'sine',
+    dur: 0.22, gain: 0.34, minInterval: 300,
   },
   loot_drop: {
     kind: 'tone', type: 'triangle', freq: 440, freqEnd: 330, dur: 0.07, gain: 0.14,
@@ -128,7 +141,7 @@ export const SOUNDS = {
     ],
   },
   enhance_success: {
-    kind: 'arp', notes: [659, 880, 1175], step: 0.07, type: 'triangle',
+    kind: 'arp', notes: [659, 784, 1047], step: 0.07, type: 'triangle',
     dur: 0.16, gain: 0.34, minInterval: 200,
   },
   enhance_fail: {
@@ -160,15 +173,15 @@ export const SOUNDS = {
 
   // ───────── NPC / 系统 ─────────
   dialogue_blip: {
-    kind: 'tone', type: 'square', freq: 540, dur: 0.03, gain: 0.1,
+    kind: 'tone', type: 'triangle', freq: 560, dur: 0.03, gain: 0.1,
     attack: 0.001, release: 0.025, minInterval: 40, volume: 0.9,
   },
   quest_accept: {
-    kind: 'arp', notes: [523, 659, 784], step: 0.08, type: 'triangle',
+    kind: 'arp', notes: [523, 587, 784], step: 0.08, type: 'triangle',
     dur: 0.14, gain: 0.3, minInterval: 200,
   },
   quest_complete: {
-    kind: 'arp', notes: [659, 784, 988, 1319], step: 0.09, type: 'square',
+    kind: 'arp', notes: [587, 659, 784, 1047], step: 0.09, type: 'triangle',
     dur: 0.2, gain: 0.38, minInterval: 400,
   },
   shop_buy: {
@@ -206,39 +219,44 @@ export const SOUNDS = {
 const C2 = 65.41, C3 = 130.81, A2 = 55, A3 = 110, D3 = 146.83, E3 = 164.81;
 
 export const MUSIC = {
+  // 云荒引：羽调五声，慢速留白，似古琴散板
   menu: {
-    bpm: 84, root: A2, gain: 0.5, drums: false,
+    bpm: 66, root: A2, gain: 0.5, drums: false,
     bassType: 'triangle', leadType: 'sine',
-    scale: [0, 3, 5, 7, 10, 12, 15],            // A 自然小调五声+
-    chords: [[0, 7, 12], [8, 15, 20], [5, 12, 17], [7, 14, 19]],
+    scale: [0, 3, 5, 7, 10, 12],                 // A 羽调五声
+    chords: [[0, 7, 12], [3, 10, 15], [5, 12, 17], [7, 12, 19]],
     bars: 4,
   },
+  // 青岚行：宫调五声，无鼓留白，泛音气质的野外游历
   explore: {
-    bpm: 96, root: C2, gain: 0.42, drums: true,
-    bassType: 'triangle', leadType: 'triangle',
-    scale: [0, 2, 4, 7, 9, 12, 14, 16],          // C 大调五声
-    chords: [[0, 7, 12], [9, 16, 21], [5, 12, 17], [7, 14, 19]],
+    bpm: 88, root: C2, gain: 0.4, drums: false,
+    bassType: 'triangle', leadType: 'sine',
+    scale: [0, 2, 4, 7, 9, 12, 14, 16],          // C 宫调五声
+    chords: [[0, 7, 14], [9, 14, 21], [4, 9, 16], [2, 7, 12]],
     bars: 4,
   },
+  // 栖云坊：明亮宫调，笛音轻快，坊市烟火气
   town: {
-    bpm: 100, root: C3, gain: 0.4, drums: false,
+    bpm: 96, root: C3, gain: 0.4, drums: false,
     bassType: 'sine', leadType: 'triangle',
-    scale: [0, 2, 4, 5, 7, 9, 11, 12],           // C 大调
-    chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]],
+    scale: [0, 2, 4, 7, 9, 12, 14, 16],          // C 宫调五声
+    chords: [[0, 4, 9], [2, 7, 12], [4, 9, 14], [0, 7, 16]],
     bars: 4,
   },
+  // 伏妖：羽调紧凑鼓点，短促弦乐推进
   combat: {
-    bpm: 140, root: D3, gain: 0.4, drums: true,
+    bpm: 138, root: D3, gain: 0.4, drums: true,
     bassType: 'sawtooth', leadType: 'square',
-    scale: [0, 2, 3, 5, 7, 9, 10, 12],           // D 多利亚（紧张）
-    chords: [[0, 7, 12], [3, 10, 15], [5, 12, 17], [-2, 5, 10]],
+    scale: [0, 3, 5, 7, 10, 12],                 // D 羽调五声
+    chords: [[0, 7, 12], [3, 10, 15], [5, 10, 17], [0, 7, 15]],
     bars: 4,
   },
+  // 白骨鬼王：羽调叠半音压迫，阴煞鼓阵
   boss: {
-    bpm: 152, root: A2, gain: 0.44, drums: true,
+    bpm: 150, root: A2, gain: 0.44, drums: true,
     bassType: 'sawtooth', leadType: 'square',
-    scale: [0, 1, 3, 6, 7, 9, 12],               // 减/半音紧张
-    chords: [[0, 6, 12], [1, 7, 13], [3, 9, 12], [0, 6, 11]],
+    scale: [0, 1, 3, 7, 8, 10, 12],              // 羽调加变徵压迫
+    chords: [[0, 7, 12], [1, 7, 13], [3, 10, 15], [0, 6, 13]],
     bars: 4,
   },
 };
