@@ -14,8 +14,14 @@ function clamp01(v) { v = Number(v); if (!isFinite(v)) return 0; return Math.max
 
 const TABS = ['character', 'inventory', 'skillTree', 'questLog', 'party', 'settings'];
 const TAB_LABELS = ['角色', '行囊', '传承', '游历录', '同行', '设置'];
-const TAB_ICONS = ['人', '囊', '法', '录', '伴', '设'];
 const TAB_KEYS = ['C', 'B', 'X', 'L', 'T', ''];
+
+/** 面板通用尺寸/配色（大方简洁：卡片 + 下划线标签） */
+const TAB_H = 48;
+const BTN_BG = '#1b2f27';
+const BTN_BG_HOVER = '#28443a';
+const PILL_BG = '#16241f';
+const PILL_BG_ACTIVE = '#28443a';
 
 export const RARITY_COLORS = RARITY_THEME;
 
@@ -158,50 +164,48 @@ export class PanelScene extends Phaser.Scene {
   createTabBar() {
     this.tabButtons = [];
     const tabW = this.panelW / TABS.length;
-    const tabH = 40;
-    const tabY = this.panelTop + tabH / 2;
+    const tabY = this.panelTop + TAB_H / 2;
+
+    // 顶栏底色 + 下缘分隔线
+    this.add.rectangle(this.panelX, tabY, this.panelW - 2, TAB_H, UI_THEME.colors.ink, 0.45).setDepth(2);
+    this.add.rectangle(this.panelX, this.panelTop + TAB_H, this.panelW - 2, 1, UI_THEME.colors.border, 0.9).setDepth(2);
 
     TABS.forEach((tab, i) => {
       const tabX = this.panelLeft + tabW * i + tabW / 2;
 
-      const bg = this.add.rectangle(tabX, tabY, tabW - 4, tabH - 4, UI_THEME.colors.panelRaised, 1)
-        .setStrokeStyle(1, UI_THEME.colors.borderMuted).setDepth(2);
-
-      const label = this.add.text(tabX, tabY, `${TAB_ICONS[i]} ${TAB_LABELS[i]}`, {
+      const label = this.add.text(tabX - 6, tabY, TAB_LABELS[i], {
         fontSize: '16px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
       }).setOrigin(0.5).setDepth(3);
 
-      const hintChar = TAB_KEYS[i] || '';
-      const hint = this.add.text(tabX + tabW / 2 - 14, tabY - tabH / 2 + 4, hintChar, {
-        fontSize: '12px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.mono
-      }).setOrigin(0.5, 0).setDepth(3);
+      const hint = this.add.text(label.x + label.width / 2 + 8, tabY + 1, TAB_KEYS[i] || '', {
+        fontSize: '11px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.mono
+      }).setOrigin(0, 0.5).setDepth(3);
 
-      bg.setInteractive({ useHandCursor: true });
+      const underline = this.add.rectangle(tabX, this.panelTop + TAB_H - 2, tabW - 36, 3, UI_THEME.colors.jadeBright)
+        .setDepth(3).setVisible(false);
+
+      const bg = this.add.rectangle(tabX, tabY, tabW, TAB_H, 0xffffff, 0.001)
+        .setDepth(2).setInteractive({ useHandCursor: true });
       bg.on('pointerover', () => {
-        if (this.activeTab !== tab) bg.setFillStyle(UI_THEME.colors.panelHover);
+        if (this.activeTab !== tab) label.setColor(UI_THEME.text.paper);
       });
       bg.on('pointerout', () => {
-        if (this.activeTab !== tab) bg.setFillStyle(UI_THEME.colors.panelRaised);
+        if (this.activeTab !== tab) label.setColor(UI_THEME.text.muted);
       });
       bg.on('pointerdown', () => { audioEngine.playSfx('ui_click'); this.switchTab(tab); });
 
-      this.tabButtons.push({ bg, label, hint, tab });
+      this.tabButtons.push({ bg, label, hint, underline, tab });
     });
   }
 
   switchTab(tabName) {
     this.activeTab = tabName;
 
-    this.tabButtons.forEach(({ bg, label, tab }) => {
-      if (tab === tabName) {
-        bg.setFillStyle(UI_THEME.colors.panelHover);
-        bg.setStrokeStyle(2, UI_THEME.colors.jadeBright);
-        label.setColor(UI_THEME.text.jadeBright);
-      } else {
-        bg.setFillStyle(UI_THEME.colors.panelRaised);
-        bg.setStrokeStyle(1, UI_THEME.colors.borderMuted);
-        label.setColor(UI_THEME.text.muted);
-      }
+    this.tabButtons.forEach(({ label, hint, underline, tab }) => {
+      const active = tab === tabName;
+      label.setColor(active ? UI_THEME.text.jadeBright : UI_THEME.text.muted);
+      hint.setColor(active ? UI_THEME.text.jade : UI_THEME.text.disabled);
+      if (underline) underline.setVisible(active);
     });
 
     TABS.forEach(tab => {
@@ -221,6 +225,75 @@ export class PanelScene extends Phaser.Scene {
   hideTooltip() {
     if (this.tooltipContainer) this.tooltipContainer.setVisible(false);
     if (this.tooltipContainer2) this.tooltipContainer2.setVisible(false);
+  }
+
+  // ── 通用 UI 构件（各标签页共享） ──────────────────────────
+
+  /** 内容卡片：浅浮底 + 细边框，origin 左上 */
+  _addCard(container, x, y, w, h) {
+    const card = this.add.rectangle(x, y, w, h, UI_THEME.colors.panelRaised, 0.5)
+      .setOrigin(0, 0).setStrokeStyle(1, UI_THEME.colors.borderMuted);
+    container.add(card);
+    return card;
+  }
+
+  /** 区块标题：玉青短竖条 + 加粗标题 */
+  _addSectionTitle(container, x, y, text) {
+    const bar = this.add.rectangle(x, y + 10, 4, 16, UI_THEME.colors.jade).setOrigin(0, 0.5);
+    const t = this.add.text(x + 12, y, text, {
+      fontSize: '15px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
+    });
+    container.add([bar, t]);
+    return t;
+  }
+
+  /** 水平分隔线 */
+  _addDivider(container, x, y, w) {
+    const d = this.add.rectangle(x, y, w, 1, UI_THEME.colors.borderMuted, 0.8).setOrigin(0, 0.5);
+    container.add(d);
+    return d;
+  }
+
+  /**
+   * 文字按钮：定宽 + 底色 + hover 反馈。
+   * @returns {Phaser.GameObjects.Text}
+   */
+  _addTextButton(container, x, y, label, opts, onClick) {
+    const { color, hoverColor = UI_THEME.text.paper, width = 92, fontSize = '14px',
+      origin = [0, 0], bold = false } = opts || {};
+    const btn = this.add.text(x, y, label, {
+      fontSize, fill: color, fontFamily: UI_THEME.font.body,
+      fontStyle: bold ? 'bold' : 'normal',
+      backgroundColor: BTN_BG, fixedWidth: width, align: 'center',
+      padding: { x: 4, y: 7 }
+    }).setOrigin(origin[0], origin[1]).setInteractive({ useHandCursor: true });
+    btn.on('pointerover', () => btn.setStyle({ backgroundColor: BTN_BG_HOVER, fill: hoverColor }));
+    btn.on('pointerout', () => btn.setStyle({ backgroundColor: BTN_BG, fill: color }));
+    if (onClick) btn.on('pointerdown', () => { audioEngine.playSfx('ui_click'); onClick(); });
+    container.add(btn);
+    return btn;
+  }
+
+  /** 分段选择组（过滤/排序用小药丸按钮） */
+  _addPill(container, x, y, label, opts, onClick) {
+    const { width = 60, active = false } = opts || {};
+    const pill = this.add.text(x, y, label, {
+      fontSize: '13px', fill: active ? UI_THEME.text.jadeBright : UI_THEME.text.muted,
+      fontFamily: UI_THEME.font.body,
+      backgroundColor: active ? PILL_BG_ACTIVE : PILL_BG,
+      fixedWidth: width, align: 'center', padding: { x: 4, y: 5 }
+    }).setOrigin(0, 0).setInteractive({ useHandCursor: true });
+    if (onClick) pill.on('pointerdown', () => { audioEngine.playSfx('ui_click'); onClick(); });
+    container.add(pill);
+    return pill;
+  }
+
+  /** 设置药丸按钮的激活态外观 */
+  _setPillActive(pill, active) {
+    pill.setStyle({
+      backgroundColor: active ? PILL_BG_ACTIVE : PILL_BG,
+      fill: active ? UI_THEME.text.jadeBright : UI_THEME.text.muted
+    });
   }
 
   playOpenAnimation() {

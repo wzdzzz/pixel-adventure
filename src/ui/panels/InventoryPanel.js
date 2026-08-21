@@ -186,19 +186,16 @@ export const InventoryPanel = {
     const container = this.add.container(0, 0).setDepth(5).setVisible(false);
     this.tabContainers.inventory = container;
 
-    const contentTop = this.panelTop + 50;
-    const contentW = this.panelW - 20;
-    const contentH = this.panelH - 60;
+    // 布局：顶部工具栏两行 + 左格子卡片 + 右详情卡片
+    const margin = 16;
+    const gap = 12;
+    const top = this.panelTop + 56;
+    const bottom = this.panelTop + this.panelH - margin;
+    const innerLeft = this.panelLeft + margin;
+    const innerRight = this.panelLeft + this.panelW - margin;
 
-    // Content background
-    const contentBg = this.add.rectangle(
-      this.panelX, contentTop + contentH / 2,
-      contentW, contentH, UI_THEME.colors.backdrop, 0.88
-    ).setStrokeStyle(1, UI_THEME.colors.borderMuted);
-    container.add(contentBg);
-
-    // --- Filter bar ---
-    const filterY = contentTop + 18;
+    // --- 工具栏第一行：过滤 + 操作按钮 ---
+    const row1Y = top + 10;
     const filterTypes = [
       { key: 'all', label: '全部' },
       { key: 'consumable', label: '消耗' },
@@ -209,115 +206,96 @@ export const InventoryPanel = {
     this.invActiveFilter = 'all';
     this.invFilterButtons = [];
 
-    const filterLabel = this.add.text(this.panelLeft + 20, filterY, '过滤:', {
-      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
+    const filterLabel = this.add.text(innerLeft, row1Y + 5, '过滤', {
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(filterLabel);
 
     filterTypes.forEach((ft, i) => {
-      const btn = this.add.text(this.panelLeft + 65 + i * 55, filterY, `[${ft.label}]`, {
-        fontSize: '14px', fill: ft.key === 'all' ? UI_THEME.text.jadeBright : UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
-      }).setInteractive({ useHandCursor: true });
-
-      btn.on('pointerdown', () => {
-        this.invActiveFilter = ft.key;
-        this.invFilterButtons.forEach((b, j) => {
-          b.setColor(filterTypes[j].key === ft.key ? UI_THEME.text.jadeBright : UI_THEME.text.disabled);
+      const pill = this._addPill(container, innerLeft + 42 + i * 66, row1Y, ft.label,
+        { width: 60, active: ft.key === 'all' }, () => {
+          this.invActiveFilter = ft.key;
+          this.invFilterButtons.forEach((b, j) => this._setPillActive(b, filterTypes[j].key === ft.key));
+          this.refreshInventoryTab();
         });
-        this.refreshInventoryTab();
-      });
-
-      this.invFilterButtons.push(btn);
-      container.add(btn);
+      this.invFilterButtons.push(pill);
     });
 
-    // --- Sort buttons + Gold display ---
-    const sortY = contentTop + 38;
-    const sortLabel = this.add.text(this.panelLeft + 20, sortY, '排序:', {
-      fontSize: '14px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
+    // 操作按钮（右对齐链）
+    const bulkBtn = this._addTextButton(container, innerRight - 96, row1Y - 3, '批量拆解',
+      { color: UI_THEME.text.cinnabarBright, width: 96 }, () => this.openBulkDecomposeModal?.());
+    const craftBtn = this._addTextButton(container, bulkBtn.x - 84 - 10, row1Y - 3, '炼制',
+      { color: UI_THEME.text.jade, width: 84 }, () => this.openCraftModal?.());
+    this._addTextButton(container, craftBtn.x - 84 - 10, row1Y - 3, '合成',
+      { color: UI_THEME.text.brass, width: 84 }, () => this.openGemFusionModal?.());
+
+    // --- 工具栏第二行：排序 + 灵石 ---
+    const row2Y = top + 48;
+    const sortLabel = this.add.text(innerLeft, row2Y + 5, '排序', {
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(sortLabel);
 
     const sortTypes = [
-      { key: 'level', label: '等级▼' },
+      { key: 'level', label: '等级▾' },
       { key: 'type', label: '种类' },
       { key: 'rarity', label: '品质' }
     ];
     sortTypes.forEach((st, i) => {
-      const btn = this.add.text(this.panelLeft + 65 + i * 65, sortY, `[${st.label}]`, {
-        fontSize: '14px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
-      }).setInteractive({ useHandCursor: true });
-
-      btn.on('pointerdown', () => {
-        const inv = this.gameScene?.inventory;
-        if (inv) {
-          inv.sortBy(st.key);
-          this.refreshInventoryTab();
-        }
-      });
-      btn.on('pointerover', () => btn.setColor(UI_THEME.text.jadeBright));
-      btn.on('pointerout', () => btn.setColor(UI_THEME.text.disabled));
-      container.add(btn);
+      const pill = this._addPill(container, innerLeft + 42 + i * 66, row2Y, st.label,
+        { width: 60 }, () => {
+          const inv = this.gameScene?.inventory;
+          if (inv) {
+            inv.sortBy(st.key);
+            this.refreshInventoryTab();
+          }
+        });
+      pill.on('pointerover', () => pill.setColor(UI_THEME.text.jadeBright));
+      pill.on('pointerout', () => pill.setColor(UI_THEME.text.muted));
     });
 
-    // Gold display
-    this.invGoldText = this.add.text(this.panelLeft + contentW - 10, sortY, `${THEME_CONFIG.currency}: 0`, {
-      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
+    this.invGoldText = this.add.text(innerRight, row2Y + 4, `${THEME_CONFIG.currency}: 0`, {
+      fontSize: '15px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     }).setOrigin(1, 0);
     container.add(this.invGoldText);
 
-    // 批量拆解按钮（位于金币左侧）
-    const bulkBtn = this.add.text(this.panelLeft + contentW - 90, filterY, '[批量拆解]', {
-      fontSize: '14px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body,
-      backgroundColor: '#192b24', padding: { x: 6, y: 3 }
-    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
-    bulkBtn.on('pointerdown', () => {
-      this.openBulkDecomposeModal?.();
-    });
-    bulkBtn.on('pointerover', () => bulkBtn.setColor(UI_THEME.text.paper));
-    bulkBtn.on('pointerout', () => bulkBtn.setColor(UI_THEME.text.cinnabarBright));
-    container.add(bulkBtn);
-
-    // 制作按钮（bulkBtn 左侧，因 bulkBtn 是右锚定，需向左偏移）
-    const craftBtn = this.add.text(bulkBtn.x - bulkBtn.width - 10, filterY, '[炼制]', {
-      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body,
-      backgroundColor: '#192b24', padding: { x: 6, y: 3 }
-    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
-    craftBtn.on('pointerdown', () => this.openCraftModal?.());
-    craftBtn.on('pointerover', () => craftBtn.setColor(UI_THEME.text.jadeBright));
-    craftBtn.on('pointerout', () => craftBtn.setColor(UI_THEME.text.jade));
-    container.add(craftBtn);
-
-    // 合成按钮（craftBtn 左侧）
-    const fuseBtn = this.add.text(craftBtn.x - craftBtn.width - 10, filterY, '[合成]', {
-      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body,
-      backgroundColor: '#192b24', padding: { x: 6, y: 3 }
-    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
-    fuseBtn.on('pointerdown', () => this.openGemFusionModal?.());
-    fuseBtn.on('pointerover', () => fuseBtn.setColor(UI_THEME.text.paper));
-    fuseBtn.on('pointerout', () => fuseBtn.setColor(UI_THEME.text.brass));
-    container.add(fuseBtn);
-
-    // --- 11x9 Grid (99 slots) ---
+    // --- 左卡片：物品格子 11×9 ---
+    const cardsTop = top + 88;
+    const cardH = bottom - cardsTop;
     const cols = 11;
     const rows = 9;
-    const cellSize = 40;
-    const gap = 3;
-    const gridW = cols * (cellSize + gap) - gap;
-    const gridStartX = this.panelX - gridW / 2;
-    const gridStartY = contentTop + 65;
+    const cellSize = 44;
+    const gapCell = 4;
+    const gridW = cols * (cellSize + gapCell) - gapCell;
+    const gridCardW = gridW + 36;
+    const gridCardX = innerLeft;
+    this._addCard(container, gridCardX, cardsTop, gridCardW, cardH);
+
+    this._addSectionTitle(container, gridCardX + 18, cardsTop + 14, '行囊');
+    this.invCapacityText = this.add.text(gridCardX + gridCardW - 18, cardsTop + 18, '0/99', {
+      fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.mono
+    }).setOrigin(1, 0);
+    container.add(this.invCapacityText);
+
+    const gridStartX = gridCardX + 18;
+    const gridStartY = cardsTop + 50;
+
+    const gridHint = this.add.text(gridCardX + gridCardW / 2, cardsTop + cardH - 22, '左键选中 · 右键快捷菜单', {
+      fontSize: '12px', fill: UI_THEME.text.disabled, fontFamily: UI_THEME.font.body
+    }).setOrigin(0.5, 0.5);
+    container.add(gridHint);
 
     this.RARITY_COLORS = RARITY_THEME;
 
     this.invSlots = [];
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
-        const x = gridStartX + col * (cellSize + gap) + cellSize / 2;
-        const y = gridStartY + row * (cellSize + gap) + cellSize / 2;
+        const x = gridStartX + col * (cellSize + gapCell) + cellSize / 2;
+        const y = gridStartY + row * (cellSize + gapCell) + cellSize / 2;
         const slotIndex = row * cols + col;
 
-        const cell = this.add.rectangle(x, y, cellSize, cellSize, RARITY_THEME.common.bg, 0.8)
-          .setStrokeStyle(1, RARITY_THEME.common.border)
+        const cell = this.add.rectangle(x, y, cellSize, cellSize, UI_THEME.colors.ink, 0.55)
+          .setStrokeStyle(1, UI_THEME.colors.borderMuted, 0.8)
           .setInteractive({ useHandCursor: true });
 
         // Item icon placeholder (text-based since we use generated textures)
@@ -352,90 +330,83 @@ export const InventoryPanel = {
       }
     }
 
-    // --- Item Detail Panel (bottom) ---
-    const detailY = gridStartY + rows * (cellSize + gap) + 10;
-    const detailH = contentTop + contentH - detailY - 10;
+    // --- 右卡片：物品详情 ---
+    const detailX = gridCardX + gridCardW + gap;
+    const detailW = innerRight - detailX;
+    this._addCard(container, detailX, cardsTop, detailW, cardH);
+    this._addSectionTitle(container, detailX + 18, cardsTop + 14, '详情');
 
-    const detailBg = this.add.rectangle(this.panelX, detailY + detailH / 2, contentW - 20, detailH, UI_THEME.colors.panelRaised, 0.9)
-      .setStrokeStyle(1, UI_THEME.colors.borderMuted);
-    container.add(detailBg);
+    const detailInnerX = detailX + 18;
+    const detailInnerW = detailW - 36;
 
-    this.invDetailName = this.add.text(this.panelLeft + 30, detailY + 8, '', {
-      fontSize: '16px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
+    this.invDetailName = this.add.text(detailInnerX, cardsTop + 48, '', {
+      fontSize: '17px', fill: UI_THEME.text.paper, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
     });
     container.add(this.invDetailName);
 
-    this.invDetailRarity = this.add.text(this.panelLeft + 30, detailY + 28, '', {
+    this.invDetailRarity = this.add.text(detailInnerX, cardsTop + 74, '', {
       fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body
     });
     container.add(this.invDetailRarity);
 
-    this.invDetailDesc = this.add.text(this.panelLeft + 30, detailY + 44, '', {
+    this._addDivider(container, detailInnerX, cardsTop + 96, detailInnerW);
+
+    this.invDetailDesc = this.add.text(detailInnerX, cardsTop + 108, '选择一个物品查看详情', {
       fontSize: '13px', fill: UI_THEME.text.muted, fontFamily: UI_THEME.font.body,
-      wordWrap: { width: (contentW - 120) / 2 - 20 }, lineSpacing: 1
+      wordWrap: { width: detailInnerW }, lineSpacing: 2
     });
     container.add(this.invDetailDesc);
 
-    // 对比栏（右半边：显示当前装备信息 + 属性差异）
-    this.invCompareText = this.add.text(this.panelX + 10, detailY + 8, '', {
+    // 对比栏（下半部：当前装备信息 + 属性差异）
+    this.invCompareText = this.add.text(detailInnerX, cardsTop + 404, '', {
       fontSize: '13px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body,
-      lineSpacing: 1, wordWrap: { width: (contentW - 120) / 2 - 20 }
+      lineSpacing: 2, wordWrap: { width: detailInnerW }
     }).setVisible(false);
     container.add(this.invCompareText);
 
-    // Action buttons
-    this.invUseBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 12, '[使用]', {
-      fontSize: '14px', fill: UI_THEME.text.jade, fontFamily: UI_THEME.font.body
-    }).setInteractive({ useHandCursor: true }).setVisible(false);
-    this.invUseBtn.on('pointerdown', () => this.useSelectedItem());
-    container.add(this.invUseBtn);
+    // 操作按钮：底部两行三列
+    const btnW = 92;
+    const btnStep = btnW + 12;
+    const btnRow1Y = cardsTop + cardH - 96;
+    const btnRow2Y = cardsTop + cardH - 50;
 
-    this.invDropBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 34, '[丢弃]', {
-      fontSize: '14px', fill: UI_THEME.text.cinnabar, fontFamily: UI_THEME.font.body
-    }).setInteractive({ useHandCursor: true }).setVisible(false);
-    this.invDropBtn.on('pointerdown', () => this.dropSelectedItem());
-    container.add(this.invDropBtn);
+    this.invUseBtn = this._addTextButton(container, detailInnerX, btnRow1Y, '使用',
+      { color: UI_THEME.text.jade, width: btnW }, () => this.useSelectedItem());
+    this.invUseBtn.setVisible(false);
 
-    this.invEquipBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 56, '[装备]', {
-      fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body, fontStyle: 'bold'
-    }).setInteractive({ useHandCursor: true }).setVisible(false);
-    this.invEquipBtn.on('pointerdown', () => this.equipSelectedItem());
-    container.add(this.invEquipBtn);
+    this.invEquipBtn = this._addTextButton(container, detailInnerX + btnStep, btnRow1Y, '装备',
+      { color: UI_THEME.text.jadeBright, width: btnW, bold: true }, () => this.equipSelectedItem());
+    this.invEquipBtn.setVisible(false);
 
-    // 强化按钮（仅装备显示）
-    this.invEnhanceBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 78, '[强化]', {
-      fontSize: '14px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
-    }).setInteractive({ useHandCursor: true }).setVisible(false);
-    this.invEnhanceBtn.on('pointerdown', () => {
-      if (this.invSelectedSlot < 0) return;
-      const actualSlot = this._actualSlot(this.invSelectedSlot);
-      if (actualSlot >= 0) this.openEnhanceModal?.(actualSlot);
-    });
-    container.add(this.invEnhanceBtn);
+    this.invDropBtn = this._addTextButton(container, detailInnerX + btnStep * 2, btnRow1Y, '丢弃',
+      { color: UI_THEME.text.cinnabar, width: btnW }, () => this.dropSelectedItem());
+    this.invDropBtn.setVisible(false);
 
-    // 分解按钮（仅装备显示）
-    this.invDecomposeBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 100, '[分解]', {
-      fontSize: '14px', fill: UI_THEME.text.cinnabarBright, fontFamily: UI_THEME.font.body
-    }).setInteractive({ useHandCursor: true }).setVisible(false);
-    this.invDecomposeBtn.on('pointerdown', () => {
-      if (this.invSelectedSlot < 0) return;
-      const actualSlot = this._actualSlot(this.invSelectedSlot);
-      if (actualSlot >= 0) this.openDecomposeModal?.(actualSlot);
-    });
-    container.add(this.invDecomposeBtn);
+    this.invEnhanceBtn = this._addTextButton(container, detailInnerX, btnRow2Y, '强化',
+      { color: UI_THEME.text.brass, width: btnW }, () => {
+        if (this.invSelectedSlot < 0) return;
+        const actualSlot = this._actualSlot(this.invSelectedSlot);
+        if (actualSlot >= 0) this.openEnhanceModal?.(actualSlot);
+      });
+    this.invEnhanceBtn.setVisible(false);
 
-    // 镶嵌按钮（仅有孔位装备显示）
-    this.invSocketBtn = this.add.text(this.panelLeft + contentW - 90, detailY + 122, '[镶嵌]', {
-      fontSize: '14px', fill: UI_THEME.text.jadeBright, fontFamily: UI_THEME.font.body
-    }).setInteractive({ useHandCursor: true }).setVisible(false);
-    this.invSocketBtn.on('pointerdown', () => {
-      if (this.invSelectedSlot < 0) return;
-      const actualSlot = this._actualSlot(this.invSelectedSlot);
-      if (actualSlot < 0) return;
-      const item = this.gameScene?.inventory?.getSlot(actualSlot);
-      if (item) this.openSocketModal?.(item);
-    });
-    container.add(this.invSocketBtn);
+    this.invSocketBtn = this._addTextButton(container, detailInnerX + btnStep, btnRow2Y, '镶嵌',
+      { color: UI_THEME.text.jadeBright, width: btnW }, () => {
+        if (this.invSelectedSlot < 0) return;
+        const actualSlot = this._actualSlot(this.invSelectedSlot);
+        if (actualSlot < 0) return;
+        const item = this.gameScene?.inventory?.getSlot(actualSlot);
+        if (item) this.openSocketModal?.(item);
+      });
+    this.invSocketBtn.setVisible(false);
+
+    this.invDecomposeBtn = this._addTextButton(container, detailInnerX + btnStep * 2, btnRow2Y, '分解',
+      { color: UI_THEME.text.cinnabarBright, width: btnW }, () => {
+        if (this.invSelectedSlot < 0) return;
+        const actualSlot = this._actualSlot(this.invSelectedSlot);
+        if (actualSlot >= 0) this.openDecomposeModal?.(actualSlot);
+      });
+    this.invDecomposeBtn.setVisible(false);
 
     this.invSelectedSlot = -1;
 
@@ -449,8 +420,12 @@ export const InventoryPanel = {
     const inv = this.gameScene?.inventory;
     if (!inv || !this.invSlots) return;
 
-    // Update gold
+    // Update gold + capacity
     if (this.invGoldText) this.invGoldText.setText(`${THEME_CONFIG.currency}: ${inv.gold}`);
+    if (this.invCapacityText) {
+      const used = inv.slots.filter(Boolean).length;
+      this.invCapacityText.setText(`${used}/${inv.slots.length}`);
+    }
 
     // Get filtered view
     const filtered = this.invActiveFilter === 'all'
@@ -492,8 +467,8 @@ export const InventoryPanel = {
           countText.setVisible(false);
         }
       } else {
-        cell.setFillStyle(RARITY_THEME.common.bg, 0.8);
-        cell.setStrokeStyle(1, RARITY_THEME.common.border);
+        cell.setFillStyle(UI_THEME.colors.ink, 0.55);
+        cell.setStrokeStyle(1, UI_THEME.colors.borderMuted, 0.8);
         icon.setVisible(false);
         countText.setVisible(false);
       }
@@ -595,7 +570,7 @@ export const InventoryPanel = {
       const rarity = this.RARITY_COLORS[item.rarity] || this.RARITY_COLORS.common;
       cell.setStrokeStyle(1, rarity.border);
     } else {
-      cell.setStrokeStyle(1, RARITY_THEME.common.border);
+      cell.setStrokeStyle(1, UI_THEME.colors.borderMuted, 0.8);
     }
   },
 
