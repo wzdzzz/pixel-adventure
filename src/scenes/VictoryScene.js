@@ -67,7 +67,7 @@ export class VictoryScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    this.add.text(width / 2, height / 2 - 104, '你取得镇界灵宝，平定了云荒异变', {
+    this.add.text(width / 2, height / 2 - 104, '你取回镇界古印，平定了云荒异变', {
       fontSize: '20px',
       fill: text.jadeBright,
       fontFamily: font.body
@@ -90,30 +90,51 @@ export class VictoryScene extends Phaser.Scene {
       fontFamily: font.body
     }).setOrigin(0.5);
 
-    const actionBg = this.add.rectangle(width / 2, height / 2 + 116, 240, 48, colors.panelRaised)
-      .setStrokeStyle(1, colors.jade);
-    const restartText = this.add.text(width / 2, height / 2 + 116, '重返山门', {
-      fontSize: '18px',
-      fill: text.jadeBright,
-      fontFamily: font.body
-    }).setOrigin(0.5);
-
-    this.tweens.add({
-      targets: [actionBg, restartText],
-      alpha: 0.64,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1
+    // ── 制作名单（分段淡入） ──
+    const credits = [
+      ['《云荒问道》', text.brass, '18px'],
+      ['设计 · 程序 · 美术 · 音乐   wzdzzz × Claude', text.muted, '14px'],
+      ['引擎  Phaser 3', text.muted, '14px'],
+      ['感谢游玩', text.jadeBright, '15px'],
+    ];
+    credits.forEach(([line, color, size], i) => {
+      const t = this.add.text(width / 2, height / 2 + 84 + i * 30, line, {
+        fontSize: size, fill: color, fontFamily: font.body,
+        fontStyle: i === 0 ? 'bold' : 'normal'
+      }).setOrigin(0.5).setAlpha(0);
+      this.tweens.add({ targets: t, alpha: 1, duration: 700, delay: 600 + i * 550 });
     });
 
-    const goToMenu = () => {
+    // ── 双选项：继续游历（post-game 读档回世界）/ 重返山门 ──
+    const makeButton = (x, label, color, borderColor, onClick) => {
+      const bg = this.add.rectangle(x, height / 2 + 256, 236, 50, colors.panelRaised)
+        .setStrokeStyle(1, borderColor).setInteractive({ useHandCursor: true }).setAlpha(0);
+      const txt = this.add.text(x, height / 2 + 256, label, {
+        fontSize: '18px', fill: color, fontFamily: font.body
+      }).setOrigin(0.5).setAlpha(0);
+      this.tweens.add({ targets: [bg, txt], alpha: 1, duration: 500, delay: 2900 });
+      bg.on('pointerover', () => bg.setFillStyle(colors.panelHover));
+      bg.on('pointerout', () => bg.setFillStyle(colors.panelRaised));
+      bg.on('pointerdown', onClick);
+      return bg;
+    };
+
+    // 继续游历：读回通关时自动写入的存档（post-game）
+    const victorySlot = this.registry.get('lastVictorySlot') || this.registry.get('activeSaveSlot') || 1;
+    makeButton(width / 2 - 136, '继续游历', text.jadeBright, colors.jade, () => {
+      this.game.registry.set('pendingLoadSlot', victorySlot);
+      this.game.registry.set('activeSaveSlot', victorySlot);
+      this.scene.stop('PanelScene');
+      this.scene.start('MainGameScene');
+      this.scene.start('UIScene');
+      this.scene.bringToTop('UIScene');
+    });
+
+    makeButton(width / 2 + 136, '重返山门', text.paper, colors.borderMuted, () => {
       this.scene.stop('UIScene');
       this.scene.stop('PanelScene');
       this.scene.start('MainMenuScene');
-    };
-
-    this.input.on('pointerdown', goToMenu);
-    this.input.keyboard.on('keydown-R', goToMenu);
+    });
 
     this.add.text(width / 2, height - 52, '云荒留痕，道途未止', {
       fontSize: '14px',

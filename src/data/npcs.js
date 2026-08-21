@@ -44,7 +44,7 @@ export const NPCS = {
     ]
   },
 
-  // ─── 赏金官：发布开放世界委托 / 刷新赏金 ───
+  // ─── 悬赏执事：主线四幕叙事锚点 + 发布委托 / 刷新赏金 ───
   bounty_officer: {
     id: 'bounty_officer',
     name: '悬赏执事雷九',
@@ -52,9 +52,22 @@ export const NPCS = {
     faction: 'townfolk',
     essential: true,
     spawn: { chunkX: 8, chunkY: 8, localX: 10, localY: 12 },
-    initialStage: 'greet',
+    initialStage: 'intro',
     dialogueModule: 'bounty_officer',
-    movement: 'stand'
+    movement: 'stand',
+    // 这些 stage 有新差事可交接 → 头顶显示金色「！」
+    handoffStages: ['intro', 'act1_done', 'act2_done', 'act3_done'],
+    // 主线 stage 机：任务接取/完成事件驱动（见 dialogues/bounty_officer.js 头注）
+    transitions: [
+      { on: 'quest:ow_first_hunt:accepted',     from: 'intro',     to: 'act1' },
+      { on: 'quest:ow_first_hunt:completed',    from: 'act1',      to: 'act1_done' },
+      { on: 'quest:ow_goblin_threat:accepted',  from: 'act1_done', to: 'act2' },
+      { on: 'quest:ow_goblin_threat:completed', from: 'act2',      to: 'act2_done' },
+      { on: 'quest:ow_bone_legion:accepted',    from: 'act2_done', to: 'act3' },
+      { on: 'quest:ow_bone_legion:completed',   from: 'act3',      to: 'act3_done' },
+      { on: 'quest:ow_slay_king:accepted',      from: 'act3_done', to: 'act4' },
+      { on: 'quest:ow_slay_king:completed',     from: 'act4',      to: 'post' },
+    ]
   },
 
   // ─── 训练师：教技能 + 重置天赋 ───

@@ -58,6 +58,7 @@ import { SHRINE_TYPES } from '../data/shrines.js';
 import SystemRegistry from '../core/SystemRegistry.js';
 import MusicEngine from '../systems/MusicEngine.js';
 import SoundManager from '../systems/SoundManager.js';
+import { installStoryArc } from '../systems/StoryArc.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -171,6 +172,9 @@ export class MainGameScene extends Phaser.Scene {
     this.enterWorld(initialSaveData);
     this.tryLoadSave();
     this.setupEvents();
+
+    // 体验弧：序章引导 / 情境教学 / 方向指引 / 结局演出（存档就绪后安装）
+    installStoryArc(this);
 
     // 延迟一帧触发全部 UI 刷新，确保 UIScene 已完成事件注册
     this.time.delayedCall(0, () => {

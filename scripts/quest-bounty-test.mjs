@@ -93,7 +93,7 @@ console.log('\n=== page errors:', pageErrors.length, '===');
 pageErrors.slice(0, 6).forEach(e => console.log('  -', e.slice(0, 160)));
 
 const pass =
-  flow.availableCount >= 5 && flow.bountyCount === 3 && flow.accepted &&
+  flow.availableCount >= 4 && /* 主线已改链式锁定，可接列表=支线+赏金 */ flow.bountyCount === 3 && flow.accepted &&
   flow.questStatus === 'completed' && flow.objProgress === 5 && flow.goldGain === 60 && flow.xpGain >= 80 &&
   flow.refreshChanged && flow.afterRefreshBounties === 3 &&
   ui.activeTab === 'questLog' && ui.btnMode === 'accept' && ui.btnText === '接受任务' && ui.acceptedNow === 'active' &&

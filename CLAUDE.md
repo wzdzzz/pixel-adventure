@@ -45,9 +45,16 @@ npx vite --force  # 清除 Vite 缓存启动
   - 顶部 Boss 血条 HUD（名字+阶段）；阶段/狂暴（HP 66%/33% 阈值 → 攻/速 +30%/阶 + 红闪震屏提示）
   - 事件 `bossEngaged/bossPhase/bossDefeated/bossDisengaged`；boss 专属音乐（优先于战斗曲）；击败横幅
 - **任务&赏金系统**（开放世界，见 `docs/plans/2026-05-29-quest-bounty-system.md`）：
-  - QuestSystem 事件驱动追踪（kill/collect）+ `available→active→completed` 状态 + 自动发奖
-  - `data/quests.js` 开放世界主/支线（autoAvailable 可接）+ `generateBounties` 可重复击杀赏金（按等级缩放，篝火/赏金官刷新）
+  - QuestSystem 事件驱动追踪（kill/collect/interact）+ `locked→available→active→completed` 状态 + 自动发奖
+  - `data/quests.js` 支线 autoAvailable 可接；**主线为链式锁定**，仅能通过雷九对话逐幕解锁
   - 任务日志面板「可接取」分组接受；赏金官 NPC（城镇）发布/刷新委托；动态赏金进存档
+- **体验弧 / 主线叙事**（`systems/StoryArc.js`，见 `docs/plans/2026-08-19-experience-arc-phase1-design.md`）：
+  - 序章：新档字幕卡 + 引导任务 `ow_prologue` + 5 条一次性情境教学 toast（worldState `hint_*` flag）
+  - 主线四幕由雷九串联：stage 机 intro→act1~4→post（NpcTransitions 按任务事件切换）；handoffStages 显示头顶「！」
+  - 结局：`bossDefeated(skeleton_king)` → world_calm + 原地掉镇界古印 → 拾印冻结战斗 → 结语卡 → 自动写档 →
+    VictoryScene（制作名单 + 继续游历/重返山门）；读档兜底在最近鬼王巢穴补生成古印
+  - 存档 `storyVersion` 迁移三类老档（未开始/中途/通关）；测试 `pnpm test:story`
+  - 注意：测试新档流程须用 `enterFreshGame`（自动跳过序章字幕卡，否则游戏处于 story 暂停）
 - **音频系统**（程序化合成，无外部音频文件，见 `docs/modules/audio.md`）：
   - Web Audio 实时合成；`AudioEngine`（全局单例 + 三级音量 + localStorage 持久化 + 解锁）
   - 数据驱动 `data/sounds.js`（SFX 参数 + 音乐曲库）；`MusicEngine`（前瞻调度循环乐 + 交叉淡变）

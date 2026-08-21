@@ -21,7 +21,8 @@
     "test:perf:movement": "node scripts/movement-performance-test.mjs",
     "test:theme": "node scripts/xianxia-theme-test.mjs",
     "test:theme:visual": "node scripts/xianxia-visual-test.mjs",
-    "test:smoke": "pnpm test:theme && pnpm test:theme:visual && pnpm test:smoke:audio && pnpm test:smoke:boss && pnpm test:smoke:companion && pnpm test:smoke:dialogue && pnpm test:smoke:quest && pnpm test:smoke:world"
+    "test:smoke": "pnpm test:theme && pnpm test:theme:visual && pnpm test:smoke:audio && pnpm test:smoke:boss && pnpm test:smoke:companion && pnpm test:smoke:dialogue && pnpm test:smoke:quest && pnpm test:smoke:world && pnpm test:story",
+    "test:story": "node scripts/story-migration-test.mjs && node scripts/prologue-test.mjs && node scripts/ending-test.mjs"
   },
   "dependencies": {
     "phaser": "^3.80.1",

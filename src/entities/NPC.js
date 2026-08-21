@@ -91,6 +91,10 @@ export class NPC {
 
     // Stage 自动转换
     this._uninstallTransitions = installNpcTransitions(this, this.config.transitions);
+
+    // stage 变化时刷新头顶指示（主线交接「！」依赖此监听）
+    this._onStageChanged = (p) => { if (p?.npcId === this.id) this._refreshIndicator(); };
+    scene.events.on('npcStageChanged', this._onStageChanged);
   }
 
   // ===== Stage 查询 =====
@@ -117,6 +121,13 @@ export class NPC {
     }
     if (this.state === NPCState.SURRENDERED) {
       this.stateIndicator.setText('🆘');
+      return;
+    }
+    // 主线交接：该 stage 有新差事可领 → 金色「！」
+    const handoff = this.config.handoffStages;
+    if (Array.isArray(handoff) && handoff.includes(this.getActiveStage())) {
+      this.stateIndicator.setText('！');
+      this.stateIndicator.setFill('#c6a45f');
       return;
     }
     // 默认按关系等级显示
@@ -203,6 +214,10 @@ export class NPC {
     if (this._uninstallTransitions) {
       this._uninstallTransitions();
       this._uninstallTransitions = null;
+    }
+    if (this._onStageChanged) {
+      this.scene?.events?.off('npcStageChanged', this._onStageChanged);
+      this._onStageChanged = null;
     }
     if (this.sprite) this.sprite.destroy();
     if (this.nameText) this.nameText.destroy();

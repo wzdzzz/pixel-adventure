@@ -15,6 +15,7 @@ export class SaveSystem {
   static OLD_SAVE_KEY = 'pixel_adventure_save';
   static SLOT_COUNT = 3;
   static SAVE_VERSION = '3.0.0';  // v3: 关卡制→开放世界迁移
+  static STORY_VERSION = 1;       // v1: 主线链式四幕 + 序章 + 结局（体验弧第一阶段）
 
   /** 比较语义版本号，返回 -1/0/1 */
   static _compareVersions(a, b) {
@@ -50,7 +51,74 @@ export class SaveSystem {
       saveData.themeVersion = THEME_CONFIG.version;
     }
 
+    if ((saveData.storyVersion || 0) < SaveSystem.STORY_VERSION) {
+      SaveSystem._migrateStoryArc(saveData);
+      saveData.storyVersion = SaveSystem.STORY_VERSION;
+    }
+
     return saveData;
+  }
+
+  /**
+   * storyVersion 1 迁移：主线由"四个并列可接"改为"序章 + 链式四幕"。
+   * 规则（见 docs/plans/2026-08-19-experience-arc-phase1-design.md 第 7 节）：
+   *   - 从未开始主线的老档 → 四幕全部回锁，重新从雷九登记开始（无进度损失）
+   *   - 已开始的老档 → 跳过序章；已完成/进行中的幕保留，未触碰的幕回锁；
+   *     多幕同时进行的保持 active（stage 机 from 守卫保证不会回退）
+   *   - 雷九 stage 按链条进度推导写入 npcMemory
+   *   - 已通关老档 → post 状态 + world_calm（未拾印则读档时补生成古印，可补看结局）
+   */
+  static _migrateStoryArc(saveData) {
+    const ACTS = ['ow_first_hunt', 'ow_goblin_threat', 'ow_bone_legion', 'ow_slay_king'];
+    const quests = Array.isArray(saveData.quests) ? saveData.quests : null;
+    if (!quests) return; // 无任务数据（极老档）：按全新链条走序章
+
+    const byId = Object.fromEntries(quests.map(q => [q.id, q]));
+    const acts = ACTS.map(id => byId[id]).filter(Boolean);
+    const started = acts.some(q => q.status === 'active' || q.status === 'completed');
+
+    if (!started) {
+      // 从未开始：全部回锁，走完整序章（不标 prologue_done）
+      acts.forEach(q => { q.status = 'locked'; });
+      return;
+    }
+
+    // 已开始：跳过序章
+    if (!byId.ow_prologue) {
+      quests.push({ id: 'ow_prologue', status: 'completed', objectives: [{ id: 'meet_leijou', current: 1 }] });
+    } else {
+      byId.ow_prologue.status = 'completed';
+    }
+
+    // 未触碰的幕（老档默认 available）回锁；active/completed 保留
+    acts.forEach(q => { if (q.status === 'available') q.status = 'locked'; });
+
+    // 雷九 stage 推导（取最高进度里程碑）
+    const status = (id) => byId[id]?.status;
+    let stage = 'act1';
+    if (status('ow_slay_king') === 'completed') stage = 'post';
+    else if (status('ow_slay_king') === 'active') stage = 'act4';
+    else if (status('ow_bone_legion') === 'completed') stage = 'act3_done';
+    else if (status('ow_bone_legion') === 'active') stage = 'act3';
+    else if (status('ow_goblin_threat') === 'completed') stage = 'act2_done';
+    else if (status('ow_goblin_threat') === 'active') stage = 'act2';
+    else if (status('ow_first_hunt') === 'completed') stage = 'act1_done';
+
+    // worldState flags：仅在已有 worldState 时写入（凭空造壳会丢失世界种子）。
+    // 缺 worldState 的极老档由 ow_prologue=completed 兜底，不会重播序章。
+    if (saveData.worldState && Array.isArray(saveData.worldState.permanentFlags)) {
+      const flags = new Map(saveData.worldState.permanentFlags);
+      flags.set('prologue_done', true);
+      if (stage === 'post') {
+        flags.set('world_calm', true);
+        // ending_done 故意不设：老档通关玩家读档后可拾印补看结局
+      }
+      saveData.worldState.permanentFlags = [...flags.entries()];
+    }
+
+    saveData.npcMemory = saveData.npcMemory || {};
+    saveData.npcMemory.bounty_officer = saveData.npcMemory.bounty_officer || {};
+    saveData.npcMemory.bounty_officer.stage = stage;
   }
 
   /** 读取完整存档数据，供场景在创建世界前取得 seed / 玩家位置。 */
@@ -106,6 +174,7 @@ export class SaveSystem {
         timestamp: Date.now(),
         version: SaveSystem.SAVE_VERSION,
         themeVersion: THEME_CONFIG.version,
+        storyVersion: SaveSystem.STORY_VERSION,
         slotId,
         // 简要元数据用于存档列表预览（不参与加载）
         meta: {

@@ -36,13 +36,24 @@ export const BOUNTY_TARGETS = [
 ];
 
 export const questData = [
-  // ── 主线引导：开局即可接 ──
+  // ── 主线：序章 + 链式四幕（由悬赏执事雷九逐幕交接，acceptQuest 支持 locked→active）──
+  {
+    id: 'ow_prologue',
+    title: '初到坊市',
+    type: 'main',
+    description: '要在云荒讨生活，先去悬赏堂找执事雷九挂名登记。',
+    autoAvailable: false,  // 新档由 MainGameScene 直接 acceptQuest 激活；老档迁移视为已完成
+    objectives: [
+      { id: 'meet_leijou', text: '到悬赏堂找雷九登记', type: 'interact', target: 'bounty_officer', required: 1 },
+    ],
+    rewards: {},  // 奖励在登记对话里发（回春散×3）
+  },
   {
     id: 'ow_first_hunt',
     title: '坊外除祟',
     type: 'main',
-    description: '栖云坊市外的浊水精频频侵扰商路。清理一些，向悬赏堂证明你的本事。',
-    autoAvailable: true,
+    description: '栖云坊市外的浊水精频频侵扰商路。清理一些，回悬赏堂向雷九复命。',
+    autoAvailable: false,
     objectives: [
       { id: 'kill_slimes_intro', text: '击败浊水精', type: 'kill', target: 'slime', required: 5 },
     ],
@@ -52,8 +63,8 @@ export const questData = [
     id: 'ow_goblin_threat',
     title: '山魈作乱',
     type: 'main',
-    description: '山魈正在青岚竹海边缘聚集，趁它们侵入坊市前削减其数量。',
-    autoAvailable: true,
+    description: '西面山林的山魈近来不安分，趁它们侵入坊市前削减其数量，再回报雷九。',
+    autoAvailable: false,
     objectives: [
       { id: 'kill_goblins', text: '击败山魈', type: 'kill', target: 'goblin', required: 6 },
     ],
@@ -63,8 +74,8 @@ export const questData = [
     id: 'ow_bone_legion',
     title: '阴兵过境',
     type: 'main',
-    description: '太虚宗遗址的阴兵日渐增多，其中还有尸傀将军统领。破去阴煞，让它们归于沉寂。',
-    autoAvailable: true,
+    description: '北面太虚宗遗址的封印松脱，阴兵四出，还有尸傀将军统领。破去阴煞，回报雷九。',
+    autoAvailable: false,
     objectives: [
       { id: 'kill_skeletons', text: '击败阴兵', type: 'kill', target: 'skeleton', required: 6 },
       { id: 'kill_giant', text: '击败尸傀将军', type: 'kill', target: 'giant_skeleton', required: 1 },
@@ -75,8 +86,8 @@ export const questData = [
     id: 'ow_slay_king',
     title: '镇压白骨鬼王',
     type: 'main',
-    description: '白骨鬼王盘踞在镇界禁制深处。击败它，暂时平息云荒灵脉的阴煞之患。',
-    autoAvailable: true,
+    description: '操纵这场灵潮的白骨鬼王盘踞在遗址深处。击败它，取回镇界古印，平定云荒异变。',
+    autoAvailable: false,
     objectives: [
       { id: 'kill_king', text: '击败白骨鬼王', type: 'kill', target: 'skeleton_king', required: 1 },
     ],
