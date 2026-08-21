@@ -1118,7 +1118,8 @@ export class MainGameScene extends Phaser.Scene {
   startPlayerCameraFollow() {
     const camera = this.cameras.main;
     camera.setDeadzone();
-    camera.startFollow(this.player.sprite, true, 1, 1);
+    // roundPixels=false：滚动保持亚像素连续，避免取整造成的 3/4px 步进抖动
+    camera.startFollow(this.player.sprite, false, 1, 1);
   }
 
   setupEvents() {

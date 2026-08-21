@@ -41,7 +41,9 @@ export function createPhaserConfig(scenes) {
     type: Phaser.AUTO,
     parent: 'game-container',
     pixelArt: true,
-    roundPixels: true,
+    // 关闭整数取整：相机/物体允许亚像素位置。开启时相机滚动被取整为
+    // 3/4px 交替步进（移速非整数 px/帧），整个背景以 ~7Hz 抖动，观感眩晕。
+    roundPixels: false,
     backgroundColor: '#0e0e1a',
     fps: {
       target: 60,

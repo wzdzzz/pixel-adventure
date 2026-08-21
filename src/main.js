@@ -41,6 +41,13 @@ const config = createPhaserConfig(scenes);
 // 创建游戏实例
 const game = new Phaser.Game(config);
 
+// 画布最终缩放使用平滑插值（覆盖 pixelArt 默认的 pixelated CSS）。
+// 高 DPI（如 150% 缩放 → 1.5x 非整数比）下最近邻拉伸会让滚屏时
+// 像素蠕动/闪烁，观感眩晕；内部渲染仍保持 pixelArt 最近邻采样。
+game.events.once(Phaser.Core.Events.READY, () => {
+  if (game.canvas) game.canvas.style.imageRendering = 'auto';
+});
+
 // ── 程序化音频系统：初始化 + 首次用户手势解锁 AudioContext ──
 // 浏览器自动播放策略要求音频在用户交互后才能出声，因此监听首次
 // pointerdown / keydown / touchstart，解锁后移除监听。
