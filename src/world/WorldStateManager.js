@@ -22,8 +22,8 @@ export class WorldStateManager {
     this.openedChests = new Set();
     /** 已拾取的物品 (Set of itemId) */
     this.pickedItems = new Set();
-    /** 实体血量缓存 (Map: entityId → hp) — 临时，不存档 */
-    this.entityHpCache = new Map();
+    /** 实体快照 (Map: entityId → {hp, x, y}) — session 级,不入存档;卸载即睡眠、重载即唤醒 */
+    this.entitySnapshots = new Map();
     /** 上次篝火休息时间戳 */
     this.bonfireReset = 0;
     /** 永久标记（如 Boss 击杀） (Map: key → value) */
@@ -37,7 +37,10 @@ export class WorldStateManager {
   isChunkExplored(chunkKey) { return this.exploredChunks.has(chunkKey); }
 
   // ── 记录方法 ─────────────────────────────────────
-  markEntityKilled(entityId) { this.killedEntities.set(entityId, Date.now()); }
+  markEntityKilled(entityId) {
+    this.killedEntities.set(entityId, Date.now());
+    this.entitySnapshots.delete(entityId);
+  }
   markChestOpened(chestId) { this.openedChests.add(chestId); }
   markItemPicked(itemId) { this.pickedItems.add(itemId); }
   markChunkExplored(chunkKey) { this.exploredChunks.add(chunkKey); }
@@ -47,10 +50,10 @@ export class WorldStateManager {
   getFlag(key) { return this.permanentFlags.get(key); }
   hasFlag(key) { return this.permanentFlags.has(key); }
 
-  // ── 血量缓存（临时，不存档） ─────────────────────
-  cacheEntityHp(entityId, hp) { this.entityHpCache.set(entityId, hp); }
-  getCachedHp(entityId) { return this.entityHpCache.get(entityId) ?? null; }
-  clearHpCache() { this.entityHpCache.clear(); }
+  // ── 实体快照(session 级,不存档) ─────────────────
+  setEntitySnapshot(entityId, snap) { this.entitySnapshots.set(entityId, snap); }
+  getEntitySnapshot(entityId) { return this.entitySnapshots.get(entityId) ?? null; }
+  clearEntitySnapshots() { this.entitySnapshots.clear(); }
 
   // ── 篝火休息（魂系重生机制） ─────────────────────
   /**
@@ -60,7 +63,7 @@ export class WorldStateManager {
   restAtBonfire() {
     this.killedEntities.clear();
     this.pickedItems.clear();
-    this.entityHpCache.clear();
+    this.entitySnapshots.clear();
     this.bonfireReset = Date.now();
   }
 
