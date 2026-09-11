@@ -255,7 +255,7 @@ export class MainGameScene extends Phaser.Scene {
       if (this.dialoguing || this.gamePaused) return;
       if (!this.useOpenWorld) return;
       if (this.scene.isActive('WorldMapScene')) return;
-      if (this.worldContext?.type === 'site') {
+      if (this.worldContext?.type === 'site' || this._siteTransition) {
         this.events.emit('showMessage', '身处秘境,无法查看舆图');
         return;
       }
@@ -516,6 +516,12 @@ export class MainGameScene extends Phaser.Scene {
 
     this.cameras.main.fadeOut(250, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
+      // 0. 清掉在途弹道(与 enterSite 对称,秘境弹道不带出大世界)
+      if (this.enemyProjectiles) {
+        for (const p of this.enemyProjectiles) p.destroy?.();
+        this.enemyProjectiles = [];
+      }
+
       // 1. 销毁秘境实体与图层
       this._despawnEntityList(this._siteObjects || []);
       this._siteObjects = [];
