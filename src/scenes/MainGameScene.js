@@ -359,6 +359,8 @@ export class MainGameScene extends Phaser.Scene {
 
     // chunk → gameObjects 映射（独立于 chunkData，因为卸载时 chunkData 先被删除）
     this._chunkGameObjects = new Map();
+    // 空间上下文:overworld=大世界流式;site=秘境整图(B1)
+    this.worldContext = { type: 'overworld' };
 
     // 5. 设置物理世界边界
     // 必须在创建玩家之前，因为 Actor 构造函数调用 setCollideWorldBounds(true)
@@ -891,15 +893,8 @@ export class MainGameScene extends Phaser.Scene {
     gameObjects.push({ ref: npc, type: 'npc', spawnId: spawn.id, colliders: [overlap] });
   }
 
-  /**
-   * 卸载 chunk 时销毁所有关联的 GameObjects
-   */
-  _despawnChunkEntities(chunkX, chunkY) {
-    const key = chunkKey(chunkX, chunkY);
-    // chunkData 可能已被 destroyChunk 删除，用临时缓存
-    const objs = this._chunkGameObjects?.get(key);
-    if (!objs) return;
-
+  /** 销毁一组实体 GameObject(chunk 卸载与秘境退出共用) */
+  _despawnEntityList(objs) {
     for (const entry of objs) {
       if (entry.colliders) {
         for (const collider of entry.colliders) {
@@ -949,6 +944,18 @@ export class MainGameScene extends Phaser.Scene {
         else if (npc.sprite) npc.sprite.destroy();
       }
     }
+  }
+
+  /**
+   * 卸载 chunk 时销毁所有关联的 GameObjects
+   */
+  _despawnChunkEntities(chunkX, chunkY) {
+    const key = chunkKey(chunkX, chunkY);
+    // chunkData 可能已被 destroyChunk 删除，用临时缓存
+    const objs = this._chunkGameObjects?.get(key);
+    if (!objs) return;
+
+    this._despawnEntityList(objs);
 
     this._destroyEnemyChunkGroup(chunkX, chunkY);
     this._chunkGameObjects.delete(key);
