@@ -16,5 +16,4 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 .mcp.json
-.agentsroom/handoff-transcript-*.txt
-.agentsroom/handoff-summary-*.md
+.agentsroom/
