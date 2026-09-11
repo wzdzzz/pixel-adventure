@@ -2,6 +2,9 @@ import { WORLD_CHUNK_PX, WORLD_CONFIG, chunkKey, worldToChunk } from './worldCon
 
 /** Chunk 流式管理 — 负责 Tilemap 的创建/销毁 + 分帧加载调度 + 实体描述符 */
 export class ChunkManager {
+  /** 每帧加载预算(step 数)：对角跨线最多新增 9 个 chunk×2 步，6 帧内补齐 */
+  static LOAD_STEPS_PER_FRAME = 3;
+
   /**
    * @param {Phaser.Scene} scene
    * @param {import('./WorldGenerator').WorldGenerator} worldGenerator
@@ -25,10 +28,10 @@ export class ChunkManager {
     this.lastPlayerChunkX = null;
     this.lastPlayerChunkY = null;
 
-    /** 加载半径：加载 (2r+1)² 区域，1 → 3×3 */
-    this.loadRadius = 1;
-    /** 卸载半径：超出 (2r+1)² 外的 chunk 会被回收，2 → 5×5 */
-    this.unloadRadius = 2;
+    /** 加载半径：加载 (2r+1)² 区域，2 → 5×5（保证已加载边界始终在屏幕外 ≥1000px） */
+    this.loadRadius = 2;
+    /** 卸载半径：超出 (2r+1)² 外的 chunk 会被回收，3 → 7×7 */
+    this.unloadRadius = 3;
 
     /** 一个 chunk 的像素边长 (32 tiles × 32px) */
     this.CHUNK_PX = WORLD_CHUNK_PX;
@@ -130,7 +133,7 @@ export class ChunkManager {
   /**
    * 每帧处理一轮加载/卸载队列。
    * - 卸载：全部立即处理（销毁 tilemap 很快）
-   * - 加载：每帧只处理 1 个队列项的 1 个 step（避免卡帧）
+   * - 加载：每帧最多处理 LOAD_STEPS_PER_FRAME(=3) 个 step，跨 chunk 边界后约 6 帧内补齐邻居
    */
   _processQueues() {
     // --- 卸载：全部立即处理 ---
@@ -144,21 +147,19 @@ export class ChunkManager {
       this.destroyChunk(chunkX, chunkY);
     }
 
-    // --- 加载：每帧处理 1 个 step ---
-    if (this.loadQueue.length === 0) return;
-
-    const item = this.loadQueue[0];
-
-    if (item.step === 0) {
-      // Step 0: 创建 tilemap 层
-      this.createChunk(item.chunkX, item.chunkY);
-      item.step = 1;
-    } else if (item.step === 1) {
-      // Step 1: 加载实体描述并发出一次 ready 通知。
-      this._loadChunkNow(item.chunkX, item.chunkY);
-
-      // 完成，从队列移除
-      this.loadQueue.shift();
+    // --- 加载：每帧最多处理 LOAD_STEPS_PER_FRAME 个 step ---
+    for (let i = 0; i < ChunkManager.LOAD_STEPS_PER_FRAME; i++) {
+      if (this.loadQueue.length === 0) return;
+      const item = this.loadQueue[0];
+      if (item.step === 0) {
+        // Step 0: 创建 tilemap 层
+        this.createChunk(item.chunkX, item.chunkY);
+        item.step = 1;
+      } else {
+        // Step 1: 加载实体描述并发出一次 ready 通知
+        this._loadChunkNow(item.chunkX, item.chunkY);
+        this.loadQueue.shift();
+      }
     }
   }
 
