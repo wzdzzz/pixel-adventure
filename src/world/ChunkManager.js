@@ -361,6 +361,12 @@ export class ChunkManager {
     const decoLayer = decoMap.createLayer(0, decoTileset, worldX, worldY);
     decoLayer.setDepth(-1);
 
+    // 淡入兜底:极端情况(高速移动/传送)下的刷入不突兀(A3)
+    for (const layer of [groundLayer, wallLayer, decoLayer]) {
+      layer.setAlpha(0);
+      this.scene.tweens.add({ targets: layer, alpha: 1, duration: 150 });
+    }
+
     const chunkData = {
       groundMap, groundLayer,
       wallMap, wallLayer,

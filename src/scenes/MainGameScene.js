@@ -666,6 +666,16 @@ export class MainGameScene extends Phaser.Scene {
       }
     }
 
+    // 实体淡入兜底(A3):只淡主 sprite;篝火已有常驻闪烁 tween,跳过避免 alpha 冲突
+    for (const entry of gameObjects) {
+      if (entry.type === 'bonfire') continue;
+      const s = entry.ref?.sprite;
+      if (s?.setAlpha) {
+        s.setAlpha(0);
+        this.tweens.add({ targets: s, alpha: 1, duration: 150 });
+      }
+    }
+
     console.log(`[MainGameScene] 生成 chunk(${chunkX},${chunkY}) 实体: ${gameObjects.length} 个`);
   }
 
