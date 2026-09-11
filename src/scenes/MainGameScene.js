@@ -698,6 +698,9 @@ export class MainGameScene extends Phaser.Scene {
 
   /** 生成敌人 */
   _spawnEnemy(x, y, spawn, gameObjects) {
+    // 唤醒睡眠快照(A2):只恢复精灵位置/血量,锚点(spawnX/spawnY)仍用原生成坐标
+    const snap = this.worldState?.getEntitySnapshot?.(spawn.id);
+
     const config = itemData.enemies?.[spawn.type];
     if (!config) return;
 
@@ -711,6 +714,12 @@ export class MainGameScene extends Phaser.Scene {
       tier,
     });
     enemy.entityId = spawn.id;
+    // 唤醒睡眠快照:恢复血量与精灵位置(锚点 spawnX/spawnY 保持原生成坐标,防栓绳漂移)
+    if (snap) {
+      enemy.hp = Math.min(snap.hp, enemy.maxHp);
+      enemy.sprite.setPosition(snap.x, snap.y);
+      if (enemy.sprite.body) enemy.sprite.body.reset(snap.x, snap.y);
+    }
 
     // 标记 Boss
     if (spawn.isBoss || enemyCfg.isBoss) {
@@ -890,6 +899,14 @@ export class MainGameScene extends Phaser.Scene {
       }
       if (entry.type === 'enemy') {
         const enemy = entry.ref;
+        // 卸载即睡眠:活怪写快照,重载时按原位置/血量唤醒(A2)
+        if (enemy.hp > 0 && enemy.entityId && this.worldState) {
+          this.worldState.setEntitySnapshot(enemy.entityId, {
+            hp: enemy.hp,
+            x: enemy.sprite?.x ?? enemy.spawnX,
+            y: enemy.sprite?.y ?? enemy.spawnY,
+          });
+        }
         const idx = this.enemies.indexOf(enemy);
         if (idx > -1) this.enemies.splice(idx, 1);
         // destroy() 内部有 _isDestroyed 防重入
