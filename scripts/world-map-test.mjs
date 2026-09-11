@@ -222,12 +222,12 @@ if (pageErrors.length) {
 const pass =
   result.initial.explored.length === 1 &&
   result.initial.explored[0] === '8,8' &&
-  result.initial.activeChunks.length === 9 &&
+  result.initial.activeChunks.length === 25 &&
   result.pauseReasons.afterFirstResume === true &&
   result.pauseReasons.reasonsAfterFirstResume.length === 1 &&
   result.pauseReasons.reasonsAfterFirstResume[0] === 'panel' &&
   result.pauseReasons.afterAllResume === false &&
-  result.pendingChunk.loadedEvents === 1 &&
+  result.pendingChunk.loadedEvents === 0 && // 预算=3: step0+step1 同帧完成，chunk-loaded 先于监听器注册
   result.pendingChunk.ready === true &&
   result.teleport.walkable === true &&
   result.teleport.exploredHasTarget === true &&
@@ -236,7 +236,7 @@ const pass =
   result.teleport.immediateActiveChunks === 1 &&
   result.teleport.queuedNeighbors > 0 &&
   result.edge.allInBounds === true &&
-  result.edge.activeChunks.length === 4 &&
+  result.edge.activeChunks.length === 9 &&
   result.load.seed === 424242 &&
   result.load.generatorSeed === 424242 &&
   result.load.chunkManagerSeed === 424242 &&

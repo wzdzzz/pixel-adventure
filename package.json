@@ -17,12 +17,14 @@
     "test:smoke:companion": "node scripts/companion-p0-test.mjs && node scripts/companion-p1-test.mjs && node scripts/companion-p3-test.mjs && node scripts/companion-p4-test.mjs && node scripts/companion-combat-test.mjs && node scripts/companion-down-test.mjs",
     "test:smoke:dialogue": "node scripts/dialogue-repro.mjs",
     "test:smoke:quest": "node scripts/quest-bounty-test.mjs",
+    "test:smoke:site": "node scripts/enemy-snapshot-test.mjs && node scripts/site-test.mjs",
     "test:smoke:world": "node scripts/shrine-test.mjs && node scripts/treasure-test.mjs && node scripts/world-map-test.mjs",
     "test:perf:movement": "node scripts/movement-performance-test.mjs",
     "test:theme": "node scripts/xianxia-theme-test.mjs",
     "test:theme:visual": "node scripts/xianxia-visual-test.mjs",
-    "test:smoke": "pnpm test:theme && pnpm test:theme:visual && pnpm test:smoke:audio && pnpm test:smoke:boss && pnpm test:smoke:companion && pnpm test:smoke:dialogue && pnpm test:smoke:quest && pnpm test:smoke:world && pnpm test:story",
-    "test:story": "node scripts/story-migration-test.mjs && node scripts/prologue-test.mjs && node scripts/ending-test.mjs"
+    "test:smoke": "pnpm test:theme && pnpm test:theme:visual && pnpm test:smoke:audio && pnpm test:smoke:boss && pnpm test:smoke:companion && pnpm test:smoke:dialogue && pnpm test:smoke:quest && pnpm test:smoke:world && pnpm test:story && pnpm test:smoke:site",
+    "test:story": "node scripts/story-migration-test.mjs && node scripts/prologue-test.mjs && node scripts/ending-test.mjs",
+    "test:world:stream": "node scripts/chunk-stream-test.mjs && node scripts/entity-snapshot-test.mjs && node scripts/sites-data-test.mjs"
   },
   "dependencies": {
     "phaser": "^3.80.1",
