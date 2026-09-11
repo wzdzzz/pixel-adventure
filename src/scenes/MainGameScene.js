@@ -59,6 +59,8 @@ import SystemRegistry from '../core/SystemRegistry.js';
 import MusicEngine from '../systems/MusicEngine.js';
 import SoundManager from '../systems/SoundManager.js';
 import { installStoryArc } from '../systems/StoryArc.js';
+import { SITES } from '../world/sites.js';
+import { SiteBuilder } from '../world/SiteBuilder.js';
 
 export class MainGameScene extends Phaser.Scene {
   constructor() {
@@ -361,6 +363,8 @@ export class MainGameScene extends Phaser.Scene {
     this._chunkGameObjects = new Map();
     // 空间上下文:overworld=大世界流式;site=秘境整图(B1)
     this.worldContext = { type: 'overworld' };
+    // 复位过渡标志(防止上一局在淡出窗口内退出导致 enterSite 永久卡死)
+    this._siteTransition = false;
 
     // 5. 设置物理世界边界
     // 必须在创建玩家之前，因为 Actor 构造函数调用 setCollideWorldBounds(true)
@@ -439,6 +443,131 @@ export class MainGameScene extends Phaser.Scene {
     }
   }
 
+  /** 进入秘境:淡出 → 清空大世界(顺带写怪物快照)→ 整图构建 → 落点淡入 */
+  enterSite(siteId) {
+    if (this.gamePaused) return;
+    if (this.worldContext?.type === 'site' || this._siteTransition) return;
+    const site = SITES[siteId];
+    if (!site || !this.player?.sprite) return;
+
+    this._siteTransition = true;
+    const returnPos = { x: this.player.sprite.x, y: this.player.sprite.y };
+    this.player.sprite.setVelocity(0, 0);
+
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      // 0. 清掉在途弹道,避免跟随玩家进入秘境(destroy 内部有 alive 防重入)
+      if (this.enemyProjectiles) {
+        for (const p of this.enemyProjectiles) p.destroy?.();
+        this.enemyProjectiles = [];
+      }
+
+      // 1. 清空大世界(chunk-unloaded → 实体回收 + 怪物快照)
+      this.chunkManager.clearAllChunks();
+
+      // 2. 整图构建 + 上下文切换
+      this._siteHandle = SiteBuilder.build(this, site);
+      this._siteObjects = [];
+      this.worldContext = { type: 'site', siteId, returnPos };
+
+      // 3. 边界(物理 + 摄像机)
+      this.physics.world.setBounds(0, 0, this._siteHandle.widthPx, this._siteHandle.heightPx);
+      this.cameras.main.setBounds(0, 0, this._siteHandle.widthPx, this._siteHandle.heightPx);
+
+      // 4. 玩家墙碰撞 + 实体 + 出口
+      this._siteHandle.colliders.push(
+        this.physics.add.collider(this.player.sprite, this._siteHandle.wallLayer)
+      );
+      this._spawnSiteEntities(site);
+
+      // 5. 玩家/同伴落点
+      this._placeActorAtTile(this.player, site.entry.tileX, site.entry.tileY, 0, 0);
+      const companion = this.companionManager?.getActiveNpc?.();
+      if (companion?.sprite) this._placeActorAtTile(companion, site.entry.tileX, site.entry.tileY, 24, 24);
+      this.cameras.main.centerOn(this.player.sprite.x, this.player.sprite.y);
+
+      // 6. 音乐 + HUD 地名 + 提示
+      if (site.musicKey) this.soundManager?.setAmbientTrack?.(site.musicKey);
+      this.events.emit('levelChanged', site.name, 0);
+      this.events.emit('showMessage', `进入秘境「${site.name}」`);
+
+      this.cameras.main.fadeIn(250, 0, 0, 0);
+      this._siteTransition = false;
+    });
+  }
+
+  /** 退出秘境:淡出 → 销毁秘境 → 回洞口重建大世界 → 淡入 */
+  exitSite() {
+    if (this.gamePaused) return;
+    if (this.worldContext?.type !== 'site' || this._siteTransition) return;
+    const { returnPos } = this.worldContext;
+    const siteName = SITES[this.worldContext.siteId]?.name || '秘境';
+
+    this._siteTransition = true;
+    this.player.sprite.setVelocity(0, 0);
+
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      // 1. 销毁秘境实体与图层
+      this._despawnEntityList(this._siteObjects || []);
+      this._siteObjects = [];
+      SiteBuilder.destroy(this._siteHandle);
+      this._siteHandle = null;
+
+      // 2. 恢复大世界边界(摄像机原本无边界)
+      this.physics.world.setBounds(0, 0, WORLD_WIDTH_PX, WORLD_HEIGHT_PX);
+      this.cameras.main.removeBounds();
+
+      // 3. 玩家/同伴回洞口 + 重建大世界
+      this.worldContext = { type: 'overworld' };
+      this._placeActorAt(this.player, returnPos.x, returnPos.y);
+      const companion = this.companionManager?.getActiveNpc?.();
+      if (companion?.sprite) this._placeActorAt(companion, returnPos.x + 24, returnPos.y + 24);
+      this.chunkManager.teleportReset(returnPos.x, returnPos.y);
+      this.cameras.main.centerOn(returnPos.x, returnPos.y);
+
+      // 4. 音乐回环境曲 + 提示
+      this.soundManager?.setAmbientTrack?.('explore');
+      this.events.emit('showMessage', `离开「${siteName}」`);
+
+      this.cameras.main.fadeIn(250, 0, 0, 0);
+      this._siteTransition = false;
+    });
+  }
+
+  /** 生成秘境内实体(固定摆放)+ 出口传送门 */
+  _spawnSiteEntities(site) {
+    const ts = WORLD_CONFIG.tileSize;
+    const toWorld = (t) => ({ x: t.tileX * ts + ts / 2, y: t.tileY * ts + ts / 2 });
+    for (const spawn of site.spawns) {
+      // 已开宝箱不复活(与 ChunkManager._loadChunkEntities 同款过滤)
+      if (spawn.type === 'chest' && this.worldState?.isChestOpened?.(spawn.id)) continue;
+      const { x, y } = toWorld(spawn);
+      if (spawn.type === 'chest') {
+        this._spawnChest(x, y, spawn, this._siteObjects);
+      } else {
+        this._spawnEnemy(x, y, spawn, this._siteObjects);
+      }
+    }
+    const exitPos = toWorld(site.exit);
+    this._spawnSitePortal(exitPos.x, exitPos.y, { kind: 'exit', siteId: site.id, label: '离开秘境' }, this._siteObjects);
+  }
+
+  /** 把 actor(player/companion)瞬移到 tile 中心(带 body.reset) */
+  _placeActorAtTile(actor, tileX, tileY, dx, dy) {
+    const ts = WORLD_CONFIG.tileSize;
+    this._placeActorAt(actor, tileX * ts + ts / 2 + dx, tileY * ts + ts / 2 + dy);
+  }
+
+  _placeActorAt(actor, x, y) {
+    actor.sprite.setPosition(x, y);
+    actor.sprite.setVelocity?.(0, 0);
+    if (actor.sprite.body) {
+      actor.sprite.body.reset(x, y);
+      actor.sprite.body.setVelocity(0, 0);
+    }
+  }
+
   _shutdownWorld() {
     if (this._worldDisposed) return;
     this._worldDisposed = true;
@@ -496,6 +625,7 @@ export class MainGameScene extends Phaser.Scene {
     this.shrines = [];
     this.enemyProjectiles = [];
     this.enemyHitboxes = [];
+    this._sitePortals = [];
     this._enemySprites = this.physics.add.group();
     // Members already own configured bodies; the group is only a spatial index.
     this._enemySprites.internalCreateCallback = null;
@@ -745,7 +875,15 @@ export class MainGameScene extends Phaser.Scene {
     gameObjects.push({ ref: enemy, type: 'enemy', spawnId: spawn.id, colliders: [] });
 
     // 注册碰撞
-    this._registerEnemyCollisions(enemy);
+    if (this.worldContext?.type === 'site' && this._siteHandle) {
+      // 秘境:直接对整图墙层注册碰撞(无 chunk 分组);战斗 overlap 仍走全局 _enemySprites
+      this._enemySprites.add(enemy.sprite);
+      this._siteHandle.colliders.push(
+        this.physics.add.collider(enemy.sprite, this._siteHandle.wallLayer)
+      );
+    } else {
+      this._registerEnemyCollisions(enemy);
+    }
   }
 
   /** 为单个敌人注册所有碰撞 */
@@ -837,6 +975,30 @@ export class MainGameScene extends Phaser.Scene {
     gameObjects.push({ ref: shrine, type: 'shrine', spawnId: spawn.id, colliders: [overlap] });
   }
 
+  /**
+   * 生成秘境传送门(洞口或出口)
+   * @param {object} portalDef { kind: 'entrance'|'exit', siteId, label }
+   */
+  _spawnSitePortal(x, y, portalDef, gameObjects) {
+    const sprite = this.physics.add.sprite(x, y, TEXTURES.PORTAL);
+    sprite.setOrigin(0.5, 0.5).setDepth(y).setDisplaySize(32, 36);
+    sprite.body.setImmovable(true);
+    sprite.body.setAllowGravity(false);
+
+    const label = this.add.text(x, y - 26, `${portalDef.label} [E]`, {
+      fontSize: '10px', fill: UI_THEME.text.brass, fontFamily: UI_THEME.font.body
+    }).setOrigin(0.5).setDepth(y + 1).setVisible(false);
+
+    const portal = { sprite, label, kind: portalDef.kind, siteId: portalDef.siteId };
+    sprite.sitePortalInstance = portal;
+    this._sitePortals = this._sitePortals || [];
+    this._sitePortals.push(portal);
+    const overlap = this.physics.add.overlap(
+      this.player.sprite, sprite, () => this.handleSitePortalProximity(portal), null, this
+    );
+    gameObjects.push({ ref: portal, type: 'sitePortal', spawnId: portalDef.siteId || null, colliders: [overlap] });
+  }
+
   /** 生成篝火 */
   _spawnBonfire(x, y, spawn, gameObjects) {
     const sprite = this.physics.add.sprite(x, y, 'campfire');
@@ -904,8 +1066,8 @@ export class MainGameScene extends Phaser.Scene {
       }
       if (entry.type === 'enemy') {
         const enemy = entry.ref;
-        // 卸载即睡眠:活怪写快照,重载时按原位置/血量唤醒(A2)
-        if (enemy.hp > 0 && enemy.entityId && this.worldState) {
+        // 卸载即睡眠:活怪写快照,重载时按原位置/血量唤醒(A2);秘境实体不写(离开即重置)
+        if (enemy.hp > 0 && enemy.entityId && this.worldState && this.worldContext?.type !== 'site') {
           this.worldState.setEntitySnapshot(enemy.entityId, {
             hp: enemy.hp,
             x: enemy.sprite?.x ?? enemy.spawnX,
@@ -936,6 +1098,12 @@ export class MainGameScene extends Phaser.Scene {
         const bonfire = entry.ref;
         if (bonfire.sprite) bonfire.sprite.destroy();
         if (bonfire.label) bonfire.label.destroy();
+      } else if (entry.type === 'sitePortal') {
+        const portal = entry.ref;
+        const idx = this._sitePortals ? this._sitePortals.indexOf(portal) : -1;
+        if (idx > -1) this._sitePortals.splice(idx, 1);
+        if (portal.sprite) portal.sprite.destroy();
+        if (portal.label) portal.label.destroy();
       } else if (entry.type === 'npc') {
         const npc = entry.ref;
         const idx = this.npcs.indexOf(npc);
@@ -1179,6 +1347,12 @@ export class MainGameScene extends Phaser.Scene {
       }
 
       const npcInst = target.npcInstance || target;
+
+      // Check if it's a site portal(秘境传送门)
+      if (target.sitePortalInstance) {
+        this.handleSitePortalInteract(target.sitePortalInstance);
+        return;
+      }
 
       // Check if it's a chest
       if (target.chestInstance) {
@@ -1812,6 +1986,18 @@ export class MainGameScene extends Phaser.Scene {
             this.player.sprite.x, this.player.sprite.y, shrine.sprite.x, shrine.sprite.y
           );
           shrine.label.setVisible(dist < 60);
+        }
+      });
+    }
+
+    // 秘境传送门标签按距离显隐(同 chest/shrine 款)
+    if (this._sitePortals) {
+      this._sitePortals.forEach(portal => {
+        if (this.player?.sprite && portal.label) {
+          const dist = Phaser.Math.Distance.Between(
+            this.player.sprite.x, this.player.sprite.y, portal.sprite.x, portal.sprite.y
+          );
+          portal.label.setVisible(dist < 60);
         }
       });
     }

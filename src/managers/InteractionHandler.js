@@ -156,6 +156,20 @@ export const InteractionHandler = {
     }
   },
 
+  handleSitePortalProximity(portal) {
+    if (this.dialoguing) return;
+    this.player.setInteractTarget(portal.sprite);
+    portal.label.setVisible(true);
+  },
+
+  handleSitePortalInteract(portal) {
+    portal.label.setVisible(false);
+    this.player.canInteract = false;
+    this.player.interactTarget = null;
+    if (portal.kind === 'entrance') this.enterSite(portal.siteId);
+    else this.exitSite();
+  },
+
   handlePortalProximity() {
     if (this.dialoguing) return;
     if (this.portalSprite) {
