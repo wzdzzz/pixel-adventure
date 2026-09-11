@@ -30,4 +30,24 @@ cm._processQueues();
 assert.equal(stepCount, 3, '一帧应恰好消化 3 步(旧实现只消化 1 步)');
 assert.equal(cm.loadQueue.length, 3, '4 项×2步=8步,消化3步后:第1项完成出队,第2项完成一半,剩 3 项');
 
+// 4) clearAllChunks:清队列 + 逐 chunk 发 chunk-unloaded + 销毁 + 重置位置缓存
+const emitted = [];
+const cm2 = new ChunkManager(
+  { events: { emit: (name, data) => emitted.push([name, data]) } },
+  stubGenerator, null
+);
+cm2.activeChunks.set('3,4', { entities: [] });
+cm2.activeChunks.set('5,6', { entities: [] });
+cm2.destroyChunk = (x, y) => { cm2.activeChunks.delete(`${x},${y}`); };
+cm2.loadQueue.push({ chunkX: 9, chunkY: 9, step: 0 });
+cm2.unloadQueue.push({ chunkX: 7, chunkY: 7 });
+cm2.lastPlayerChunkX = 3; cm2.lastPlayerChunkY = 4;
+cm2.clearAllChunks();
+assert.equal(cm2.activeChunks.size, 0, 'clearAllChunks 应清空所有 chunk');
+assert.equal(cm2.loadQueue.length, 0, 'clearAllChunks 应清空加载队列');
+assert.equal(cm2.lastPlayerChunkX, null, 'clearAllChunks 应重置位置缓存');
+assert.equal(cm2.lastPlayerChunkY, null, 'clearAllChunks 应重置 Y 位置缓存');
+assert.equal(cm2.unloadQueue.length, 0, 'clearAllChunks 应清空卸载队列');
+assert.equal(emitted.filter(([n]) => n === 'chunk-unloaded').length, 2, '每个 chunk 应发 chunk-unloaded');
+
 console.log('chunk-stream-test 全部通过 ✓');

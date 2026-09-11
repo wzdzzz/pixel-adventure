@@ -241,6 +241,22 @@ export class ChunkManager {
   }
 
   /**
+   * 清空全部 chunk:清队列 → 逐 chunk 发 chunk-unloaded(回收实体/NPC/写怪物快照)→ 销毁 tilemap。
+   * teleportReset 与秘境进出共用。
+   */
+  clearAllChunks() {
+    this.loadQueue.length = 0;
+    this.unloadQueue.length = 0;
+    for (const [key] of this.activeChunks) {
+      const [cx, cy] = key.split(',').map(Number);
+      this.scene.events.emit('chunk-unloaded', { chunkX: cx, chunkY: cy });
+      this.destroyChunk(cx, cy);
+    }
+    this.lastPlayerChunkX = null;
+    this.lastPlayerChunkY = null;
+  }
+
+  /**
    * 传送专用：销毁所有 chunk 并在新位置同步加载
    * @param {number} destX - 目标世界 X 坐标（像素）
    * @param {number} destY - 目标世界 Y 坐标（像素）
@@ -249,20 +265,8 @@ export class ChunkManager {
     const { chunkX: cx, chunkY: cy } = worldToChunk(destX, destY);
     if (!this.generator.isInBounds(cx, cy)) return false;
 
-    // 清空队列
-    this.loadQueue.length = 0;
-    this.unloadQueue.length = 0;
-
-    // chunk-unloaded 先回收实体/NPC，再销毁 Tilemap。
-    for (const [key] of this.activeChunks) {
-      const [cx, cy] = key.split(',').map(Number);
-      this.scene.events.emit('chunk-unloaded', { chunkX: cx, chunkY: cy });
-      this.destroyChunk(cx, cy);
-    }
-
-    // 重置位置缓存
-    this.lastPlayerChunkX = null;
-    this.lastPlayerChunkY = null;
+    // 清空队列 + 逐 chunk 发 chunk-unloaded + 销毁 tilemap + 重置位置缓存
+    this.clearAllChunks();
 
     // 目标 chunk 同步可用，邻居继续走分帧队列，避免传送帧一次创建 9 个 tilemap。
     this._emitPlayerChunkChanged(cx, cy);
