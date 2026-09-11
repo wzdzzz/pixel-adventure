@@ -255,6 +255,10 @@ export class MainGameScene extends Phaser.Scene {
       if (this.dialoguing || this.gamePaused) return;
       if (!this.useOpenWorld) return;
       if (this.scene.isActive('WorldMapScene')) return;
+      if (this.worldContext?.type === 'site') {
+        this.events.emit('showMessage', '身处秘境,无法查看舆图');
+        return;
+      }
       this._worldMapInputLockUntil = this.time.now + 250;
       this.pauseGame('world-map');
       this.scene.launch('WorldMapScene');
@@ -462,6 +466,10 @@ export class MainGameScene extends Phaser.Scene {
         this.enemyProjectiles = [];
       }
 
+      // 0b. 清除大世界残留掉落物(对称处理:进入时清大世界,离开时清秘境)
+      for (const item of this.items) item.destroy();
+      this.items = [];
+
       // 1. 清空大世界(chunk-unloaded → 实体回收 + 怪物快照)
       this.chunkManager.clearAllChunks();
 
@@ -514,6 +522,10 @@ export class MainGameScene extends Phaser.Scene {
       SiteBuilder.destroy(this._siteHandle);
       this._siteHandle = null;
 
+      // 1b. 清除秘境内未拾取掉落物(秘境掉落属于秘境,离开即消失)
+      for (const item of this.items) item.destroy();
+      this.items = [];
+
       // 2. 恢复大世界边界(摄像机原本无边界)
       this.physics.world.setBounds(0, 0, WORLD_WIDTH_PX, WORLD_HEIGHT_PX);
       this.cameras.main.removeBounds();
@@ -526,7 +538,8 @@ export class MainGameScene extends Phaser.Scene {
       this.chunkManager.teleportReset(returnPos.x, returnPos.y);
       this.cameras.main.centerOn(returnPos.x, returnPos.y);
 
-      // 4. 音乐回环境曲 + 提示
+      // 4. 音乐回环境曲 + 提示(重置 zone 缓存,下一帧 zone 检测按洞口位置重新选曲)
+      this._currentMusicZone = null;
       this.soundManager?.setAmbientTrack?.('explore');
       this.events.emit('showMessage', `离开「${siteName}」`);
 
@@ -588,6 +601,13 @@ export class MainGameScene extends Phaser.Scene {
     this.trainerPanel?.destroy?.();
     this._despawnAllWorldEntities?.();
     this.npcRegistry?.destroyAll?.();
+    // 若在秘境内退出(主菜单/存档加载),先销毁秘境实体与图层
+    if (this._siteHandle) {
+      this._despawnEntityList(this._siteObjects || []);
+      this._siteObjects = [];
+      SiteBuilder.destroy(this._siteHandle);
+      this._siteHandle = null;
+    }
     this.chunkManager?.destroy?.();
     this.soundManager?.destroy?.();
     this.musicEngine?.destroy?.();
@@ -1813,7 +1833,8 @@ export class MainGameScene extends Phaser.Scene {
     // ─── 音频：音乐状态机 + 城镇/野外环境曲切换 ───
     if (this.soundManager) {
       this.soundManager.update(time, delta);
-      if (this.player?.sprite) {
+      // 秘境内不做城镇/野外 zone 检测(秘境局部坐标会误判 zone,盖掉秘境音乐)
+      if (this.player?.sprite && this.worldContext?.type !== 'site') {
         const town = getDefaultWorldSpawn();
         const dx = this.player.sprite.x - town.x;
         const dy = this.player.sprite.y - town.y;
@@ -1828,8 +1849,10 @@ export class MainGameScene extends Phaser.Scene {
 
     // ─── 开放世界系统更新 ─────────────────────────
     if (this.useOpenWorld && this.chunkManager && this.player?.sprite) {
-      // Chunk 流式加载/卸载
-      this.chunkManager.update(this.player.sprite.x, this.player.sprite.y);
+      // 秘境内不做 chunk 流式(整图已就绪,也不写探索记录)
+      if (this.worldContext?.type !== 'site') {
+        this.chunkManager.update(this.player.sprite.x, this.player.sprite.y);
+      }
     }
 
     // NPC 注册表逐帧更新（位置同步、巡逻、可视化）

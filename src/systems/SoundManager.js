@@ -116,6 +116,13 @@ export default class SoundManager {
     this._bound = false;
   }
 
+  /** 切换环境音乐轨(秘境进出用);战斗/Boss 状态中只改回落目标,不打断当前曲 */
+  setAmbientTrack(track) {
+    if (typeof track !== 'string' || !track) return;
+    this._ambientTrack = track;
+    if (!this._inBoss && !this._inCombat) this._playMusic(track);
+  }
+
   /** 每帧由场景调用：处理战斗音乐超时回落到环境曲（Boss 战不超时，由 boss 结束事件控制）。 */
   update(/* time, delta */) {
     if (this._inBoss) return;
@@ -141,15 +148,13 @@ export default class SoundManager {
 
   /**
    * 设置环境曲目（如进城用 'town'，野外用 'explore'）。
-   * 若当前不在战斗中，立即切到该曲；战斗中只记录，待退出战斗时生效。
+   * 委托 setAmbientTrack：战斗/Boss 中只改回落目标，不打断当前曲。
+   * （历史上本方法只检查 _inCombat；因 Boss 战期间 _inCombat 恒为 true，
+   *   缺失的 _inBoss 检查是冗余而非有意设计，故与 setAmbientTrack 统一。）
    * @param {'explore'|'town'|'menu'|string} trackName
    */
   setAmbient(trackName) {
-    if (typeof trackName !== 'string' || !trackName) return;
-    this._ambientTrack = trackName;
-    if (!this._inCombat) {
-      this._playMusic(trackName);
-    }
+    this.setAmbientTrack(trackName);
   }
 
   /** 主动播放当前环境曲（仅当不在战斗中）。场景决定何时调用。 */

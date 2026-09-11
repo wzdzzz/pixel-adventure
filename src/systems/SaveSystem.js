@@ -164,7 +164,10 @@ export class SaveSystem {
     if (slotId == null) slotId = SaveSystem.getActiveSlot(scene);
     try {
       const gameState = scene.registry.get('gameState') || {};
-      const playerPosition = scene.player ? scene.player.getPosition() : null;
+      // 秘境内存档记录洞口坐标(读档一律回大世界,副本重置)
+      const playerPosition = (scene.worldContext?.type === 'site' && scene.worldContext.returnPos)
+        ? { ...scene.worldContext.returnPos }
+        : (scene.player ? scene.player.getPosition() : null);
       const levelSystem = scene.levelSystem;
       const levelName = (typeof scene.currentLevel === 'number')
         ? (scene.registry.get('levelName') || `第${scene.currentLevel + 1}关`)
