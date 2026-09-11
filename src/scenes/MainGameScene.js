@@ -810,6 +810,8 @@ export class MainGameScene extends Phaser.Scene {
         this._spawnShrine(wx, wy, spawn, gameObjects);
       } else if (spawn.type === 'bonfire') {
         this._spawnBonfire(wx, wy, spawn, gameObjects);
+      } else if (spawn.type === 'site_entrance') {
+        this._spawnSitePortal(wx, wy, { kind: 'entrance', siteId: spawn.siteId, label: spawn.label || '秘境入口' }, gameObjects);
       } else if (spawn.type === 'npc') {
         this._spawnNPC(wx, wy, spawn, gameObjects);
       } else {

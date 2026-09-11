@@ -9,6 +9,7 @@ import { createNoise2D } from 'simplex-noise';
 import { BIOMES, BIOME_ENEMIES, WORLD_CENTER, WORLD_RADIUS, getDifficultyAtChunk } from './biomes/biomeConfig.js';
 import { getLayoutOverride, getTemplate } from './WorldLayout.js';
 import { WORLD_CONFIG, isChunkInBounds } from './worldConfig.js';
+import { getSiteEntrancesForChunk } from './sites.js';
 
 // ─── Tile ID 常量 ──────────────────────────────────────────
 export const TILE_IDS = {
@@ -510,6 +511,28 @@ export class WorldGenerator {
           localY: pos.ly,
         });
       }
+    }
+
+    // ─── 秘境洞口(固定位置,落点就近寻可行走 tile) ─────────
+    for (const ent of getSiteEntrancesForChunk(chunkX, chunkY)) {
+      let px = ent.tileX, py = ent.tileY;
+      outer:
+      for (let r = 0; r < 8; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            const tx = ent.tileX + dx, ty = ent.tileY + dy;
+            if (isWalkable(tx, ty)) { px = tx; py = ty; break outer; }
+          }
+        }
+      }
+      entities.push({
+        id: `site_entrance_${ent.siteId}`,
+        type: 'site_entrance',
+        siteId: ent.siteId,
+        label: ent.label,
+        localX: px,
+        localY: py,
+      });
     }
 
     return entities;
