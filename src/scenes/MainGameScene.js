@@ -401,19 +401,30 @@ export class MainGameScene extends Phaser.Scene {
     // 7. 注册 chunk 事件（必须在首次 update 之前）
     if (this._onWorldChunkLoaded) this.events.off('chunk-loaded', this._onWorldChunkLoaded);
     if (this._onWorldChunkUnloaded) this.events.off('chunk-unloaded', this._onWorldChunkUnloaded);
+    if (this._onChunkEntitiesReady) this.events.off('chunk-entities-ready', this._onChunkEntitiesReady);
+    if (this._onChunkEntitiesUnload) this.events.off('chunk-entities-unload', this._onChunkEntitiesUnload);
     if (this._onPlayerChunkChanged) this.events.off('player-chunk-changed', this._onPlayerChunkChanged);
 
+    // 地形就绪(半径 2 预取):只注册墙碰撞;实体由实体半径(3×3)事件负责
     this._onWorldChunkLoaded = (data) => {
       this._registerChunkCollisions(data.chunkX, data.chunkY);
+    };
+
+    // 实体半径进入:生成实体 GameObject + NPC
+    this._onChunkEntitiesReady = (data) => {
       this._spawnChunkEntities(data.chunkX, data.chunkY);
-      // NPC: chunk 加载时生成该 chunk 配置的 NPC
       if (this.npcRegistry) this.npcRegistry.spawnChunk(data.chunkX, data.chunkY);
     };
 
-    // chunk 卸载时清理实体
+    // 实体半径离开:回收 GameObject(活怪经 _despawnEntityList 写快照)+ NPC
+    this._onChunkEntitiesUnload = (data) => {
+      this._despawnChunkEntities(data.chunkX, data.chunkY);
+      if (this.npcRegistry) this.npcRegistry.despawnChunk(chunkKey(data.chunkX, data.chunkY));
+    };
+
+    // chunk 地形卸载兜底:clearAllChunks 等路径实体可能仍在,再回收一次(幂等)
     this._onWorldChunkUnloaded = (data) => {
       this._despawnChunkEntities(data.chunkX, data.chunkY);
-      // NPC: chunk 卸载时销毁非 persistent NPC
       if (this.npcRegistry) this.npcRegistry.despawnChunk(chunkKey(data.chunkX, data.chunkY));
     };
     this._onPlayerChunkChanged = ({ chunkX, chunkY }) => {
@@ -422,6 +433,8 @@ export class MainGameScene extends Phaser.Scene {
       this.events.emit('levelChanged', BIOMES[biome]?.name || biome, 0);
     };
     this.events.on('chunk-loaded', this._onWorldChunkLoaded);
+    this.events.on('chunk-entities-ready', this._onChunkEntitiesReady);
+    this.events.on('chunk-entities-unload', this._onChunkEntitiesUnload);
     this.events.on('chunk-unloaded', this._onWorldChunkUnloaded);
     this.events.on('player-chunk-changed', this._onPlayerChunkChanged);
 
@@ -597,6 +610,8 @@ export class MainGameScene extends Phaser.Scene {
 
     if (this._onWorldChunkLoaded) this.events.off('chunk-loaded', this._onWorldChunkLoaded);
     if (this._onWorldChunkUnloaded) this.events.off('chunk-unloaded', this._onWorldChunkUnloaded);
+    if (this._onChunkEntitiesReady) this.events.off('chunk-entities-ready', this._onChunkEntitiesReady);
+    if (this._onChunkEntitiesUnload) this.events.off('chunk-entities-unload', this._onChunkEntitiesUnload);
     if (this._onPlayerChunkChanged) this.events.off('player-chunk-changed', this._onPlayerChunkChanged);
 
     if (this.scene.isActive('WorldMapScene')) this.scene.stop('WorldMapScene');

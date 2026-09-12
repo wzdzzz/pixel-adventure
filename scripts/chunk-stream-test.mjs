@@ -50,4 +50,40 @@ assert.equal(cm2.lastPlayerChunkY, null, 'clearAllChunks 应重置 Y 位置缓�
 assert.equal(cm2.unloadQueue.length, 0, 'clearAllChunks 应清空卸载队列');
 assert.equal(emitted.filter(([n]) => n === 'chunk-unloaded').length, 2, '每个 chunk 应发 chunk-unloaded');
 
+// 5) 实体半径解耦:地形半径 2 预取,实体只在 entityRadius(1) 内生成,超出 entityUnloadRadius(2) 回收
+//    (防止实体模拟量随地形半径翻倍 — 555 敌人卡顿回归的修复)
+const events3 = [];
+const cm3 = new ChunkManager(
+  { events: { emit: (name, data) => events3.push([name, data]) } },
+  stubGenerator, null
+);
+assert.equal(cm3.entityRadius, 1, 'entityRadius 应为 1(旧版模拟预算)');
+assert.equal(cm3.entityUnloadRadius, 2, 'entityUnloadRadius 应为 2');
+cm3._loadChunkEntities = () => {}; // stub 描述符加载
+// 地形就绪的 5×5(以 (8,8) 为中心)
+for (let y = 6; y <= 10; y++) for (let x = 6; x <= 10; x++) {
+  cm3.activeChunks.set(`${x},${y}`, { ready: true, entities: [] });
+}
+cm3._updateEntityChunks(8, 8);
+assert.equal(cm3.entityChunks.size, 9, '实体应只在 3×3 生成');
+assert.equal(events3.filter(([n]) => n === 'chunk-entities-ready').length, 9, '应发 9 次 chunk-entities-ready');
+
+// 玩家移到 (10,8):前方新生成 3 个,身后超出卸载半径回收 3 个,稳态仍 9 个
+events3.length = 0;
+cm3._updateEntityChunks(10, 8);
+assert.equal(events3.filter(([n]) => n === 'chunk-entities-ready').length, 3, '前进方向应新生成 3 个');
+assert.equal(events3.filter(([n]) => n === 'chunk-entities-unload').length, 3, '身后应回收 3 个');
+assert.equal(cm3.entityChunks.size, 9, '稳态实体 chunk 应保持 9 个');
+
+// 地形未就绪的 chunk 不生成实体
+cm3.activeChunks.set('11,8', { ready: false, entities: [] });
+events3.length = 0;
+cm3._updateEntityChunks(10, 8);
+assert.equal(events3.length, 0, '未就绪 chunk 不应生成实体');
+
+// clearAllChunks 同时清空实体记录
+cm3.destroyChunk = (x, y) => { cm3.activeChunks.delete(`${x},${y}`); };
+cm3.clearAllChunks();
+assert.equal(cm3.entityChunks.size, 0, 'clearAllChunks 应清空 entityChunks');
+
 console.log('chunk-stream-test 全部通过 ✓');

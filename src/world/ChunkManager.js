@@ -33,6 +33,18 @@ export class ChunkManager {
     /** 卸载半径：超出 (2r+1)² 外的 chunk 会被回收，3 → 7×7 */
     this.unloadRadius = 3;
 
+    /**
+     * 实体模拟半径：实体只在玩家周围 (2r+1)² 生成，1 → 3×3。
+     * 与地形半径解耦——地形半径 2 只为消除视野内 pop-in，若实体跟着扩到 5×5~7×7，
+     * 同时模拟的敌人会从 ~160 涨到 ~550(AI/物理/血条每帧全跑)，弱机直接卡爆。
+     * 实体生成线距玩家 ≥1024px(半屏 960px)，在屏幕外，不可见。
+     */
+    this.entityRadius = 1;
+    /** 实体卸载半径：超出后实体回收(经 chunk-entities-unload → 活怪写快照)，2 → 5×5 */
+    this.entityUnloadRadius = 2;
+    /** 已生成实体的 chunk key 集合 */
+    this.entityChunks = new Set();
+
     /** 一个 chunk 的像素边长 (32 tiles × 32px) */
     this.CHUNK_PX = WORLD_CHUNK_PX;
   }
@@ -59,10 +71,39 @@ export class ChunkManager {
     const chunkData = this.createChunk(chunkX, chunkY);
     if (!chunkData) return null;
     if (chunkData.ready) return chunkData;
-    this._loadChunkEntities(chunkX, chunkY);
+    // 只就绪地形；实体由 _updateEntityChunks 在实体半径内按需生成
     chunkData.ready = true;
     this.scene.events.emit('chunk-loaded', { chunkX, chunkY, chunkData });
     return chunkData;
+  }
+
+  /**
+   * 每帧调用：维护实体半径内的实体生成/回收（与地形加载解耦）。
+   * - 生成：entityRadius 内、地形已就绪、尚未生成实体的 chunk → 加载描述符 + 发 chunk-entities-ready
+   * - 回收：超出 entityUnloadRadius 的 → 发 chunk-entities-unload（MainGameScene 回收 GameObject、活怪写快照）
+   */
+  _updateEntityChunks(cx, cy) {
+    if (cx == null || cy == null) return;
+
+    for (const { chunkX, chunkY } of this._getChunksInRadius(cx, cy, this.entityRadius)) {
+      const key = chunkKey(chunkX, chunkY);
+      if (this.entityChunks.has(key)) continue;
+      const chunkData = this.activeChunks.get(key);
+      if (!chunkData?.ready) continue;
+      this._loadChunkEntities(chunkX, chunkY);
+      this.entityChunks.add(key);
+      this.scene.events.emit('chunk-entities-ready', { chunkX, chunkY, chunkData });
+    }
+
+    for (const key of this.entityChunks) {
+      const [ax, ay] = key.split(',').map(Number);
+      if (Math.abs(ax - cx) > this.entityUnloadRadius || Math.abs(ay - cy) > this.entityUnloadRadius) {
+        this.scene.events.emit('chunk-entities-unload', { chunkX: ax, chunkY: ay });
+        const chunkData = this.activeChunks.get(key);
+        if (chunkData) chunkData.entities = [];
+        this.entityChunks.delete(key);
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -78,9 +119,10 @@ export class ChunkManager {
     const { chunkX: cx, chunkY: cy } = worldToChunk(playerX, playerY);
     if (!this.generator.isInBounds(cx, cy)) return;
 
-    // 玩家仍在同一 chunk → 只处理队列，不重算
+    // 玩家仍在同一 chunk → 只处理队列，不重算（实体维护仍需跑：排队 chunk 就绪后要补实体）
     if (cx === this.lastPlayerChunkX && cy === this.lastPlayerChunkY) {
       this._processQueues();
+      this._updateEntityChunks(cx, cy);
       return;
     }
 
@@ -124,6 +166,7 @@ export class ChunkManager {
     });
 
     this._processQueues();
+    this._updateEntityChunks(cx, cy);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -226,18 +269,15 @@ export class ChunkManager {
    * worldState.killedEntities 已被清空，所以重新生成会包含之前被杀的怪物
    */
   respawnAllEntities() {
-    // 清除所有 chunk 中的实体描述符
-    for (const [key, chunkData] of this.activeChunks) {
-      chunkData.entities = [];
-    }
-
-    // 重新为所有活跃 chunk 加载实体
-    for (const [key] of this.activeChunks) {
+    // 只重载"实体半径内"的 chunk 描述符;地形预取 chunk 本就没有实体
+    for (const key of this.entityChunks) {
+      const chunkData = this.activeChunks.get(key);
+      if (chunkData) chunkData.entities = [];
       const [cx, cy] = key.split(',').map(Number);
       this._loadChunkEntities(cx, cy);
     }
 
-    console.log('[ChunkManager] 所有活跃 Chunk 实体已重生');
+    console.log('[ChunkManager] 实体半径内 Chunk 实体已重生');
   }
 
   /**
@@ -254,6 +294,8 @@ export class ChunkManager {
     }
     this.lastPlayerChunkX = null;
     this.lastPlayerChunkY = null;
+    // 实体记录同步清空(GameObject 已由 chunk-unloaded 监听回收)
+    this.entityChunks.clear();
   }
 
   /**
@@ -280,6 +322,9 @@ export class ChunkManager {
     // 更新缓存为新位置
     this.lastPlayerChunkX = cx;
     this.lastPlayerChunkY = cy;
+
+    // 落点 chunk 的实体立即生成(邻居随队列就绪后由每帧维护补上)
+    this._updateEntityChunks(cx, cy);
 
     console.log(`[ChunkManager] 传送重置完成 → chunk(${cx},${cy})`);
     return true;
@@ -410,6 +455,7 @@ export class ChunkManager {
     chunkData.decoMap.destroy();
 
     this.activeChunks.delete(key);
+    this.entityChunks.delete(key);
     console.log(`[ChunkManager] 销毁 chunk (${chunkX}, ${chunkY})`);
   }
 
