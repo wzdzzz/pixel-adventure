@@ -19,13 +19,17 @@ export class Item {
     this.isCollected = false;
 
     this.onCollect = config.onCollect || null;
+    this.spawnQuantity = config.spawnQuantity || 1;
+    // 掉落物拾取保护期（毫秒），防止刚生成就被站在原地的玩家秒拾
+    this.pickupDelay = config.pickupDelay || 0;
+    this._spawnTime = Date.now();
 
     const textureKey = AssetManager.getTextureKey(type);
 
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setOrigin(0.5, 0.5);
     // Normalize item sprite sizes to fit the tile grid
-    const sizeMap = { coin: [20, 20], key: [20, 20], potion: [18, 22], artifact: [24, 24] };
+    const sizeMap = { coin: [20, 20], key: [20, 20], potion: [18, 22], mana_potion: [18, 22], artifact: [24, 24] };
     const sz = sizeMap[type] || [20, 20];
     this.sprite.setDisplaySize(sz[0], sz[1]);
     this.sprite.body.setAllowGravity(false);
@@ -63,6 +67,8 @@ export class Item {
 
   collect() {
     if (this.isCollected) return null;
+    // 保护期内不可拾取
+    if (this.pickupDelay > 0 && Date.now() - this._spawnTime < this.pickupDelay) return null;
     this.isCollected = true;
 
     this.scene.tweens.add({

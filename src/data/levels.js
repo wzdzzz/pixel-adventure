@@ -12,111 +12,162 @@ const TILE = {
 };
 
 function generateLevel1Map() {
-  const W = 50, H = 40;
+  const W = 80, H = 60;
   const map = Array.from({ length: H }, () => Array(W).fill(TILE.EMPTY));
 
   // 围墙
   for (let x = 0; x < W; x++) { map[0][x] = TILE.WALL; map[H - 1][x] = TILE.WALL; }
   for (let y = 0; y < H; y++) { map[y][0] = TILE.WALL; map[y][W - 1] = TILE.WALL; }
 
-  // 迷宫墙体
-  for (let x = 10; x < 16; x++) map[5][x] = TILE.WALL;
-  for (let y = 5; y < 12; y++) map[y][10] = TILE.WALL;
-  for (let x = 25; x < 35; x++) map[8][x] = TILE.WALL;
-  for (let y = 8; y < 15; y++) map[y][25] = TILE.WALL;
-  for (let y = 8; y < 15; y++) map[y][34] = TILE.WALL;
-  for (let x = 34; x < 40; x++) map[14][x] = TILE.WALL;
-  for (let x = 15; x < 22; x++) map[20][x] = TILE.WALL;
-  for (let y = 20; y < 28; y++) map[y][15] = TILE.WALL;
-  for (let x = 30; x < 40; x++) map[25][x] = TILE.WALL;
-  for (let y = 25; y < 32; y++) map[y][30] = TILE.WALL;
-  for (let x = 5; x < 12; x++) map[30][x] = TILE.WALL;
-  for (let y = 30; y < 36; y++) map[y][5] = TILE.WALL;
+  // 迷宫墙体 — scaled from 50x40 to 80x60 (x*1.6, y*1.5)
+  for (let x = 16; x < 26; x++) map[8][x] = TILE.WALL;
+  for (let y = 8; y < 18; y++) map[y][16] = TILE.WALL;
+  for (let x = 40; x < 56; x++) map[12][x] = TILE.WALL;
+  for (let y = 12; y < 23; y++) map[y][40] = TILE.WALL;
+  for (let y = 12; y < 23; y++) map[y][55] = TILE.WALL;
+  for (let x = 55; x < 64; x++) map[21][x] = TILE.WALL;
+  for (let x = 24; x < 35; x++) map[30][x] = TILE.WALL;
+  for (let y = 30; y < 42; y++) map[y][24] = TILE.WALL;
+  for (let x = 48; x < 64; x++) map[38][x] = TILE.WALL;
+  for (let y = 38; y < 48; y++) map[y][48] = TILE.WALL;
+  for (let x = 8; x < 19; x++) map[45][x] = TILE.WALL;
+  for (let y = 45; y < 54; y++) map[y][8] = TILE.WALL;
 
-  // 水池区域
-  for (let y = 16; y < 19; y++) for (let x = 20; x < 25; x++) map[y][x] = TILE.WATER;
-  map[17][22] = TILE.BRIDGE; map[17][23] = TILE.BRIDGE;
+  // Additional walls to fill expanded space
+  for (let x = 62; x < 72; x++) map[8][x] = TILE.WALL;
+  for (let y = 8; y < 16; y++) map[y][72] = TILE.WALL;
+  for (let x = 10; x < 20; x++) map[22][x] = TILE.WALL;
+  for (let x = 65; x < 75; x++) map[30][x] = TILE.WALL;
+  for (let y = 30; y < 38; y++) map[y][65] = TILE.WALL;
+  for (let x = 30; x < 40; x++) map[50][x] = TILE.WALL;
+  for (let y = 50; y < 56; y++) map[y][30] = TILE.WALL;
 
-  for (let y = 32; y < 36; y++) for (let x = 35; x < 42; x++) map[y][x] = TILE.WATER;
-  map[33][37] = TILE.BRIDGE; map[33][38] = TILE.BRIDGE;
-  map[34][37] = TILE.BRIDGE; map[34][38] = TILE.BRIDGE;
+  // 水池区域 — scaled
+  // Pool 1: y=24..28, x=32..39 — chest at [26][34], bridge path connects west edge (x=31) to chest
+  for (let y = 24; y < 29; y++) for (let x = 32; x < 40; x++) map[y][x] = TILE.WATER;
+  map[26][32] = TILE.BRIDGE; // west edge — connects to dry land at x=31
+  map[26][33] = TILE.BRIDGE;
+  map[26][35] = TILE.BRIDGE; map[26][36] = TILE.BRIDGE;
+  map[26][37] = TILE.BRIDGE;
+  map[26][38] = TILE.BRIDGE; map[26][39] = TILE.BRIDGE; // east edge — connects to dry land at x=40
 
-  // 树木
+  // Pool 2: y=48..53, x=56..66 — locked chest at [51][58], bridge path connects west edge (x=55) to island
+  for (let y = 48; y < 54; y++) for (let x = 56; x < 67; x++) map[y][x] = TILE.WATER;
+  map[50][56] = TILE.BRIDGE; map[50][57] = TILE.BRIDGE; map[50][58] = TILE.BRIDGE; // west edge to island
+  map[50][59] = TILE.BRIDGE; map[50][60] = TILE.BRIDGE;
+  map[51][56] = TILE.BRIDGE; map[51][57] = TILE.BRIDGE; // extra width for access
+  map[51][59] = TILE.BRIDGE; map[51][60] = TILE.BRIDGE;
+
+  // Additional water feature in top-right
+  // Pool 3: y=4..6, x=68..73 — bridge path connects south edge (y=6→dry y=7) to bridges
+  for (let y = 4; y < 7; y++) for (let x = 68; x < 74; x++) map[y][x] = TILE.WATER;
+  map[5][70] = TILE.BRIDGE; map[5][71] = TILE.BRIDGE;
+  map[6][70] = TILE.BRIDGE; map[6][71] = TILE.BRIDGE; // south edge — connects to dry land at y=7
+
+  // 树木 — scaled and expanded
   const trees = [
-    [3,3],[4,3],[3,4],[6,8],[7,8],[6,9],
-    [42,3],[43,3],[44,4],[42,8],[43,9],
-    [3,32],[4,33],[3,34],[42,32],[43,33],[44,34],
-    [18,10],[19,11],[38,18],[39,19],[40,18],
-    [8,22],[9,23],[44,25],[45,26],[43,27],
-    [20,35],[21,36],[22,35],[35,6],[36,7],[37,6]
+    [5,5],[6,5],[5,6],[9,13],[11,13],[9,14],
+    [5,67],[6,67],[7,67],[5,69],[6,70],
+    [5,48],[6,48],[7,50],
+    [48,5],[49,5],[48,6],[48,50],[49,50],
+    [27,16],[29,18],[15,29],[16,30],
+    [57,29],[58,30],[57,32],
+    [13,35],[14,36],[15,35],
+    [42,56],[43,57],[44,56],
+    [35,10],[36,11],[37,10],
+    [20,60],[21,61],[22,60],
+    [55,68],[56,69],[55,70],
+    [40,20],[41,21],[42,20],
+    [10,50],[11,51],[12,50],
+    [52,40],[53,41],[54,40],
+    [32,70],[33,71],[34,70],
+    [45,15],[46,16],[47,15]
   ];
   trees.forEach(([y, x]) => {
     if (y > 0 && y < H - 1 && x > 0 && x < W - 1 && map[y][x] === TILE.EMPTY)
       map[y][x] = Math.random() < 0.5 ? TILE.TREE : TILE.TREE_PINE;
   });
 
-  // 草地
+  // 草地 — scaled and expanded
   const grass = [
-    [2,2],[3,5],[5,3],[8,6],[12,4],[15,8],[18,5],
-    [2,42],[5,40],[8,44],[12,42],[15,38],
-    [22,8],[24,12],[28,6],[32,10],[35,4],
-    [22,40],[25,42],[28,38],[32,44],[35,40],
-    [10,20],[12,22],[14,18],[16,24],
-    [28,20],[30,22],[32,18],[34,24]
+    [3,3],[5,8],[8,5],[12,10],[18,13],[27,8],
+    [3,67],[8,64],[12,67],[18,61],
+    [33,13],[36,19],[42,10],[48,16],[52,6],
+    [33,64],[38,67],[42,61],[48,70],[52,64],
+    [15,32],[18,35],[21,29],[24,38],
+    [42,32],[45,35],[48,29],[52,38],
+    [8,45],[10,48],[14,42],[18,50],
+    [30,55],[34,58],[38,52],[42,60],
+    [55,20],[56,30],[57,45],[55,55],
+    [25,72],[28,74],[20,75],[35,75]
   ];
   grass.forEach(([y, x]) => {
     if (y > 0 && y < H - 1 && x > 0 && x < W - 1 && map[y][x] === TILE.EMPTY)
       map[y][x] = Math.random() < 0.4 ? TILE.GRASS_TALL : TILE.GRASS;
   });
 
-  // 花朵
+  // 花朵 — scaled and expanded
   const flowers = [
-    [4,7],[6,5],[10,3],[14,7],[20,4],
-    [4,40],[8,42],[12,40],[16,44],
-    [24,8],[28,12],[34,8],[38,10],
-    [24,40],[28,38],[34,42],[38,40]
+    [6,11],[9,8],[15,5],[21,11],[30,6],
+    [6,64],[12,67],[18,64],[24,70],
+    [36,13],[42,19],[52,13],[57,16],
+    [36,64],[42,61],[52,67],[57,64],
+    [10,30],[14,38],[20,45],[26,55],
+    [44,30],[48,42],[54,50],[56,38],
+    [38,8],[25,20],[15,55],[45,72],
+    [8,58],[22,42],[50,25],[33,48]
   ];
   flowers.forEach(([y, x]) => {
     if (y > 0 && y < H - 1 && x > 0 && x < W - 1 && map[y][x] === TILE.EMPTY)
       map[y][x] = TILE.FLOWER;
   });
 
-  // 石头
+  // 石头 — scaled and expanded
   const stones = [
-    [7,15],[10,25],[16,35],[20,10],[22,28],
-    [28,15],[32,25],[36,10],[38,20],
-    [12,30],[18,38],[26,42],[34,44]
+    [11,24],[15,40],[24,56],[30,16],[33,45],
+    [42,24],[48,40],[54,16],[57,32],
+    [18,48],[27,61],[39,67],[52,70],
+    [8,36],[14,52],[22,68],[38,74],
+    [46,58],[35,35],[28,48],[55,12],
+    [4,30],[12,60],[40,45],[50,10]
   ];
   stones.forEach(([y, x]) => {
     if (y > 0 && y < H - 1 && x > 0 && x < W - 1 && map[y][x] === TILE.EMPTY)
       map[y][x] = TILE.STONE;
   });
 
-  // 蘑菇
+  // 蘑菇 — scaled and expanded
   const mushrooms = [
-    [6,12],[11,18],[14,28],[22,6],[26,10],
-    [30,20],[34,30],[38,14],[10,36],[16,42]
+    [9,19],[17,29],[21,45],[33,10],[39,16],
+    [45,32],[52,48],[57,22],[15,58],[24,67],
+    [7,40],[30,60],[44,70],[56,50],
+    [3,20],[12,72],[38,25],[48,62]
   ];
   mushrooms.forEach(([y, x]) => {
     if (y > 0 && y < H - 1 && x > 0 && x < W - 1 && map[y][x] === TILE.EMPTY)
       map[y][x] = TILE.MUSHROOM;
   });
 
-  // 栅栏
-  for (let x = 3; x < 8; x++) map[2][x] = TILE.FENCE;
-  for (let x = 40; x < 46; x++) map[2][x] = TILE.FENCE;
-  for (let x = 3; x < 8; x++) map[37][x] = TILE.FENCE;
+  // 栅栏 — scaled and expanded
+  for (let x = 5; x < 13; x++) map[3][x] = TILE.FENCE;
+  for (let x = 64; x < 74; x++) map[3][x] = TILE.FENCE;
+  for (let x = 5; x < 13; x++) map[56][x] = TILE.FENCE;
+  for (let x = 64; x < 74; x++) map[56][x] = TILE.FENCE;
 
-  // 篝火
-  map[10][20] = TILE.CAMPFIRE;
-  map[25][40] = TILE.CAMPFIRE;
+  // 篝火 — scaled and expanded
+  map[15][32] = TILE.CAMPFIRE;
+  map[38][64] = TILE.CAMPFIRE;
+  map[10][55] = TILE.CAMPFIRE;
+  map[50][20] = TILE.CAMPFIRE;
 
-  // 宝箱
-  map[17][21] = TILE.CHEST;         // 水池边普通宝箱
-  map[34][36] = TILE.CHEST_LOCKED;  // 水池边锁定宝箱
+  // 宝箱 — scaled
+  map[26][34] = TILE.CHEST;          // 水池边普通宝箱
+  map[51][58] = TILE.CHEST_LOCKED;   // 水池边锁定宝箱
+  map[10][70] = TILE.CHEST;          // 右上区域普通宝箱
+  map[45][40] = TILE.CHEST_LOCKED;   // 中下区域锁定宝箱
 
-  // 传送点（替代原来的END）
-  map[38][47] = TILE.PORTAL;
+  // 传送点 — bottom-right area (around column 76, row 57)
+  map[57][76] = TILE.PORTAL;
 
   return map;
 }
@@ -227,73 +278,85 @@ export const LEVEL_TILE = TILE;
 
 export const levelData = [
   {
-    name: '第一关 - 迷雾森林',
+    name: '第一境 - 青岚竹海',
+    recommendedLevel: 3,
     generateMap: generateLevel1Map,
     playerStart: { x: 150, y: 150 },
     enemies: [
-      { type: 'slime', count: 2 },
-      { type: 'goblin', count: 2 },
-      { type: 'spider', count: 2 },
-      { type: 'bat', count: 2 },
-      { type: 'skeleton', count: 2 },
-      { type: 'orc_warrior', count: 1 },
+      { type: 'slime', count: 5 },
+      { type: 'goblin', count: 4 },
+      { type: 'spider', count: 3 },
+      { type: 'bat', count: 4 },
+      { type: 'skeleton', count: 3 },
+      { type: 'orc_warrior', count: 2 },
       { type: 'fire_mage', count: 1 },
       { type: 'giant_skeleton', count: 1 },
       { type: 'skeleton_king', count: 1 }
     ],
-    items: { coins: 12, keys: 2, potions: 4, hasArtifact: false },
+    items: { coins: 20, keys: 3, potions: 8, hasArtifact: false },
     npcs: [
       {
-        id: 'elder', name: '村长', x: 200, y: 400,
+        id: 'elder', name: '坊市主事', x: 300, y: 600,
         dialogues: [
-          '欢迎来到这个危险的地方，冒险者！',
-          '小心那些红色的怪物，它们会攻击你。',
-          '收集钥匙可以打开宝箱，找到传送门就能离开这里！'
+          '道友，前方就是青岚竹海，近来灵脉异动，务必小心。',
+          '留意那些染着赤色煞气的妖祟，它们会主动袭击过路人。',
+          '收集禁制令牌可以打开宝匣，找到挪移阵就能离开这里。'
         ],
         hasStateCondition: true
       },
       {
-        id: 'merchant', name: '旅行商人', x: 600, y: 200,
+        id: 'merchant', name: '坊市行商', x: 960, y: 300,
         dialogues: [
-          '欢迎！这里到处都是危险的史莱姆。',
-          '鼠标左键挥剑攻击，击败它们可以获得金币。',
-          '收集钥匙可以开启宝箱，找到传送门就能前往下一关！'
+          '道友留步！竹海里到处都是危险的浊水精。',
+          '鼠标左键挥剑攻击，除去妖祟可以获得灵石。',
+          '收集禁制令牌可以开启宝匣，找到挪移阵就能前往下一境。'
+        ]
+      },
+      {
+        id: 'scout', name: '巡境修士', x: 1600, y: 1200,
+        dialogues: [
+          '道友，你已经深入青岚竹海了。',
+          '东南方有一座古老挪移阵，但需要禁制令牌才能激活。',
+          '留心搜索每个角落，令牌可能藏在意想不到的地方。'
         ]
       }
     ],
     signs: [
-      { x: 120, y: 120, text: '--- 像素冒险 ---\n\n操作:\nWASD/方向键 移动\n鼠标左键 攻击\nE 交互/对话\n\n目标:收集钥匙到达传送门!' },
-      { x: 120, y: 300, text: '--- 道具说明 ---\n\n金币(黄):+10分\n钥匙(粉):开启宝箱/传送门\n药水(绿):恢复25HP\n生命之心(红):恢复50HP' },
-      { x: 120, y: 500, text: '--- 战斗提示 ---\n\n鼠标左键挥剑攻击\n角色自动转向鼠标方向\n攻击有前摇和后摇\n命中敌人造成定格冻结\n可破坏木桶获取道具' },
-      { x: 800, y: 120, text: '--- 探索提示 ---\n\n与NPC按E对话\n黄色感叹号=有新对话\n探索每个角落寻找道具\n水池和树木是障碍物\n击败史莱姆获得金币' }
+      { x: 120, y: 120, text: '--- 云荒问道 ---\n\n操作:\nWASD/方向键 移动\n鼠标左键 攻击\nE 交互/对话\n\n目标:收集禁制令牌并抵达挪移阵!' },
+      { x: 120, y: 450, text: '--- 行囊说明 ---\n\n灵石(黄):+10分\n禁制令牌(粉):开启宝匣/挪移阵\n回春药(绿):恢复25HP\n血玉(红):恢复50HP' },
+      { x: 120, y: 800, text: '--- 斗法提示 ---\n\n鼠标左键挥剑攻击\n角色自动转向鼠标方向\n攻击有前摇和后摇\n命中妖祟造成短暂定身\n可破坏木桶获取物资' },
+      { x: 1280, y: 120, text: '--- 游历提示 ---\n\n与NPC按E对话\n黄色感叹号=有新对话\n探索每个角落寻找物资\n水池和树木是障碍物\n击败浊水精获得灵石' },
+      { x: 2000, y: 900, text: '--- 竹海警示 ---\n\n前方妖祟更加危险\n确保回春药充足再继续\n挪移阵就在东南方向！' }
     ],
-    portalRequiredKeys: 2
+    portalRequiredKeys: 3
   },
   {
-    name: '第二关 - 古老废墟',
+    name: '第二境 - 太虚宗遗址',
+    recommendedLevel: 5,
     generateMap: generateLevel2Map,
     playerStart: { x: 800, y: 1100 },
     enemies: [
       { type: 'skeleton', count: 4 },
       { type: 'bat', count: 3 },
       { type: 'orc_warrior', count: 2 },
-      { type: 'slime', count: 3 }
+      { type: 'slime', count: 3 },
+      { type: 'skeleton_king', count: 1 }
     ],
     items: { coins: 15, keys: 2, potions: 6, hasArtifact: true },
     npcs: [
       {
-        id: 'guardian', name: '守卫者', x: 800, y: 700,
+        id: 'guardian', name: '守碑人', x: 800, y: 700,
         dialogues: [
-          '你竟然来到了古老废墟...',
-          '远古神器就藏在这片废墟的深处。',
-          '小心这里的怪物比外面的更加凶猛！',
-          '找到神器，到达北方的出口就能逃出生天！'
+          '你竟然寻到了太虚宗遗址……',
+          '镇界古印就藏在遗址深处。',
+          '小心，这里的妖祟比竹海外更加凶猛。',
+          '取得古印，再从北方阵门离开此地。'
         ]
       }
     ],
     signs: [
-      { x: 800, y: 1050, text: '--- 古老废墟 ---\n\n第二关\n\n这里的敌人更加危险\n探索废墟深处寻找神器\n到达北方出口即可胜利!' },
-      { x: 500, y: 700, text: '--- 警告 ---\n\n前方区域危险\n确保你有足够的药水\n锁定宝箱需要钥匙才能打开' }
+      { x: 800, y: 1050, text: '--- 太虚宗遗址 ---\n\n第二境\n\n这里的妖祟更加危险\n探索遗址深处寻找镇界古印\n到达北方阵门即可离开!' },
+      { x: 500, y: 700, text: '--- 警示 ---\n\n前方阴煞浓重\n确保你有足够的回春药\n封禁宝匣需要禁制令牌才能打开' }
     ],
     portalRequiredKeys: 0
   }

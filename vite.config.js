@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 
+const openBrowser = process.env.VITE_OPEN !== 'false';
+
 export default defineConfig({
   base: './',
   build: {
@@ -9,6 +11,6 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
+    open: openBrowser
   }
 });

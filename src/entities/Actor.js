@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { Stats } from '../systems/Stats.js';
 import { CHARACTERS } from '../assets/AssetManager.js';
+import { StatusEffectSystem } from '../systems/StatusEffectSystem.js';
 
 /**
  * Actor 基类 — Player 和 Enemy 共享的逻辑
- * 提供: Stats属性、HP/MP管理、受伤/击退、I-Frames、死亡
+ * 提供: Stats属性、HP/Stamina/Rage管理、受伤/击退、I-Frames、死亡
  */
 export class Actor {
   constructor(scene, x, y, textureKey, statsConfig = {}, characterType = null) {
@@ -15,11 +16,23 @@ export class Actor {
     this.stats = new Stats(statsConfig);
     const derived = this.stats.getDerived();
 
-    // 生命/魔法
+    // 生命
     this.hp = derived.maxHp;
     this.maxHp = derived.maxHp;
-    this.mp = derived.maxMp;
-    this.maxMp = derived.maxMp;
+
+    // Stamina (replaces MP) — based on CON
+    this.stamina = this.getMaxStamina();
+    this.maxStamina = this.getMaxStamina();
+
+    // Rage — combat resource, 0-100
+    this.rage = 0;
+    this.maxRage = 100;
+    this.rageCombatTimer = 0;   // time since last combat action (for decay)
+    this.staminaIdleTimer = 0;  // time since last stamina use (for regen delay)
+
+    // Mana — caster resource
+    this.mana = this.getMaxMana();
+    this.maxMana = this.getMaxMana();
 
     // I-Frames (无敌帧)
     this.isInvulnerable = false;
@@ -43,7 +56,7 @@ export class Actor {
     const dw = this.sprite.displayWidth;
     const dh = this.sprite.displayHeight;
     const bodyW = dw * 0.85;
-    const bodyH = dh * 0.55;
+    const bodyH = dh * 0.75;
     // Convert display-space body dimensions to unscaled texture coords
     const scaleX = this.sprite.scaleX || 1;
     const scaleY = this.sprite.scaleY || 1;
@@ -56,6 +69,9 @@ export class Actor {
     this.sprite.setCollideWorldBounds(true);
 
     this.direction = { x: 1, y: 0 };
+
+    // Status effects (Buff/Debuff)
+    this.statusEffects = new StatusEffectSystem(scene, this);
   }
 
   /** Play a character animation by name (idle, walk, attack, hurt, die) */
@@ -67,33 +83,105 @@ export class Actor {
     }
   }
 
-  /** 刷新属性缓存并同步 maxHp/maxMp */
+  /** 刷新属性缓存并同步 maxHp/maxStamina/maxMana */
   refreshStats() {
     const derived = this.stats.getDerived();
     this.maxHp = derived.maxHp;
-    this.maxMp = derived.maxMp;
-    // 不超过上限
+    this.maxStamina = this.getMaxStamina();
+    this.maxMana = this.getMaxMana();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
-    if (this.mp > this.maxMp) this.mp = this.maxMp;
+    if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
+    if (this.mana > this.maxMana) this.mana = this.maxMana;
   }
 
-  /** 获取攻击力 */
+  /** 获取攻击力（已应用 buff 乘数） */
   getAttack() {
-    return this.stats.getDerived().attack;
+    const base = this.stats.getDerived().attack;
+    const mod = this.statusEffects?.getModifiers().attack ?? 1;
+    return base * mod;
   }
 
-  /** 获取移动速度 */
+  /** 获取移动速度（已应用 buff 乘数） */
   getMoveSpeed() {
-    return this.stats.getDerived().moveSpeed;
+    const base = this.stats.getDerived().moveSpeed;
+    const mod = this.statusEffects?.getModifiers().moveSpeed ?? 1;
+    return base * mod;
   }
+
+  /** Max stamina based on CON */
+  getMaxStamina() {
+    const con = this.stats.getEffective('con');
+    return con * 8 + 60;
+  }
+
+  /** Max mana based on INT */
+  getMaxMana() {
+    const int = this.stats.getEffective('int');
+    return int * 10 + 50;
+  }
+
+  /** Mana regen rate per second based on INT (脱战回复), scaled by bonusPct.manaRegen */
+  getManaRegenRate() {
+    const int = this.stats.getEffective('int');
+    const manaRegenMult = 1 + (this.stats?.bonusPct?.manaRegen || 0);
+    return int * 0.05 * manaRegenMult;
+  }
+
+  /** Use mana. Returns true if enough, false otherwise. */
+  useMana(amount) {
+    if (this.mana < amount) return false;
+    this.mana -= amount;
+    this.onResourceChanged();
+    return true;
+  }
+
+  /** Stamina regen rate per second based on CON */
+  getStaminaRegenRate() {
+    const con = this.stats.getEffective('con');
+    return con * 0.8;
+  }
+
+  /** Use stamina. Returns true if enough, false otherwise. */
+  useStamina(amount) {
+    if (this.stamina < amount) return false;
+    this.stamina -= amount;
+    this.staminaIdleTimer = 0;
+    this.onResourceChanged();
+    return true;
+  }
+
+  /** Add rage (clamped to 0-100), scaled by bonusPct.rageGain */
+  addRage(amount) {
+    const rageGainMult = 1 + (this.stats?.bonusPct?.rageGain || 0);
+    this.rage = Math.min(this.maxRage, this.rage + Math.round(amount * rageGainMult));
+    this.rageCombatTimer = 0;
+    this.onResourceChanged();
+  }
+
+  /** Use rage. Returns true if enough, false otherwise. */
+  useRage(amount) {
+    if (this.rage < amount) return false;
+    this.rage -= amount;
+    this.rageCombatTimer = 0;
+    this.onResourceChanged();
+    return true;
+  }
+
+  /** Subclass override for resource change notification */
+  onResourceChanged() {}
 
   /** 受伤 (通用) */
   takeDamage(damage, attackerX, attackerY) {
     if (this.isInvulnerable || this.hp <= 0) return;
 
-    // 防御减伤
-    const defense = this.stats.getDerived().defense;
-    const finalDamage = Math.max(1, damage - defense);
+    // 防御减伤（应用 buff 乘数）
+    const mods = this.statusEffects?.getModifiers() || {};
+    const baseDef = this.stats.getDerived().defense;
+    const defMod = mods.defense ?? 1;
+    const defense = baseDef * defMod;
+    // 受伤增幅（猎人印记/奥术虚弱等附加 debuff）
+    const dtMod = mods.damageTaken ?? 1;
+    const finalDamage = Math.max(1, Math.floor((damage - defense) * dtMod));
 
     this.hp = Math.max(0, this.hp - finalDamage);
 
@@ -101,14 +189,17 @@ export class Actor {
     this.isInvulnerable = true;
     this.iFramesTimer = this.iFramesDuration;
 
-    // 击退
-    this.applyKnockback(attackerX, attackerY);
+    // 击退已禁用（玩家和敌人都不再受击退）
+    // this.applyKnockback(attackerX, attackerY);
 
     // 受伤闪烁
     this.flashDamage();
 
     // 通知 HP 变更
     this.onHpChanged();
+
+    // 飘字事件（让 MainGameScene 监听并显示伤害数字）
+    this.scene.events.emit('actorDamaged', this, finalDamage);
 
     if (this.hp <= 0) {
       // 延迟到闪烁结束再死亡
@@ -123,9 +214,10 @@ export class Actor {
       attackerX, attackerY,
       this.sprite.x, this.sprite.y
     );
-    // 韧性减少击退
+    // 韧性减少击退 (diminishing returns: tenacity / (tenacity + 20))
     const tenacity = this.stats.getDerived().tenacity;
-    const finalForce = force * (1 - tenacity);
+    const reduction = tenacity / (tenacity + 20);
+    const finalForce = force * (1 - reduction);
     this.sprite.setVelocity(
       Math.cos(angle) * finalForce,
       Math.sin(angle) * finalForce
@@ -148,34 +240,71 @@ export class Actor {
     this.scene.time.delayedCall(420, () => this.sprite.clearTint());
   }
 
+  /**
+   * Tick 伤害（DoT 专用）— 绕过 I-Frames/防御/击退/闪烁，
+   * 直接扣血、飘字、必要时进入死亡。
+   */
+  takeTickDamage(amount) {
+    if (this.hp <= 0) return;
+    const dmg = Math.max(1, Math.floor(amount));
+    this.hp = Math.max(0, this.hp - dmg);
+    this.onHpChanged();
+    this.scene.events.emit('actorDamaged', this, dmg);
+    if (this.hp <= 0) {
+      this.scene.time.delayedCall(50, () => this.die());
+    }
+  }
+
   /** 治疗 */
   heal(amount) {
     if (this.hp <= 0) return;
+    const before = this.hp;
     this.hp = Math.min(this.maxHp, this.hp + amount);
+    const realHeal = this.hp - before;
     this.onHpChanged();
+    if (realHeal > 0) {
+      this.scene.events.emit('actorHealed', this, realHeal);
+    }
   }
 
-  /** MP 消耗 */
-  useMp(amount) {
-    if (this.mp < amount) return false;
-    this.mp -= amount;
-    this.onHpChanged(); // Also notifies MP change to UI
-    return true;
-  }
-
-  /** HP/MP 回复 (每帧调用) */
+  /** HP/Stamina/Rage 回复 (每帧调用) */
   updateRegen(delta) {
     if (this.hp <= 0) return;
-    const hpRegen = this.stats.getDerived().hpRegen;
-    if (hpRegen <= 0) return;
 
-    this.regenTimer += delta;
-    if (this.regenTimer >= 1000) {
-      this.regenTimer -= 1000;
-      if (this.hp < this.maxHp) {
-        this.hp = Math.min(this.maxHp, this.hp + hpRegen);
-        this.onHpChanged();
+    // HP regen — 战斗中不回血（仅 Enemy 在 inCombat=true 时禁用）
+    const hpRegen = this.stats.getDerived().hpRegen;
+    if (hpRegen > 0 && !this.inCombat) {
+      this.regenTimer += delta;
+      if (this.regenTimer >= 1000) {
+        this.regenTimer -= 1000;
+        if (this.hp < this.maxHp) {
+          this.hp = Math.round(Math.min(this.maxHp, this.hp + hpRegen));
+          this.onHpChanged();
+        }
       }
+    }
+
+    // Stamina regen (after 1s idle)
+    this.staminaIdleTimer += delta;
+    if (this.staminaIdleTimer >= 1000 && this.stamina < this.maxStamina) {
+      const regenPerFrame = this.getStaminaRegenRate() * (delta / 1000);
+      this.stamina = Math.min(this.maxStamina, this.stamina + regenPerFrame);
+      this.onResourceChanged();
+    }
+
+    // Rage decay (5/sec after 3s of no combat)
+    this.rageCombatTimer += delta;
+    if (this.rageCombatTimer >= 3000 && this.rage > 0) {
+      const decayPerFrame = 5 * (delta / 1000);
+      this.rage = Math.max(0, this.rage - decayPerFrame);
+      this.onResourceChanged();
+    }
+
+    // Mana regen (脱战时才回蓝)
+    if (this.mana < this.maxMana && !this.inCombat) {
+      const manaPerFrame = this.getManaRegenRate() * (delta / 1000);
+      this.mana = Math.min(this.maxMana, this.mana + manaPerFrame);
+      this.onResourceChanged();
     }
   }
 
@@ -184,9 +313,12 @@ export class Actor {
     if (!this.isInvulnerable) return;
     this.iFramesTimer -= delta;
     if (this.iFramesTimer <= 0) {
-      this.isInvulnerable = false;
       this.iFramesTimer = 0;
-      this.sprite.setAlpha(1);
+      // Don't clear invulnerability if a skill is granting it
+      if (!this._whirlwindSuperArmor) {
+        this.isInvulnerable = false;
+        this.sprite.setAlpha(1);
+      }
     }
   }
 
@@ -194,6 +326,7 @@ export class Actor {
   updateActor(delta) {
     this.updateIFrames(delta);
     this.updateRegen(delta);
+    this.statusEffects.update(delta);
   }
 
   /** 子类覆写 — HP变更时的回调 */

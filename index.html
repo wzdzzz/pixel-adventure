@@ -3,25 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>像素冒险 - Pixel Adventure</title>
+  <title>云荒问道</title>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
     body {
-      background: #1a1a2e;
+      background: #09110f;
+      font-family: 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      font-family: 'Courier New', monospace;
     }
     #game-container {
-      border: 4px solid #16213e;
-      border-radius: 4px;
-      box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+      width: 100vw;
+      height: 100vh;
+    }
+    #game-container canvas {
+      display: block;
+      margin: 0 auto;
     }
   </style>
 </head>
